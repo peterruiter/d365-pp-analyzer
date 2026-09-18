@@ -1,0 +1,1162 @@
+{
+  "contract": "component-model",
+  "version": "1.0.0",
+  "description": "Every Power Platform and Dynamics 365 component this tool understands, classified on two axes that do not move together: what it is made of, and how much life it has left. Everything downstream reads from here. The low code ratio, the technical debt list, the modernisation recommendations and the rule catalogue all key on componentType ids declared in this file, and a component type that is not here is invisible to the product no matter what an extraction returns.",
+  "axes": {
+    "description": "Two independent classifications. Conflating them is the mistake that produces reports saying a plugin is technical debt because it is code, and a classic workflow is fine because it is low code. Both statements are wrong.",
+    "craft": "What the component is made of, and therefore who can change it and what changing it costs. Drives the low code to high code ratio.",
+    "lifecycle": "How much life Microsoft has left in it. Drives the technical debt list and the modernisation backlog.",
+    "complexity": "How hard this particular component is to change or move, as opposed to what kind of component it is. Craft and lifecycle are properties of the type; complexity is a property of the instance and is measured from its own attributes."
+  },
+  "craftLevels": {
+    "config": "Metadata with no expression language. A table, a column, a view, a security role. Changed in a maker portal by somebody who cannot write code and cannot break it in a way a deployment will not catch.",
+    "lowCode": "A designer or an expression language. Power Fx, a cloud flow, a business rule, a low code plugin. Changed by a maker. Testable only by running it.",
+    "proCode": "Compiled or hand written code in a language with a build step. A plugin assembly, a PCF control, a JavaScript web resource, a custom workflow activity. Needs a developer, a repository and a pipeline.",
+    "external": "Not in the solution at all. An Azure Function, a Logic App, an API the platform calls. Counted separately because a solution that looks clean while all its logic sits in an unversioned Function App is not clean, it is undocumented.",
+    "content": "Data shaped as configuration. An email template, a knowledge article, a document template. No logic, no code, and real migration cost."
+  },
+  "lifecycleStates": {
+    "current": "Microsoft's recommended way to do this today. No action.",
+    "dated": "Supported, not deprecated, and no longer where the platform is going. New investment goes elsewhere and the tooling around it stops improving. Worth replacing when the component is touched for another reason, not worth a project of its own.",
+    "deprecated": "Microsoft has announced it will be removed. There is a date or there will be one. Replace on a plan.",
+    "removed": "Already gone or past its removal date. Anything found here is either a leftover record or an environment that has not been touched in years. Either way it is a finding.",
+    "preview": "Not generally available. Fine in a proof of concept and a risk in production, because preview terms carry no support commitment and the shape can change."
+  },
+  "evidenceSources": {
+    "description": "Where a component is seen from. An extraction mode that cannot reach a source cannot report on the components that need it, and the report says so rather than reporting zero. Reporting an absence you could not have detected is the single most damaging thing this product can do.",
+    "metadata": "The Dataverse Web API. RetrieveAllEntities, the solution and solutioncomponent tables, workflow, plugintype, sdkmessageprocessingstep and the rest. Needs a live connection.",
+    "solutionZip": "An exported unmanaged solution, unpacked. customizations.xml, the Workflows folder, the WebResources folder, CanvasApps and the flow definitions. Needs no connection.",
+    "checker": "The Power Apps checker service. Static analysis of the same solution file, returning rules this tool deliberately does not reimplement.",
+    "runtime": "Operational data that only exists in a live environment. Flow run history, plugin trace logs, last used dates, failure rates. Needs a live connection and, for some of it, more privilege than a reader."
+  },
+  "ratioRules": {
+    "description": "How the low code to high code ratio is computed. Published here rather than in code because the first question anybody asks about the number is how it was calculated, and the second is whether it was calculated the same way last quarter.",
+    "counted": "Components whose 'countsTowardRatio' is true. Config components are reported but excluded: a solution with four hundred columns and one plugin is not ninety-nine percent low code in any sense a consultant would defend out loud.",
+    "denominator": "lowCode + proCode + external components. Config and content are shown beside the ratio, never inside it.",
+    "weighting": "None by default. A weighted ratio needs a defensible weight per component type and this product does not have one yet. An unweighted ratio that everybody understands beats a weighted one nobody can reproduce.",
+    "externalIsVisible": "External components are counted into the high code side when they are detectable, which is only through connection references, service endpoints and custom connectors. The report states that this is a floor rather than a count."
+  },
+  "domains": [
+    {
+      "id": "data",
+      "name": "Data",
+      "description": "The shape of the data. Tables, columns, relationships, keys. Cheap to add and expensive to remove, which is why unused columns are the most common finding in this product."
+    },
+    {
+      "id": "logic",
+      "name": "Logic",
+      "description": "Anything that happens on its own. Where almost all technical debt lives, and the only domain where a component can be doing damage while nobody is looking at it."
+    },
+    {
+      "id": "interface",
+      "name": "Interface",
+      "description": "What a user sees and clicks. Apps, forms, views, scripts, controls."
+    },
+    {
+      "id": "integration",
+      "name": "Integration",
+      "description": "How the solution reaches outside itself. The domain that turns into an incident at three in the morning."
+    },
+    {
+      "id": "ai",
+      "name": "AI",
+      "description": "Agents, prompts and models. Newest domain and the one where preview components are most likely to be sitting in production."
+    },
+    {
+      "id": "security",
+      "name": "Security",
+      "description": "Who may do what. Analysed for sprawl and for privilege, not for correctness, which no static tool can judge."
+    },
+    {
+      "id": "analytics",
+      "name": "Analytics",
+      "description": "Reports, dashboards and the things that read data to show it back."
+    },
+    {
+      "id": "platform",
+      "name": "Platform",
+      "description": "Solution hygiene itself. Publishers, layering, managed state, dependencies."
+    }
+  ],
+  "verification": {
+    "description": "Every lifecycle claim in this file is an assertion about Microsoft's roadmap, and roadmaps move. A claim carries its own state so a stale one is visible rather than quietly wrong. This matters more here than anywhere else in the product: a report telling a client to rebuild forty workflows because a tool believed a deprecation that never happened is a report that costs money and credibility.",
+    "states": {
+      "documented": "Microsoft has published it. 'source' carries the URL and 'checkedOn' the date somebody read it.",
+      "inferred": "This tool's reading of where the platform is going, from behaviour, from what is getting investment and from what is not. Defensible in a workshop, not quotable as Microsoft's position.",
+      "verified": "Confirmed against a real environment on the date recorded."
+    },
+    "staleAfterDays": 180,
+    "staleMeaning": "A documented claim older than this is reported in the run header as unverified, and the modernisation recommendations derived from it are marked. Nothing is suppressed. A consultant deciding whether to trust a six month old deprecation claim is a better outcome than a tool deciding for them."
+  },
+  "componentTypes": [
+    {
+      "id": "table",
+      "name": "Table",
+      "domain": "data",
+      "craft": "config",
+      "lifecycle": "current",
+      "solutionComponentType": 1,
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "countsTowardRatio": false,
+      "attributes": [
+        "isCustom",
+        "isActivity",
+        "isVirtual",
+        "isElastic",
+        "ownershipType",
+        "auditEnabled",
+        "changeTrackingEnabled",
+        "rowCount"
+      ]
+    },
+    {
+      "id": "column",
+      "name": "Column",
+      "domain": "data",
+      "craft": "config",
+      "lifecycle": "current",
+      "solutionComponentType": 2,
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "countsTowardRatio": false,
+      "attributes": [
+        "attributeType",
+        "isCustom",
+        "requiredLevel",
+        "maxLength",
+        "isAuditEnabled",
+        "isValidForAdvancedFind",
+        "formUsageCount",
+        "viewUsageCount"
+      ]
+    },
+    {
+      "id": "calculatedColumn",
+      "name": "Calculated column",
+      "domain": "data",
+      "craft": "lowCode",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata"
+      ],
+      "countsTowardRatio": true,
+      "note": "A formula, so it is logic living in the data domain. Counts as low code because somebody wrote an expression that can be wrong."
+    },
+    {
+      "id": "rollupColumn",
+      "name": "Rollup column",
+      "domain": "data",
+      "craft": "lowCode",
+      "lifecycle": "dated",
+      "evidence": [
+        "metadata"
+      ],
+      "countsTowardRatio": true,
+      "lifecycleVerification": "inferred",
+      "lifecycleNote": "Not deprecated. Recalculated on a system job on an hourly cycle, which surprises somebody in every project, and a modern alternative exists for most uses. Flagged as dated rather than deprecated because Microsoft has said nothing."
+    },
+    {
+      "id": "formulaColumn",
+      "name": "Formula column",
+      "domain": "data",
+      "craft": "lowCode",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata"
+      ],
+      "countsTowardRatio": true,
+      "note": "Power Fx, evaluated on read. The current answer where a calculated column used to be the only one."
+    },
+    {
+      "id": "relationship",
+      "name": "Relationship",
+      "domain": "data",
+      "craft": "config",
+      "lifecycle": "current",
+      "solutionComponentType": 10,
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "countsTowardRatio": false,
+      "attributes": [
+        "relationshipType",
+        "cascadeConfiguration",
+        "isCustom"
+      ]
+    },
+    {
+      "id": "alternateKey",
+      "name": "Alternate key",
+      "domain": "data",
+      "craft": "config",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata"
+      ],
+      "countsTowardRatio": false,
+      "attributes": [
+        "status",
+        "keyAttributes"
+      ],
+      "note": "Status matters. A key stuck in a pending or failed index job is a key nothing is enforcing, and it looks identical to a working one on a form."
+    },
+    {
+      "id": "choice",
+      "name": "Choice",
+      "domain": "data",
+      "craft": "config",
+      "lifecycle": "current",
+      "solutionComponentType": 9,
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "countsTowardRatio": false,
+      "attributes": [
+        "isGlobal",
+        "optionCount",
+        "usageCount"
+      ]
+    },
+    {
+      "id": "virtualTable",
+      "name": "Virtual table",
+      "domain": "data",
+      "craft": "config",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata"
+      ],
+      "countsTowardRatio": false,
+      "attributes": [
+        "dataProvider",
+        "dataSource"
+      ]
+    },
+    {
+      "id": "classicWorkflowBackground",
+      "name": "Classic workflow, background",
+      "domain": "logic",
+      "craft": "lowCode",
+      "lifecycle": "dated",
+      "solutionComponentType": 29,
+      "evidence": [
+        "metadata",
+        "solutionZip",
+        "runtime"
+      ],
+      "countsTowardRatio": true,
+      "lifecycleVerification": "inferred",
+      "lifecycleSource": "https://learn.microsoft.com/power-apps/maker/data-platform/workflow-processes",
+      "lifecycleNote": "Not deprecated and repeatedly assumed to be. Microsoft's guidance has pointed at Power Automate for years, the designer has had no meaningful investment, and asynchronous workflows still run. Calling this deprecated in a client report is wrong and gets caught. Calling it dated is right and is enough to justify replacing one when you are already in there.",
+      "attributes": [
+        "category",
+        "mode",
+        "scope",
+        "statecode",
+        "triggerOnCreate",
+        "triggerOnUpdate",
+        "triggerOnDelete",
+        "stepCount",
+        "usesCustomActivity",
+        "lastExecutedUtc",
+        "executionCount30d",
+        "failureCount30d"
+      ]
+    },
+    {
+      "id": "classicWorkflowRealtime",
+      "name": "Classic workflow, real time",
+      "domain": "logic",
+      "craft": "lowCode",
+      "lifecycle": "dated",
+      "solutionComponentType": 29,
+      "evidence": [
+        "metadata",
+        "solutionZip",
+        "runtime"
+      ],
+      "countsTowardRatio": true,
+      "lifecycleVerification": "inferred",
+      "lifecycleNote": "Separated from the background kind deliberately. A real time workflow runs inside the transaction and can block a save, which is a behaviour a cloud flow does not have. Recommending the same replacement for both is the most common bad advice in this space.",
+      "attributes": [
+        "mode",
+        "stage",
+        "statecode",
+        "stepCount",
+        "rollsBackOnError"
+      ]
+    },
+    {
+      "id": "dialog",
+      "name": "Dialog",
+      "domain": "logic",
+      "craft": "lowCode",
+      "lifecycle": "removed",
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "countsTowardRatio": true,
+      "lifecycleVerification": "documented",
+      "lifecycleSource": "https://learn.microsoft.com/power-platform/important-changes-coming",
+      "lifecycleCheckedOn": "2026-09-18",
+      "lifecycleNote": "Removed in 2020. Anything found is a record nobody cleaned up. Zero runtime risk and a real finding: it means this solution has not been audited in five years, which colours every other number in the report.",
+      "attributes": [
+        "statecode",
+        "stepCount"
+      ]
+    },
+    {
+      "id": "businessRule",
+      "name": "Business rule",
+      "domain": "logic",
+      "craft": "lowCode",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "countsTowardRatio": true,
+      "attributes": [
+        "scope",
+        "statecode",
+        "conditionCount",
+        "actionCount"
+      ],
+      "note": "Scope is the thing to look at. An entity scoped rule runs server side, a form scoped one does not, and a validation somebody believes is enforced but is only on one form is a data quality problem waiting to be discovered by an integration."
+    },
+    {
+      "id": "businessProcessFlow",
+      "name": "Business process flow",
+      "domain": "logic",
+      "craft": "lowCode",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "countsTowardRatio": true,
+      "attributes": [
+        "statecode",
+        "stageCount",
+        "entityCount",
+        "hasWorkflowSteps"
+      ],
+      "note": "Model driven apps only. A finding when a solution has one and its apps are canvas."
+    },
+    {
+      "id": "customProcessAction",
+      "name": "Action",
+      "domain": "logic",
+      "craft": "lowCode",
+      "lifecycle": "dated",
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "countsTowardRatio": true,
+      "lifecycleVerification": "inferred",
+      "lifecycleNote": "The classic process action. Custom API is where Microsoft has put its investment and is the current answer for a callable operation. Actions still work.",
+      "attributes": [
+        "statecode",
+        "isApiCallable",
+        "argumentCount"
+      ]
+    },
+    {
+      "id": "customApi",
+      "name": "Custom API",
+      "domain": "logic",
+      "craft": "proCode",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "countsTowardRatio": true,
+      "attributes": [
+        "bindingType",
+        "isPrivate",
+        "allowedCustomProcessingStepType",
+        "hasPluginImplementation"
+      ]
+    },
+    {
+      "id": "lowCodePlugin",
+      "name": "Low code plugin",
+      "domain": "logic",
+      "craft": "lowCode",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata"
+      ],
+      "countsTowardRatio": true,
+      "note": "Power Fx in the plugin pipeline. Needs the Dataverse accelerator in the environment, which is a dependency worth naming in a report because it is not obvious and it does not travel in the solution."
+    },
+    {
+      "id": "pluginAssembly",
+      "name": "Plugin assembly",
+      "domain": "logic",
+      "craft": "proCode",
+      "lifecycle": "current",
+      "solutionComponentType": 91,
+      "evidence": [
+        "metadata",
+        "solutionZip",
+        "checker"
+      ],
+      "countsTowardRatio": true,
+      "attributes": [
+        "isolationMode",
+        "sourceType",
+        "version",
+        "typeCount",
+        "sizeBytes",
+        "targetFramework"
+      ],
+      "note": "Isolation mode and source type are both findings when wrong. Anything not in sandbox isolation, and anything stored on disk rather than in the database, is an environment that cannot be moved."
+    },
+    {
+      "id": "pluginStep",
+      "name": "Plugin step",
+      "domain": "logic",
+      "craft": "proCode",
+      "lifecycle": "current",
+      "solutionComponentType": 92,
+      "evidence": [
+        "metadata",
+        "runtime"
+      ],
+      "countsTowardRatio": false,
+      "attributes": [
+        "message",
+        "primaryEntity",
+        "stage",
+        "mode",
+        "filteringAttributes",
+        "statecode",
+        "hasImages",
+        "executionCount30d",
+        "failureCount30d",
+        "averageExecutionMs"
+      ],
+      "note": "Not counted into the ratio. It is a registration of something already counted, and counting both double counts every plugin."
+    },
+    {
+      "id": "customWorkflowActivity",
+      "name": "Custom workflow activity",
+      "domain": "logic",
+      "craft": "proCode",
+      "lifecycle": "dated",
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "countsTowardRatio": true,
+      "lifecycleVerification": "inferred",
+      "lifecycleNote": "Code called from a classic workflow. Dated for the same reason classic workflows are, and worse: it pins the workflow in place, because replacing the workflow means finding a home for the code first."
+    },
+    {
+      "id": "cloudFlow",
+      "name": "Cloud flow",
+      "domain": "logic",
+      "craft": "lowCode",
+      "lifecycle": "current",
+      "solutionComponentType": 29,
+      "evidence": [
+        "metadata",
+        "solutionZip",
+        "checker",
+        "runtime"
+      ],
+      "countsTowardRatio": true,
+      "attributes": [
+        "statecode",
+        "triggerType",
+        "actionCount",
+        "connectionReferenceCount",
+        "usesPremiumConnector",
+        "hasErrorHandling",
+        "runCount30d",
+        "failureRate30d",
+        "averageDurationMs",
+        "isChildFlow"
+      ],
+      "note": "The most common component in a modern solution and the one whose quality varies most. A flow with forty actions and no scope around any of them is technically low code and practically unmaintainable."
+    },
+    {
+      "id": "desktopFlow",
+      "name": "Desktop flow",
+      "domain": "logic",
+      "craft": "lowCode",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata"
+      ],
+      "countsTowardRatio": true,
+      "note": "Reported separately from cloud flows because the operational model is different. A desktop flow depends on a machine somebody has to keep switched on."
+    },
+    {
+      "id": "modelDrivenApp",
+      "name": "Model driven app",
+      "domain": "interface",
+      "craft": "config",
+      "lifecycle": "current",
+      "solutionComponentType": 80,
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "countsTowardRatio": false,
+      "attributes": [
+        "statecode",
+        "componentCount",
+        "usesModernCommanding",
+        "lastPublishedUtc"
+      ]
+    },
+    {
+      "id": "canvasApp",
+      "name": "Canvas app",
+      "domain": "interface",
+      "craft": "lowCode",
+      "lifecycle": "current",
+      "solutionComponentType": 300,
+      "evidence": [
+        "metadata",
+        "solutionZip",
+        "checker"
+      ],
+      "countsTowardRatio": true,
+      "attributes": [
+        "screenCount",
+        "controlCount",
+        "formulaCount",
+        "dataSourceCount",
+        "usesDelegationWarnings",
+        "connectionReferenceCount",
+        "sizeBytes"
+      ]
+    },
+    {
+      "id": "customPage",
+      "name": "Custom page",
+      "domain": "interface",
+      "craft": "lowCode",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "countsTowardRatio": true
+    },
+    {
+      "id": "form",
+      "name": "Form",
+      "domain": "interface",
+      "craft": "config",
+      "lifecycle": "current",
+      "solutionComponentType": 60,
+      "evidence": [
+        "metadata",
+        "solutionZip",
+        "checker"
+      ],
+      "countsTowardRatio": false,
+      "attributes": [
+        "formType",
+        "statecode",
+        "tabCount",
+        "fieldCount",
+        "hasOnLoadScript",
+        "scriptLibraryCount",
+        "isCustomisable"
+      ]
+    },
+    {
+      "id": "view",
+      "name": "View",
+      "domain": "interface",
+      "craft": "config",
+      "lifecycle": "current",
+      "solutionComponentType": 26,
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "countsTowardRatio": false,
+      "attributes": [
+        "queryType",
+        "columnCount",
+        "linkedEntityCount",
+        "hasLinkedEntities",
+        "filterComplexity",
+        "isDefault"
+      ]
+    },
+    {
+      "id": "jsWebResource",
+      "name": "JavaScript web resource",
+      "domain": "interface",
+      "craft": "proCode",
+      "lifecycle": "current",
+      "solutionComponentType": 61,
+      "evidence": [
+        "metadata",
+        "solutionZip",
+        "checker"
+      ],
+      "countsTowardRatio": true,
+      "attributes": [
+        "sizeBytes",
+        "isMinified",
+        "isLibrary",
+        "referencedByFormCount",
+        "usesDeprecatedApi",
+        "usesUnsupportedSyntax"
+      ],
+      "note": "Where the checker earns its place. Deprecated client API use and unsupported syntax are exactly what it is good at, and reimplementing that analysis here would be worse and would go stale."
+    },
+    {
+      "id": "htmlWebResource",
+      "name": "HTML web resource",
+      "domain": "interface",
+      "craft": "proCode",
+      "lifecycle": "dated",
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "countsTowardRatio": true,
+      "lifecycleVerification": "inferred",
+      "lifecycleNote": "Works, is not deprecated, and is how interfaces were extended before PCF existed. An HTML web resource in a solution built after 2021 is usually somebody working around a gap rather than choosing a tool."
+    },
+    {
+      "id": "pcfControl",
+      "name": "PCF control",
+      "domain": "interface",
+      "craft": "proCode",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "countsTowardRatio": true,
+      "attributes": [
+        "isThirdParty",
+        "version",
+        "manifestVersion",
+        "usesReactPlatformLibrary"
+      ]
+    },
+    {
+      "id": "commandBar",
+      "name": "Command bar customisation",
+      "domain": "interface",
+      "craft": "proCode",
+      "lifecycle": "dated",
+      "evidence": [
+        "solutionZip"
+      ],
+      "countsTowardRatio": true,
+      "lifecycleVerification": "inferred",
+      "lifecycleNote": "Ribbon XML specifically. Modern commanding with Power Fx is where this went, and RibbonDiffXml remains supported. Counted as pro code because in practice it is XML plus JavaScript, and nobody who cannot write JavaScript has ever edited it successfully."
+    },
+    {
+      "id": "siteMap",
+      "name": "Site map",
+      "domain": "interface",
+      "craft": "config",
+      "lifecycle": "current",
+      "solutionComponentType": 62,
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "countsTowardRatio": false
+    },
+    {
+      "id": "connectionReference",
+      "name": "Connection reference",
+      "domain": "integration",
+      "craft": "config",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "countsTowardRatio": false,
+      "attributes": [
+        "connectorId",
+        "isPremium",
+        "isCustom",
+        "usedByCount",
+        "isShared"
+      ],
+      "note": "The cheapest signal in the whole product for what a solution actually touches, and the only reliable way to see external logic from inside a solution."
+    },
+    {
+      "id": "customConnector",
+      "name": "Custom connector",
+      "domain": "integration",
+      "craft": "proCode",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "countsTowardRatio": true,
+      "attributes": [
+        "authenticationType",
+        "operationCount",
+        "hasSwaggerDefinition",
+        "hasPolicyTemplates"
+      ]
+    },
+    {
+      "id": "serviceEndpoint",
+      "name": "Service endpoint",
+      "domain": "integration",
+      "craft": "external",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "countsTowardRatio": true,
+      "attributes": [
+        "contract",
+        "messageFormat",
+        "authType",
+        "url"
+      ],
+      "note": "A webhook or a Service Bus endpoint. Proof that logic left the platform, and the only kind of proof this tool gets without a subscription reader role."
+    },
+    {
+      "id": "environmentVariable",
+      "name": "Environment variable",
+      "domain": "integration",
+      "craft": "config",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "countsTowardRatio": false,
+      "attributes": [
+        "type",
+        "hasDefaultValue",
+        "hasCurrentValue",
+        "isSecret"
+      ],
+      "note": "A default value shipped in a managed solution is a configuration value that will be wrong in production and will look right in the maker portal."
+    },
+    {
+      "id": "dataflow",
+      "name": "Dataflow",
+      "domain": "integration",
+      "craft": "lowCode",
+      "lifecycle": "dated",
+      "evidence": [
+        "metadata"
+      ],
+      "countsTowardRatio": true,
+      "lifecycleVerification": "inferred",
+      "lifecycleCheckedOn": "2026-09-18",
+      "lifecycleNote": "Never deprecated and never finished. No PAC CLI support and no useful API for cataloguing, which means a dataflow is invisible to almost every governance tool including the ALM pipeline it is supposed to travel in. Flagged because the operational risk is real, not because Microsoft has said anything."
+    },
+    {
+      "id": "copilotStudioAgent",
+      "name": "Copilot Studio agent",
+      "domain": "ai",
+      "craft": "lowCode",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "countsTowardRatio": true,
+      "attributes": [
+        "topicCount",
+        "hasGenerativeAnswers",
+        "knowledgeSourceCount",
+        "publishedState",
+        "usesRealtimeVoice"
+      ]
+    },
+    {
+      "id": "aiPrompt",
+      "name": "AI prompt",
+      "domain": "ai",
+      "craft": "lowCode",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata"
+      ],
+      "countsTowardRatio": true
+    },
+    {
+      "id": "aiBuilderModel",
+      "name": "AI Builder model",
+      "domain": "ai",
+      "craft": "lowCode",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata"
+      ],
+      "countsTowardRatio": true,
+      "attributes": [
+        "modelType",
+        "statecode",
+        "lastTrainedUtc"
+      ]
+    },
+    {
+      "id": "securityRole",
+      "name": "Security role",
+      "domain": "security",
+      "craft": "config",
+      "lifecycle": "current",
+      "solutionComponentType": 20,
+      "evidence": [
+        "metadata"
+      ],
+      "countsTowardRatio": false,
+      "attributes": [
+        "isCustom",
+        "userCount",
+        "teamCount",
+        "hasOrganisationLevelWrite",
+        "hasPrivilegeToAllTables"
+      ]
+    },
+    {
+      "id": "fieldSecurityProfile",
+      "name": "Field security profile",
+      "domain": "security",
+      "craft": "config",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata"
+      ],
+      "countsTowardRatio": false
+    },
+    {
+      "id": "report",
+      "name": "Report",
+      "domain": "analytics",
+      "craft": "proCode",
+      "lifecycle": "dated",
+      "solutionComponentType": 31,
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "countsTowardRatio": true,
+      "lifecycleVerification": "inferred",
+      "lifecycleNote": "RDL. Supported and going nowhere new. Every report here is a candidate for Power BI, and each one costs real hours to move, which is why it is inventoried per report rather than summarised."
+    },
+    {
+      "id": "dashboard",
+      "name": "Dashboard",
+      "domain": "analytics",
+      "craft": "config",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "countsTowardRatio": false,
+      "attributes": [
+        "isInteractive",
+        "componentCount",
+        "hasPowerBiComponent"
+      ]
+    },
+    {
+      "id": "chart",
+      "name": "Chart",
+      "domain": "analytics",
+      "craft": "config",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "countsTowardRatio": false
+    },
+    {
+      "id": "solution",
+      "name": "Solution",
+      "domain": "platform",
+      "craft": "config",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "countsTowardRatio": false,
+      "attributes": [
+        "isManaged",
+        "version",
+        "publisherPrefix",
+        "componentCount",
+        "dependencyCount",
+        "installedOn",
+        "upgradeAvailable",
+        "isPatch"
+      ]
+    },
+    {
+      "id": "publisher",
+      "name": "Publisher",
+      "domain": "platform",
+      "craft": "config",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "countsTowardRatio": false,
+      "attributes": [
+        "prefix",
+        "optionValuePrefix",
+        "solutionCount"
+      ]
+    },
+    {
+      "id": "sla",
+      "name": "SLA",
+      "domain": "platform",
+      "craft": "lowCode",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata"
+      ],
+      "countsTowardRatio": true,
+      "attributes": [
+        "statecode",
+        "itemCount",
+        "appliesToEntity"
+      ]
+    },
+    {
+      "id": "duplicateDetectionRule",
+      "name": "Duplicate detection rule",
+      "domain": "platform",
+      "craft": "config",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata"
+      ],
+      "countsTowardRatio": false,
+      "attributes": [
+        "statecode",
+        "baseEntity"
+      ]
+    },
+    {
+      "id": "emailTemplate",
+      "name": "Email template",
+      "domain": "platform",
+      "craft": "content",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "countsTowardRatio": false
+    }
+  ],
+  "complexityRules": {
+    "description": "Every component gets a complexity, measured rather than judged. The deck this was modelled on rated only plugins, scripts and process flows, because the tool behind it could only read code. This product can measure a flow's action count and a form's script weight too, so it rates those as well and says which ones it could not measure.",
+    "levels": {
+      "simple": "Mechanical. Moves or changes without anybody reading it first.",
+      "medium": "Somebody has to understand it before touching it. An hour of reading before an hour of work.",
+      "complex": "A design decision before any work starts. Usually the component that has grown for years.",
+      "unrated": "Not measurable from what this extraction reached. Reported as its own column rather than defaulted to simple, because a chart showing four hundred simple components and forty unread ones is not the same chart as one showing four hundred and forty simple ones."
+    },
+    "rules": [
+      {
+        "componentType": "pluginAssembly",
+        "measure": "sizeBytes",
+        "bands": [
+          {
+            "upTo": 51200,
+            "level": "simple"
+          },
+          {
+            "upTo": 262144,
+            "level": "medium"
+          },
+          {
+            "upTo": null,
+            "level": "complex"
+          }
+        ],
+        "note": "Assembly size stands in for what is inside it. Crude, and it is what an offline read can see. A live connection with the checker gives a better answer and overrides this."
+      },
+      {
+        "componentType": "cloudFlow",
+        "measure": "actionCount",
+        "bands": [
+          {
+            "upTo": 10,
+            "level": "simple"
+          },
+          {
+            "upTo": 40,
+            "level": "medium"
+          },
+          {
+            "upTo": null,
+            "level": "complex"
+          }
+        ]
+      },
+      {
+        "componentType": "classicWorkflowBackground",
+        "measure": "stepCount",
+        "bands": [
+          {
+            "upTo": 5,
+            "level": "simple"
+          },
+          {
+            "upTo": 20,
+            "level": "medium"
+          },
+          {
+            "upTo": null,
+            "level": "complex"
+          }
+        ]
+      },
+      {
+        "componentType": "classicWorkflowRealtime",
+        "measure": "stepCount",
+        "bands": [
+          {
+            "upTo": 5,
+            "level": "medium"
+          },
+          {
+            "upTo": null,
+            "level": "complex"
+          }
+        ],
+        "note": "Starts at medium. A real time workflow runs inside the transaction and there is no such thing as a mechanical replacement for one."
+      },
+      {
+        "componentType": "jsWebResource",
+        "measure": "sizeBytes",
+        "bands": [
+          {
+            "upTo": 4096,
+            "level": "simple"
+          },
+          {
+            "upTo": 40960,
+            "level": "medium"
+          },
+          {
+            "upTo": null,
+            "level": "complex"
+          }
+        ]
+      },
+      {
+        "componentType": "businessProcessFlow",
+        "measure": "stageCount",
+        "bands": [
+          {
+            "upTo": 5,
+            "level": "simple"
+          },
+          {
+            "upTo": 10,
+            "level": "medium"
+          },
+          {
+            "upTo": null,
+            "level": "complex"
+          }
+        ]
+      },
+      {
+        "componentType": "canvasApp",
+        "measure": "screenCount",
+        "bands": [
+          {
+            "upTo": 5,
+            "level": "simple"
+          },
+          {
+            "upTo": 20,
+            "level": "medium"
+          },
+          {
+            "upTo": null,
+            "level": "complex"
+          }
+        ]
+      },
+      {
+        "componentType": "view",
+        "measure": "linkedEntityCount",
+        "bands": [
+          {
+            "upTo": 2,
+            "level": "simple"
+          },
+          {
+            "upTo": 5,
+            "level": "medium"
+          },
+          {
+            "upTo": null,
+            "level": "complex"
+          }
+        ]
+      },
+      {
+        "componentType": "form",
+        "measure": "scriptLibraryCount",
+        "bands": [
+          {
+            "upTo": 1,
+            "level": "simple"
+          },
+          {
+            "upTo": 4,
+            "level": "medium"
+          },
+          {
+            "upTo": null,
+            "level": "complex"
+          }
+        ]
+      },
+      {
+        "componentType": "report",
+        "measure": null,
+        "bands": [
+          {
+            "upTo": null,
+            "level": "complex"
+          }
+        ],
+        "note": "Every RDL report is a design decision rather than a conversion. Rated flat rather than measured."
+      }
+    ],
+    "default": "simple",
+    "defaultNote": "A component type with no rule and no measurable attribute is simple, because a table is a table. A component type WITH a rule whose measure came back empty is unrated, which is a different statement and gets its own column in the chart."
+  }
+}

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>analyzer</AssemblyName>
+    <RootNamespace>PowerPete.Analyzer.Jobs</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PowerPete.Analyzer.Analysis\PowerPete.Analyzer.Analysis.csproj" />
+    <ProjectReference Include="..\PowerPete.Analyzer.Data\PowerPete.Analyzer.Data.csproj" />
+    <ProjectReference Include="..\PowerPete.Analyzer.Dataverse\PowerPete.Analyzer.Dataverse.csproj" />
+    <ProjectReference Include="..\PowerPete.Analyzer.Export\PowerPete.Analyzer.Export.csproj" />
+    <ProjectReference Include="..\PowerPete.Analyzer.Pipeline\PowerPete.Analyzer.Pipeline.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azure.Storage.Blobs" />
+    <PackageReference Include="Azure.Identity" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,684 @@
+/* ---------------------------------------------------------------- primitives --
+   The Capgemini ramp, the same scale the Helix microsite is built on, so the two
+   products look like one company rather than two agencies.
+
+   These are raw values and nothing should reference them directly. The semantic
+   tokens below give them meaning, and rules use those, so a brand refresh is an
+   edit here rather than a search through eight hundred lines. */
+:root {
+  --cap-blue-25: #f0f7ff;
+  --cap-blue-50: #deeeff;
+  --cap-blue-100: #b6d8ff;
+  --cap-blue-200: #87beff;
+  --cap-blue-300: #52a0f5;
+  --cap-blue-400: #2080e0;
+  --cap-blue-500: #006ec8;
+  --cap-blue-600: #0058ab;
+  --cap-blue-700: #00438a;
+  --cap-blue-800: #003069;
+  --cap-blue-900: #001e47;
+
+  --cap-lightblue-25: #f0fbff;
+  --cap-lightblue-50: #def6fe;
+  --cap-lightblue-100: #b4eafd;
+  --cap-lightblue-300: #4ccbf7;
+  --cap-lightblue-600: #1db8f2;
+  --cap-lightblue-700: #0e9ccf;
+
+  --cap-turquoise-400: #33ddd9;
+  --cap-turquoise-600: #00d5d0;
+
+  --cap-ink-900: #121a38;
+  --cap-ink-700: #1f2a4d;
+
+  --grey-white: #ffffff;
+  --grey-2: #f4f4f4;
+  --grey-3: #e0e0e0;
+  --grey-4: #c6c6c6;
+  --grey-6: #8d8d8d;
+  --grey-7: #6f6f6f;
+  --grey-8: #525252;
+  --grey-9: #393939;
+}
+
+:root {
+  color-scheme: light;
+  --cp-bg: var(--cap-blue-25);
+  --cp-bg-elevated: #ffffff;
+  --cp-surface: #ffffff;
+  --cp-surface-soft: var(--grey-2);
+  --cp-border: var(--grey-3);
+  --cp-border-strong: var(--grey-6);
+  --cp-text: #242424;
+  --cp-text-muted: var(--grey-8);
+  --cp-text-soft: var(--grey-7);
+  --cp-accent: var(--cap-blue-600);
+  --cp-accent-hover: var(--cap-blue-700);
+  --cp-accent-soft: rgba(0, 88, 171, 0.08);
+  --cp-accent-fg: #ffffff;
+  --cp-success: #16a34a;
+  --cp-danger: #dc2626;
+  --cp-warning: #f59e0b;
+  --cp-link: var(--cap-blue-600);
+  --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+  --cp-overlay: rgba(255, 255, 255, 0.8);
+  --cp-panel: rgba(255, 255, 255, 0.86);
+  --cp-panel-strong: rgba(255, 255, 255, 0.96);
+  --cp-sheen: rgba(255, 255, 255, 0.55);
+  --cp-highlight: rgba(0, 88, 171, 0.12);
+  --cp-card-shadow: 0 0 2px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.14);
+  --cp-success-soft: rgba(22, 163, 74, 0.1);
+
+  /* Text and hairlines that sit on the brand band or the ink topbar. White in both
+     themes, because those surfaces are dark in both. Distinct from --cp-surface,
+     which is the colour of a card and moves when the theme does: the two were the
+     same value in a product that was only ever light, and only one of them is. */
+  --cp-on-brand: #ffffff;
+
+  /* --brand-blue is the fill of a band or a solid button, and it stays #0058ab in
+     both themes because it carries white text in both. It is never a foreground.
+     Anything drawn ON a surface, an outlined button, a link, a hairline, takes
+     --cp-accent instead, which moves up the ramp when the surface goes dark. The
+     two are the same value in the light theme, so this is a change nobody sees
+     until they switch. */
+  --cp-danger-soft: rgba(220, 38, 38, .12);
+  --cp-warning-soft: rgba(245, 158, 11, .16);
+  --cp-warning-fg: #92610a;
+  --cp-backdrop: rgba(0, 59, 112, .52);
+  --cp-auth-wash: linear-gradient(180deg, #edf4fb 0%, #f7f9fc 100%);
+  --cp-code-bg: #102a43;
+  --cp-code-fg: #f4f7fb;
+  --brand-blue: var(--cap-blue-600);
+  --brand-blue-dark: var(--cap-blue-700);
+  --brand-cyan: var(--cap-lightblue-600);
+  --brand-orange: var(--brand-cyan);
+  --brand-ink: var(--cap-ink-900);
+  --brand-cloud: var(--cap-blue-50);
+  font-family: "Ubuntu", Verdana, "Segoe UI", system-ui, sans-serif;
+  color: var(--cp-text);
+  background: var(--cp-bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+/* Safari on iOS inflates the font of any block it decides is too wide to read, which is
+   every table wide enough to need its own scrollbar. The run's command list went to twice
+   its size on a phone and clipped, while the same page on a laptop was fine. Opting out
+   leaves the sizes the stylesheet chose, and the tables already scroll on their own. */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--cp-bg); color: var(--cp-text); }
+button, input, select, textarea, a { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:focus-visible, a:focus-visible { outline: 3px solid var(--brand-orange); outline-offset: 3px; }
+
+.app-shell { min-height: 100vh; background: var(--cp-bg); }
+.topbar { position: sticky; top: 0; z-index: 20; height: 76px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px 0 18px; background: var(--brand-blue); color: var(--cp-on-brand); border-bottom: 4px solid var(--brand-cyan); }
+.wordmark { display: inline-flex; align-items: center; gap: 16px; color: inherit; text-decoration: none; }
+.wordmark-logo { width: 128px; height: auto; display: block; }
+.product-name { padding-left: 16px; border-left: 1px solid var(--cp-sheen); color: var(--cp-on-brand); font-size: 16px; font-weight: 600; letter-spacing: .08em; line-height: 1; text-transform: uppercase; }
+.wordmark-mark { display: none; }
+.wordmark-spade { display: none; width: 30px; height: auto; }
+.wordmark-mark i { display: block; width: 5px; background: var(--brand-orange); transform: skew(-22deg); }
+.wordmark-mark i:nth-child(1) { height: 13px; }.wordmark-mark i:nth-child(2) { height: 20px; }.wordmark-mark i:nth-child(3) { height: 27px; }
+.topbar-actions { display: flex; align-items: center; gap: 24px; }
+.system-status { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--cp-sheen); }.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--cp-warning); }.system-status.online .status-dot { background: var(--cp-success); }.system-status.offline .status-dot { background: var(--cp-danger); }
+.avatar-button { width: 34px; height: 34px; padding: 0; border: 1px solid var(--cp-sheen); border-radius: 50%; background: transparent; color: var(--cp-on-brand); font-size: 12px; font-weight: 700; }
+/* A column, not a centred grid. place-items centred the top bar as well as the card, which shrank the bar to the width of its own contents and left it floating as a pill in the middle of the page. The bar spans; the card is what should be centred. */
+.auth-shell { display: flex; flex-direction: column; min-height: 100vh; background: var(--cp-auth-wash); }
+.auth-shell > .topbar { width: 100%; }
+.auth-gate { display: grid; place-items: center; width: min(100%, 620px); margin: auto; padding: 24px; }
+.auth-card { width: 100%; padding: clamp(24px, 4vw, 42px); background: var(--cp-surface); border: 1px solid var(--cp-border); border-radius: 16px; box-shadow: var(--cp-shadow); }
+.auth-card h1 { margin: 0 0 12px; color: var(--brand-ink); font-size: clamp(28px, 4vw, 42px); letter-spacing: -.04em; }
+.auth-card .lede { margin: 0 0 24px; }
+.auth-signin { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+.workspace { display: flex; min-height: calc(100vh - 76px); }.sidebar { position: sticky; top: 76px; align-self: flex-start; width: 250px; height: calc(100vh - 76px); display: flex; flex-direction: column; overflow-y: auto; padding: 34px 18px 22px; background: var(--cp-panel-strong); border-right: 1px solid var(--cp-border); }.eyebrow { margin: 0 0 10px; color: var(--cp-accent); font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }.engagement-button { display: flex; width: 100%; justify-content: space-between; padding: 0; border: 0; background: transparent; color: var(--brand-ink); font-size: 15px; font-weight: 700; text-align: left; }.engagement-meta { display: block; margin-top: 7px; color: var(--cp-text-soft); font-size: 11px; }.sidebar nav { display: grid; gap: 4px; margin-top: 46px; }.nav-item { display: flex; align-items: center; gap: 14px; padding: 12px 13px; border: 0; border-left: 3px solid transparent; background: transparent; color: var(--cp-text-muted); text-align: left; font-size: 14px; }.nav-item:hover { background: var(--cp-surface-soft); color: var(--brand-ink); }.nav-item.active { border-left-color: var(--brand-orange); background: var(--brand-cloud); color: var(--brand-ink); font-weight: 700; }.nav-index { width: 20px; color: var(--cp-text-soft); font-family: Consolas, "Courier New", Courier, monospace; font-size: 11px; }.sidebar-footer { display: grid; gap: 12px; margin-top: auto; padding: 20px 13px 0; border-top: 1px solid var(--cp-border); }.sidebar-footer a { color: var(--cp-text-soft); font-size: 12px; text-decoration: none; }.sidebar-footer a:hover { color: var(--cp-accent); text-decoration: underline; }
+.sidebar-link { padding: 0; border: 0; background: transparent; color: var(--cp-text-soft); font-size: 12px; text-align: left; }.sidebar-link:hover { color: var(--cp-accent); text-decoration: underline; }
+.nav-parent { width: 100%; }.nav-parent > span:nth-child(2) { flex: 1; }.nav-caret { width: auto; color: var(--cp-text-soft); font-size: 12px; }.subnav { display: grid; gap: 2px; margin: -2px 0 4px 37px; }.subnav button { padding: 8px 10px; border: 0; border-left: 2px solid transparent; background: transparent; color: var(--cp-text-muted); font-size: 12px; text-align: left; }.subnav button:hover, .subnav button.active { border-left-color: var(--brand-cyan); background: var(--brand-cloud); color: var(--cp-accent); font-weight: 600; }
+.engagement-menu, .tools-popover { position: absolute; z-index: 5; background: var(--cp-surface); border: 1px solid var(--cp-border); box-shadow: var(--cp-card-shadow); }.engagement-switcher, .tools-menu { position: relative; }.engagement-menu { left: 0; right: 0; top: 73px; }/* Anchored to both edges rather than given a width. The sidebar scrolls what it cannot   show, so a 220px menu inside a 213px sidebar did not hang over the edge, it put a   horizontal scrollbar under the navigation. Matching the switcher means it fits at   every sidebar width the breakpoints produce. */.engagement-menu-item, .tools-popover button { display: block; width: 100%; padding: 11px 13px; border: 0; background: var(--cp-surface); color: var(--brand-ink); text-align: left; font-size: 12px; }.engagement-menu-item:hover, .tools-popover button:hover { background: var(--brand-cloud); }.engagement-menu-item span, .tools-popover button span { display: block; margin-top: 3px; color: var(--cp-text-muted); font-size: 11px; }.tools-popover { top: calc(100% + 8px); right: 0; width: 245px; }.button-chevron { font-size: 13px !important; margin-left: 3px; }
+.main-content { width: min(1400px, 100%); padding: 34px clamp(24px, 5vw, 70px) 28px; }.breadcrumb { display: flex; gap: 10px; color: var(--cp-text-soft); font-size: 12px; }.breadcrumb strong { color: var(--brand-ink); }.page-heading { display: flex; align-items: end; justify-content: space-between; gap: 30px; padding: 38px 0 34px; }.page-heading h1 { max-width: none; margin: 0; color: var(--brand-ink); font-size: clamp(30px, 4vw, 52px); font-weight: 600; letter-spacing: -.03em; line-height: 1.03; }.lede { max-width: none; margin: 16px 0 0; color: var(--cp-text-muted); font-size: 16px; line-height: 1.55; }.primary-button, .secondary-button, .text-button { border: 0; font-weight: 700; }.primary-button { display: inline-flex; align-items: center; gap: 10px; padding: 13px 19px; background: var(--brand-blue); color: var(--cp-on-brand); }.primary-button:hover { background: var(--cp-accent-hover); }.primary-button span { font-size: 20px; font-weight: 400; line-height: 0; }.secondary-button { padding: 11px 0; background: transparent; color: var(--cp-accent); text-align: left; }.text-button { padding: 0; background: transparent; color: var(--cp-accent); font-size: 12px; }.text-button:hover, .secondary-button:hover { color: var(--cp-accent-hover); text-decoration: underline; }
+.full-page-view { padding: 12px 0 50px; }.page-view-header { display: flex; align-items: end; justify-content: space-between; gap: 24px; padding: 28px 0 32px; }.page-view-header.compact { align-items: start; }.page-view-header h1 { margin: 0; color: var(--brand-ink); font-size: 36px; font-weight: 500; letter-spacing: -.02em; }.back-link { padding: 0; margin-bottom: 18px; border: 0; background: transparent; color: var(--cp-accent); font-size: 12px; font-weight: 600; }.back-link:hover { text-decoration: underline; }.form-panel, .detail-panel { padding: 24px; background: var(--cp-surface); border: 1px solid var(--cp-border); border-radius: 6px; }.setup-grid { grid-template-columns: 1fr 1fr; gap: 18px 24px; }.full-field { grid-column: 1 / -1; }.page-actions { display: flex; justify-content: space-between; margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--cp-border); }.detail-tabs { display: flex; gap: 2px; margin-bottom: 16px; border-bottom: 1px solid var(--cp-border); }.detail-tabs button { padding: 11px 15px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--cp-text-muted); font-size: 13px; font-weight: 600; }.detail-tabs button.active { border-bottom-color: var(--cp-accent); color: var(--cp-accent); }.connection-row { display: flex; align-items: center; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid var(--cp-border); }.connection-row strong, .connection-row span { display: block; }.connection-row strong { color: var(--brand-ink); font-size: 14px; }.connection-row span { margin-top: 3px; color: var(--cp-text-muted); font-size: 12px; }.detail-placeholder { min-height: 220px; }.row-arrow { color: var(--cp-accent); font-size: 18px; }.admin-row-button { width: 100%; cursor: pointer; text-align: left; }
+.metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }.metric-card { min-height: 148px; padding: 22px; background: var(--cp-surface); border: 1px solid var(--cp-border); border-top: 4px solid var(--cp-border-strong); box-shadow: 0 0 2px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.14); }.metric-primary { border-top-color: var(--brand-orange); }.metric-label { display: block; color: var(--cp-text-muted); font-size: 12px; }.metric-card strong { display: block; margin: 18px 0 8px; color: var(--brand-ink); font-size: 31px; font-weight: 600; letter-spacing: -.04em; }.metric-note { color: var(--cp-text-soft); font-size: 11px; }.metric-note.positive { color: var(--cp-success); }
+.content-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(280px, .8fr); gap: 14px; margin-top: 14px; }.panel { background: var(--cp-surface); border: 1px solid var(--cp-border); box-shadow: 0 0 2px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.14); }.panel-heading { display: flex; align-items: start; justify-content: space-between; gap: 18px; padding: 23px 23px 20px; border-bottom: 1px solid var(--cp-border); }.panel h2 { margin: 0; color: var(--brand-ink); font-size: 20px; font-weight: 600; }.table-wrap { overflow-x: auto; }table { width: 100%; border-collapse: collapse; font-size: 13px; }th, td { padding: 17px 23px; border-bottom: 1px solid var(--cp-border); text-align: left; white-space: nowrap; }thead th { color: var(--cp-text-soft); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }tbody th { color: var(--brand-ink); font-weight: 600; }tbody tr:last-child th, tbody tr:last-child td { border-bottom: 0; }.tag { display: inline-block; padding: 5px 8px; background: var(--brand-cloud); color: var(--cp-accent); font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }.tag.review { background: var(--cp-accent-soft); color: var(--cp-accent-hover); }.tag.complete { background: var(--cp-success-soft); color: var(--cp-success); }.run-panel { padding-bottom: 22px; }.run-date { padding: 22px 23px 12px; color: var(--cp-text-muted); font-size: 13px; }.progress-line { height: 5px; margin: 13px 23px 10px; background: var(--cp-surface-soft); }.progress-line span { display: block; height: 100%; background: var(--cp-success); }.run-meta { display: flex; justify-content: space-between; padding: 0 23px 24px; color: var(--cp-text-soft); font-size: 11px; }.run-panel .secondary-button { margin: 0 23px; }
+.dashboard-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }.dashboard-panel { min-width: 0; }.volume-map, .quadrant-list { display: grid; gap: 16px; padding: 22px 23px; }.volume-row { display: grid; grid-template-columns: minmax(130px, 1fr) minmax(80px, 1.4fr) 44px; align-items: center; gap: 12px; }.volume-row strong, .volume-row small, .quadrant-row strong, .quadrant-row small { display: block; }.volume-row strong, .quadrant-row strong { color: var(--brand-ink); font-size: 13px; }.volume-row small, .quadrant-row small { margin-top: 4px; color: var(--cp-text-muted); font-size: 11px; }.volume-row b { color: var(--cp-accent); font-size: 12px; text-align: right; }.volume-track { height: 10px; background: var(--cp-surface-soft); }.volume-track span { display: block; height: 100%; background: var(--brand-cyan); }.quadrant-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--cp-border); }.quadrant-row:last-child { padding-bottom: 0; border-bottom: 0; }
+.dashboard-empty { margin: 20px 23px; color: var(--cp-text-muted); font-size: 12px; line-height: 1.5; }.trend-list { display: grid; gap: 12px; padding: 20px 23px; }.trend-row { display: grid; grid-template-columns: 58px minmax(0,1fr) 64px; align-items: center; gap: 10px; color: var(--cp-text-muted); font-size: 11px; }.trend-row strong { color: var(--brand-ink); text-align: right; font-size: 11px; }.trend-bar { height: 8px; background: var(--cp-surface-soft); }.trend-bar span { display: block; height: 100%; background: var(--brand-cyan); }
+.notice { display: flex; align-items: center; gap: 14px; margin-top: 14px; padding: 18px 22px; background: var(--cp-surface); border-left: 4px solid var(--brand-orange); border-top: 1px solid var(--cp-border); border-right: 1px solid var(--cp-border); border-bottom: 1px solid var(--cp-border); }.notice-mark { display: grid; width: 25px; height: 25px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: var(--brand-orange); color: var(--brand-ink); font-weight: 800; }.notice strong { color: var(--brand-ink); font-size: 13px; }.notice p { margin: 4px 0 0; color: var(--cp-text-muted); font-size: 12px; }.notice .text-button { margin-left: auto; white-space: nowrap; }.page-footer { display: flex; justify-content: space-between; gap: 20px; padding-top: 28px; color: var(--cp-text-soft); font-size: 11px; }.empty-view { max-width: 720px; padding: 66px 0; }.empty-number { display: block; margin-bottom: 24px; color: var(--brand-orange); font-family: Consolas, "Courier New", Courier, monospace; font-size: 14px; }.empty-view h2 { max-width: 530px; margin: 0; color: var(--brand-ink); font-size: 36px; font-weight: 600; letter-spacing: -.03em; }.empty-view > p:last-child { max-width: 500px; color: var(--cp-text-muted); line-height: 1.6; }
+.documentation-page, .support-page { max-width: 900px; padding: 12px 0 50px; }.documentation-intro, .support-intro { padding: 26px 0; }.documentation-intro h2, .support-intro h2 { margin: 0; color: var(--brand-ink); font-size: 30px; font-weight: 600; }.documentation-intro p, .support-intro p { max-width: 650px; color: var(--cp-text-muted); line-height: 1.55; }.documentation-intro .field-label { max-width: 440px; }.documentation-list { display: grid; border-top: 1px solid var(--cp-border); }.documentation-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 18px; border: 1px solid var(--cp-border); border-top: 0; background: var(--cp-surface); color: var(--brand-ink); text-align: left; }.documentation-row:hover { background: var(--brand-cloud); }.documentation-row strong, .documentation-row small { display: block; }.documentation-row strong { font-size: 15px; }.documentation-row small { margin-top: 5px; color: var(--cp-text-muted); font-size: 12px; }.documentation-reader { min-width: 0; padding: 28px; background: var(--cp-surface); border: 1px solid var(--cp-border); }.documentation-reader h1 { margin: 8px 0 22px; color: var(--brand-ink); font-size: 34px; }.documentation-reader h2 { margin: 30px 0 12px; color: var(--brand-ink); font-size: 22px; }.documentation-reader h3 { margin: 22px 0 10px; color: var(--brand-ink); font-size: 17px; }.documentation-reader p, .documentation-reader li { color: var(--cp-text-muted); line-height: 1.65; }.documentation-reader code { padding: 2px 5px; background: var(--cp-surface-soft); color: var(--brand-ink); font-family: Consolas, "Courier New", Courier, monospace; font-size: .9em; }.documentation-reader pre { overflow-x: auto; padding: 16px; background: var(--cp-code-bg); color: var(--cp-code-fg); }.documentation-reader pre code { padding: 0; background: transparent; color: inherit; }.documentation-table-wrap { width: 100%; margin: 16px 0; overflow-x: auto; border: 1px solid var(--cp-border); }.documentation-table-wrap table { width: max-content; min-width: 100%; margin: 0; }.documentation-table-wrap th, .documentation-table-wrap td { white-space: normal; vertical-align: top; }.documentation-reader a, .documentation-inline-link { color: var(--cp-accent); font-weight: 700; }.documentation-inline-link { padding: 0; border: 0; background: transparent; text-decoration: underline; cursor: pointer; }.support-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }.support-grid > div { display: grid; gap: 10px; min-height: 150px; padding: 22px; border-top: 4px solid var(--brand-cyan); background: var(--cp-surface); box-shadow: var(--cp-card-shadow); }.support-grid span { color: var(--cp-text-soft); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }.support-grid strong { color: var(--brand-ink); font-size: 15px; line-height: 1.45; }.support-footer { display: grid; gap: 11px; margin-top: 22px; padding: 24px 0; border-top: 1px solid var(--cp-border-strong); color: var(--cp-text-muted); font-size: 12px; line-height: 1.5; }.support-footer strong { color: var(--brand-ink); font-size: 15px; }.support-footer div { display: flex; flex-wrap: wrap; gap: 16px; }.support-footer a { color: var(--cp-accent); font-weight: 700; text-decoration: none; }.support-footer a:hover { text-decoration: underline; }
+.taxonomy-layout { display: grid; grid-template-columns: minmax(280px, .75fr) minmax(0, 1.25fr); gap: 14px; }.taxonomy-items { display: grid; }.taxonomy-item { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 18px; border: 0; border-bottom: 1px solid var(--cp-border); background: var(--cp-surface); text-align: left; }.taxonomy-item:hover, .taxonomy-item.active { background: var(--brand-cloud); }.taxonomy-item strong, .taxonomy-item small { display: block; }.taxonomy-item strong { color: var(--brand-ink); font-size: 14px; }.taxonomy-item small { margin-top: 4px; color: var(--cp-text-muted); font-size: 11px; }.taxonomy-detail-body { padding: 24px; }.taxonomy-detail-body dl { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin: 0 0 24px; }.taxonomy-detail-body dt { color: var(--cp-text-soft); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }.taxonomy-detail-body dd { margin: 5px 0 0; color: var(--brand-ink); font-size: 13px; }.taxonomy-detail-body > p { color: var(--cp-text-muted); line-height: 1.55; }.taxonomy-empty { padding: 24px; color: var(--cp-text-muted); line-height: 1.5; }.curation-actions { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--cp-border); }.curation-actions > div { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 20px; }.curation-secondary-actions { justify-content: flex-start !important; }.curation-actions .primary-button { padding: 11px 15px; }.taxonomy-help { margin-top: 26px !important; padding-top: 18px; border-top: 1px solid var(--cp-border); font-size: 12px; }
+.taxonomy-history { display: grid; gap: 8px; margin-top: 14px; padding: 14px; background: var(--cp-surface-soft); border-left: 3px solid var(--brand-cyan); }.taxonomy-history div { display: grid; gap: 3px; }.taxonomy-history strong { color: var(--brand-ink); font-size: 12px; }.taxonomy-history span { color: var(--cp-text-muted); font-size: 11px; }.split-panel { display: grid !important; justify-content: stretch !important; gap: 14px; margin-top: 20px; padding: 16px; background: var(--cp-surface-soft); border: 1px solid var(--cp-border); }.split-label { color: var(--brand-ink); font-size: 12px; font-weight: 700; }.split-assignments { display: grid; max-height: 220px; overflow: auto; border: 1px solid var(--cp-border); background: var(--cp-surface); }.split-assignments label { display: flex; align-items: center; gap: 9px; padding: 10px; border-bottom: 1px solid var(--cp-border); color: var(--cp-text-muted); font-size: 12px; }.split-assignments label:last-child { border-bottom: 0; }
+.wizard-actions { display: flex; align-items: center; gap: 18px; }.wizard-actions button:disabled { cursor: default; opacity: .65; }
+.sign-in-link, .dev-account { color: var(--cp-on-brand); font-size: 12px; text-decoration: none; }.sign-in-link:hover { text-decoration: underline; }.dev-account { opacity: .72; }
+.account-menu { display: flex; align-items: center; gap: 12px; color: var(--cp-on-brand); font-size: 12px; }.account-menu > span { opacity: .82; }.account-menu a { color: inherit; font-weight: 700; text-decoration: none; }.account-menu a:hover { text-decoration: underline; }
+.admin-view { padding-top: 12px; }.admin-heading { display: flex; justify-content: space-between; gap: 24px; padding: 22px 0; }.admin-heading h2 { margin: 0; color: var(--brand-ink); font-size: 22px; font-weight: 500; }.admin-list { display: grid; gap: 10px; }.admin-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 18px; background: var(--cp-surface); border: 1px solid var(--cp-border); border-radius: 6px; }.admin-row strong, .admin-row span, .admin-row small { display: block; }.admin-row strong { color: var(--brand-ink); font-size: 15px; font-weight: 600; }.admin-row span, .admin-row small { margin-top: 4px; color: var(--cp-text-muted); font-size: 12px; }.admin-actions { display: flex; gap: 16px; }.danger-link { color: var(--cp-danger); }
+.access-form { display: grid; grid-template-columns: 1.5fr .8fr auto; align-items: end; gap: 12px; }.access-form .primary-button { margin: 0 0 1px; white-space: nowrap; }.access-form.users-form { grid-template-columns: 1.3fr 1fr .7fr auto; }.access-list { display: grid; gap: 0; margin-top: 24px; border-top: 1px solid var(--cp-border); }.access-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--cp-border); }.access-row strong, .access-row small { display: block; }.access-row strong { color: var(--brand-ink); font-size: 13px; }.access-row small { margin-top: 3px; color: var(--cp-text-muted); font-size: 11px; }
+.field-label input, .field-label select, .field-label textarea { width: 100%; min-height: 34px; padding: 6px 8px; border: 1px solid var(--cp-border); border-radius: 6px; background: var(--cp-surface); color: var(--cp-text); font: inherit; font-size: 14px; font-weight: 400; }.field-label input:focus, .field-label select:focus, .field-label textarea:focus { border-color: var(--cp-accent); outline: 2px solid var(--cp-accent-soft); outline-offset: 1px; }.field-label textarea { resize: vertical; }.wizard-section-label { margin-top: 12px; padding-top: 18px; border-top: 1px solid var(--cp-border); color: var(--cp-accent); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.forecast-page-content { width: min(850px, 100%); margin: 0 auto; background: var(--cp-surface); border: 1px solid var(--cp-border); border-top: 5px solid var(--brand-cyan); border-radius: 6px; box-shadow: var(--cp-card-shadow); }.forecast-page-content .modal-header { padding: 22px 26px; }.forecast-page-content .icon-button { display: none; }.forecast-page-content .wizard-body { padding: 26px; }.forecast-page-content .wizard-foot { margin-top: 30px; }
+.modal-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 24px; background: var(--cp-backdrop); }
+.forecast-modal { width: min(720px, 100%); max-height: calc(100vh - 48px); overflow: auto; background: var(--cp-surface); border-top: 5px solid var(--brand-cyan); box-shadow: 0 20px 60px rgba(0, 43, 82, .28); }
+.modal-header { display: flex; align-items: start; justify-content: space-between; gap: 20px; padding: 26px 30px 20px; border-bottom: 1px solid var(--cp-border); }.modal-header h2 { margin: 0; color: var(--brand-ink); font-size: 28px; font-weight: 600; }.icon-button { width: 32px; height: 32px; border: 1px solid var(--cp-border); background: transparent; color: var(--cp-text-muted); font-size: 23px; line-height: 1; }.icon-button:hover { border-color: var(--cp-accent); color: var(--cp-accent); }
+.wizard-steps { display: flex; gap: 24px; padding: 14px 30px; background: var(--brand-cloud); color: var(--cp-text-soft); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }.wizard-steps span.current { color: var(--cp-accent); }.wizard-body { padding: 28px 30px 30px; }.wizard-body h3 { margin: 0; color: var(--brand-ink); font-size: 22px; font-weight: 600; }.wizard-help { max-width: 590px; margin: 9px 0 24px; color: var(--cp-text-muted); line-height: 1.55; }.choice-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 24px; }.choice-card { min-height: 112px; padding: 16px; border: 1px solid var(--cp-border); background: var(--cp-bg-elevated); color: var(--cp-text); text-align: left; }.choice-card:hover, .choice-card.selected { border-color: var(--cp-accent); box-shadow: inset 0 0 0 1px var(--brand-blue); }.choice-card strong, .choice-card span { display: block; }.choice-card strong { margin-bottom: 8px; color: var(--brand-ink); font-size: 14px; }.choice-card span { color: var(--cp-text-muted); font-size: 12px; line-height: 1.4; }.field-label { display: grid; gap: 8px; margin-top: 16px; color: var(--brand-ink); font-size: 13px; font-weight: 700; }.field-label input[type="number"] { width: 100%; padding: 12px; border: 1px solid var(--cp-border-strong); color: var(--cp-text); font: inherit; }.field-label output { margin-left: auto; color: var(--cp-accent); font-weight: 700; }.field-label input[type="range"] { width: 100%; accent-color: var(--cp-accent); }.form-grid { display: grid; gap: 20px; }.wizard-callout { display: grid; gap: 5px; margin-top: 24px; padding: 15px 17px; border-left: 4px solid var(--brand-cyan); background: var(--brand-cloud); }.wizard-callout strong { color: var(--brand-ink); font-size: 13px; }.wizard-callout span { color: var(--cp-text-muted); font-size: 12px; line-height: 1.5; }.wizard-callout.warning { border-left-color: var(--brand-orange); }.wizard-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--cp-border); }.wizard-foot > span { color: var(--cp-text-soft); font-size: 12px; }.forecast-total { display: grid; gap: 7px; margin: 22px 0; padding: 22px; background: var(--brand-blue); color: var(--cp-on-brand); }.forecast-total span { font-size: 12px; }.forecast-total strong { font-size: 42px; font-weight: 600; letter-spacing: -.04em; }.forecast-total small { color: rgba(255,255,255,.78); font-size: 11px; }.breakdown { display: grid; gap: 0; border-top: 1px solid var(--cp-border); }.breakdown div { display: flex; justify-content: space-between; gap: 20px; padding: 13px 0; border-bottom: 1px solid var(--cp-border); color: var(--cp-text-muted); font-size: 13px; }.breakdown strong { color: var(--brand-ink); }
+/* ------------------------------------------------------------- mobile menu --
+   Hidden on anything wide enough for the rail. The rail itself is the menu
+   there, and a hamburger beside a visible menu is a second way to do one thing. */
+.menu-toggle { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 44px; height: 44px; padding: 0; border: 0; background: none; cursor: pointer; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+@media (max-width: 980px) { .sidebar { width: 210px; }.metrics-grid { grid-template-columns: repeat(2, 1fr); }.content-grid, .taxonomy-layout, .dashboard-grid { grid-template-columns: 1fr; } }
+@media (max-width: 680px) { .topbar { height: 68px; padding: 0 14px; }.topbar-actions { gap: 8px; }.account-menu > span { display: none; }.system-status { display: none; }.dev-account { display: none; }.workspace { display: block; }.menu-toggle { display: inline-flex; }.sidebar { display: none; }.sidebar.open { position: static; display: block; width: 100%; height: auto; overflow: visible; padding: 16px 20px 20px; border-right: 0; border-bottom: 1px solid var(--cp-border); }.sidebar nav { display: block; margin-top: 16px; }.nav-item { width: 100%; border-left: 0; border-bottom: 1px solid var(--cp-border); }.nav-item.active { background: var(--brand-cloud); border-left: 3px solid var(--brand-orange); }.nav-parent { width: 100%; }.subnav { display: block; padding-left: 34px; }.sidebar-footer { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 16px; padding: 14px 0 0; }.engagement-menu { position: static; width: 100%; }.main-content { padding: 24px 20px; }.page-heading, .page-view-header { display: block; padding: 28px 0; }.page-heading h1 { font-size: 35px; }.primary-button { margin-top: 24px; }.metrics-grid { gap: 10px; }.metric-card { min-height: 130px; padding: 16px; }.metric-card strong { margin-top: 16px; font-size: 26px; }.metric-label { line-height: 1.3; }.panel-heading { display: block; }.panel-heading .text-button, .panel-heading .tag { display: inline-block; margin-top: 14px; }.notice { align-items: start; flex-wrap: wrap; }.notice .text-button { margin-left: 39px; }.page-footer { display: block; line-height: 1.8; }.wordmark-logo { width: 112px; }.product-name { font-size: 14px; }.choice-grid { grid-template-columns: 1fr; }.wizard-steps { gap: 10px; padding-left: 20px; padding-right: 20px; font-size: 9px; }.modal-header, .wizard-body { padding-left: 20px; padding-right: 20px; }.forecast-total strong { font-size: 34px; } }
+@media (max-width: 680px) { .support-grid { grid-template-columns: 1fr; } }
+@media (max-width: 680px) { .access-form { grid-template-columns: 1fr; }.access-form .primary-button { width: 100%; } }
+
+/* ----------------------------------------------------------- no side scroll --
+   A page that scrolls sideways on a phone reads as broken even when nothing is
+   missing. Wide things scroll inside themselves instead. */
+@media (max-width: 680px) {
+  html, body { overflow-x: hidden; }
+  .main-content { min-width: 0; max-width: 100vw; }
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .metrics-grid { grid-template-columns: 1fr; }
+  .delta-periods { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .delta-arrow { transform: rotate(90deg); }
+  .run-actions { flex-direction: column; align-items: stretch; }
+  .run-actions .primary-button, .run-actions .secondary-button { width: 100%; margin-top: 0; }
+  .delta-picker { width: 100%; }
+  .inline-select select { flex: 1; min-width: 0; }
+  .connector-grid { grid-template-columns: 1fr; }
+  .form-grid { grid-template-columns: 1fr; }
+  .run-facts-list { grid-template-columns: 1fr; }
+  .wizard-foot { flex-direction: column; align-items: stretch; gap: 12px; }
+  .wizard-foot .primary-button, .wizard-foot .secondary-button { width: 100%; margin-top: 0; }
+}
+
+/* The language switcher in the top bar. Native names rather than flags, because several of
+   these languages are spoken in more than one country. */
+/* appearance: none is doing the work here. A select left at appearance: auto is painted by
+   the platform, which ignores the background it was given and draws a light grey control on
+   the ink bar whatever the page asked for. Dropping the native appearance means drawing the
+   chevron, which is the svg in the background shorthand. The popup list is still the
+   platform's, so its colours are stated separately on the options. */
+.language-picker select {
+  appearance: none;
+  padding: 6px 26px 6px 10px;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 22px;
+  background-color: rgba(255, 255, 255, .08);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%23ffffff' stroke-width='1.6'%3E%3Cpath d='M1 1.5 6 6.5l5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 10px 7px;
+  color: var(--cp-on-brand);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.language-picker select:hover { background-color: rgba(255, 255, 255, .14); }
+.language-picker option { background: var(--cap-ink-900); color: #fff; }
+.language-picker select:hover, .language-picker select:focus-visible { border-color: var(--cp-on-brand); }
+.language-picker option { color: var(--brand-ink); background: var(--cp-surface); }
+@media (max-width: 680px) { .language-picker select { padding: 4px 6px; font-size: 11px; } }
+
+/* ------------------------------------------------------------ system health --
+   Colour carries the state here, because the page is scanned rather than read:
+   somebody opens it to find the one red row among a dozen green ones. The word
+   is kept alongside the colour so the meaning survives a monochrome print and a
+   reader who cannot separate red from green. */
+.health-row { border-left: 4px solid var(--cp-border-strong); }
+.health-row.ok { border-left-color: var(--cp-success); }
+.health-row.degraded { border-left-color: var(--cp-warning); }
+.health-row.failed { border-left-color: var(--cp-danger); }
+.health-row.notconfigured { border-left-color: var(--cp-border-strong); }
+
+.health-row pre.config-json { margin-top: 10px; white-space: pre-wrap; word-break: break-word; }
+
+.tag.success { background: var(--cp-success-soft); color: var(--cp-success); }
+.tag.warning { background: var(--cp-warning-soft); color: var(--cp-warning-fg); }
+.tag.danger { background: var(--cp-danger-soft); color: var(--cp-danger); }
+
+/* ================================================================ refinements ==
+   Brought across from the Helix microsite so the product and the marketing site
+   read as one piece of design. Three things carry most of that look: headline
+   weight, a real elevation scale, and content that arrives rather than appears.
+
+   Appended rather than folded into the rules above, so what changed is legible
+   in a diff and reversible in one block. */
+
+:root {
+  /* An elevation scale instead of one flat shadow. Depth should say how far a
+     surface is from the page, and a single value cannot. */
+  --elev-1: 0 1px 2px rgba(18, 26, 56, .06), 0 1px 3px rgba(18, 26, 56, .08);
+  --elev-2: 0 2px 6px rgba(18, 26, 56, .07), 0 6px 16px rgba(18, 26, 56, .08);
+  --elev-3: 0 8px 20px rgba(18, 26, 56, .10), 0 18px 48px rgba(18, 26, 56, .12);
+
+  --ease-out: cubic-bezier(.22, .61, .36, 1);
+  --cp-card-shadow: var(--elev-1);
+  --cp-shadow: var(--elev-3);
+}
+
+/* Headlines carry the brand more than any other element. Light and large is the
+   Capgemini voice; semibold at the same size reads as a dashboard.
+
+   Tracking measured against capgemini.com rather than guessed: their headings run
+   at letter-spacing normal and their body copy at slightly positive tracking. This
+   had headings at -.02em, tighter than the brand and in the opposite direction, which
+   is the sort of thing nobody names but everybody registers as "not quite ours".
+
+   The big numerals keep their tightening. That is a figure, not a headline, and a
+   4em-tall number set at normal tracking drifts apart. */
+.page-heading h1,
+.page-view-header h1,
+.auth-card h1,
+.empty-view h2,
+.panel h2,
+.detail-panel h2,
+.documentation-reader h1,
+.documentation-reader h2 {
+  font-weight: 300;
+  letter-spacing: normal;
+}
+
+/* Panel headings sit above a table rather than opening a page, so they stay a step
+   heavier than a page title at the same tracking. */
+.panel h2,
+.detail-panel h2 {
+  font-weight: 400;
+}
+
+/* Surfaces lift on approach rather than sitting flat. */
+.metric-card,
+.panel,
+.detail-panel,
+.support-grid > div {
+  transition: box-shadow .28s var(--ease-out), transform .28s var(--ease-out);
+}
+
+.metric-card:hover,
+.support-grid > div:hover {
+  box-shadow: var(--elev-2);
+  transform: translateY(-2px);
+}
+
+/* Content arrives. Staggered by position so a dashboard assembles itself rather
+   than flashing into place all at once. */
+@keyframes cp-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.metrics-grid > *,
+.content-grid > *,
+.dashboard-grid > *,
+.admin-list > *,
+.support-grid > div {
+  animation: cp-rise .45s var(--ease-out) both;
+}
+
+.metrics-grid > :nth-child(2),
+.dashboard-grid > :nth-child(2),
+.content-grid > :nth-child(2) { animation-delay: .06s; }
+
+.metrics-grid > :nth-child(3),
+.dashboard-grid > :nth-child(3) { animation-delay: .12s; }
+
+.metrics-grid > :nth-child(4) { animation-delay: .18s; }
+
+/* A focus ring that belongs to the palette, and is visible on every surface. */
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--cap-blue-600);
+  outline-offset: 2px;
+}
+
+/* Motion is decoration. Anyone who has asked for less of it gets none. */
+@media (prefers-reduced-motion: reduce) {
+  .metrics-grid > *,
+  .content-grid > *,
+  .dashboard-grid > *,
+  .admin-list > *,
+  .support-grid > div { animation: none; }
+
+  .metric-card,
+  .panel,
+  .detail-panel,
+  .support-grid > div { transition: none; }
+
+  .metric-card:hover,
+  .support-grid > div:hover { transform: none; }
+}
+
+/* The header band in ink rather than brand blue.
+   The report's cover band is ink navy and the microsite's dark surfaces are the
+   same, so a bright blue bar was the one place the product disagreed with both. */
+.topbar { background: var(--cap-ink-900); }
+
+/* Metric cards take the accent sequence the report's cover tiles use, in the same
+   order, so a reader who has both open sees the same four measures marked the same
+   four ways rather than one grey row and one coloured one. */
+.metrics-grid > :nth-child(1) .metric-card,
+.metrics-grid > :nth-child(1).metric-card { border-top-color: var(--cap-ink-900); }
+.metrics-grid > :nth-child(2) .metric-card,
+.metrics-grid > :nth-child(2).metric-card { border-top-color: var(--cap-blue-600); }
+.metrics-grid > :nth-child(3) .metric-card,
+.metrics-grid > :nth-child(3).metric-card { border-top-color: var(--cap-lightblue-600); }
+.metrics-grid > :nth-child(4) .metric-card,
+.metrics-grid > :nth-child(4).metric-card { border-top-color: var(--cap-turquoise-600); }
+
+/* The page sits on the palest blue rather than a grey, which is what lifts the
+   white cards off it. Through the token, so the dark theme can move it. */
+body { background: var(--cp-bg); }
+
+/* ====================================================================== dark ==
+   One palette, two settings. Every rule above already reads a --cp-* token, so a
+   dark product is a redefinition of the token layer rather than a second
+   stylesheet: nothing below restyles a component, and a rule that needs a new
+   rule here is a rule that was holding a raw colour it should not have had.
+
+   Written twice on purpose. The media query answers to the operating system for
+   anyone who has never chosen, and the attribute overrules the machine for
+   anyone who has. Scoping the media query to :not([data-theme="light"]) is what
+   lets somebody on a dark machine deliberately choose light and keep it.
+
+   Dark is not light inverted. Pure white text on near-black vibrates, so the
+   text sits a step below white; brand blue at #0058ab fails on a dark surface,
+   so links and accents move up the ramp to the 300 and the light blue; and the
+   elevation scale stops being shadow, because a shadow on a dark ground is
+   invisible. Separation comes from the surface being lighter than the page. */
+
+:root {
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { color-scheme: dark; }
+}
+
+:root[data-theme="dark"] { color-scheme: dark; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --cp-bg: #0d1428;
+    --cp-bg-elevated: #18213c;
+    --cp-surface: #151d35;
+    --cp-surface-soft: #1e2745;
+    --cp-border: #2a3559;
+    --cp-border-strong: #3d4a76;
+    --cp-text: #e8edf6;
+    --cp-text-muted: #b3bed4;
+    --cp-text-soft: #8c99b5;
+    --cp-accent: var(--cap-blue-300);
+    --cp-accent-hover: var(--cap-lightblue-300);
+    --cp-accent-soft: rgba(82, 160, 245, .16);
+    --cp-accent-fg: #06101f;
+    --cp-link: var(--cap-blue-300);
+    --cp-success: #4ade80;
+    --cp-danger: #f87171;
+    --cp-warning: #fbbf24;
+    --cp-success-soft: rgba(74, 222, 128, .16);
+    --cp-danger-soft: rgba(248, 113, 113, .16);
+    --cp-warning-soft: rgba(251, 191, 36, .16);
+    --cp-warning-fg: #fbbf24;
+    --cp-overlay: rgba(13, 20, 40, .8);
+    --cp-panel: rgba(21, 29, 53, .86);
+    --cp-panel-strong: #111930;
+    --cp-sheen: rgba(255, 255, 255, .55);
+    --cp-highlight: rgba(82, 160, 245, .18);
+    --cp-backdrop: rgba(3, 7, 18, .7);
+    --cp-auth-wash: linear-gradient(180deg, #0d1428 0%, #111930 100%);
+    --cp-code-bg: #050c1a;
+    --cp-code-fg: #dce6f5;
+    --brand-ink: #e8edf6;
+    --brand-cloud: rgba(82, 160, 245, .14);
+    --elev-1: 0 1px 2px rgba(0, 0, 0, .5);
+    --elev-2: 0 2px 8px rgba(0, 0, 0, .55);
+    --elev-3: 0 12px 40px rgba(0, 0, 0, .6);
+  }
+}
+
+:root[data-theme="dark"] {
+  --cp-bg: #0d1428;
+  --cp-bg-elevated: #18213c;
+  --cp-surface: #151d35;
+  --cp-surface-soft: #1e2745;
+  --cp-border: #2a3559;
+  --cp-border-strong: #3d4a76;
+  --cp-text: #e8edf6;
+  --cp-text-muted: #b3bed4;
+  --cp-text-soft: #8c99b5;
+  --cp-accent: var(--cap-blue-300);
+  --cp-accent-hover: var(--cap-lightblue-300);
+  --cp-accent-soft: rgba(82, 160, 245, .16);
+  --cp-accent-fg: #06101f;
+  --cp-link: var(--cap-blue-300);
+  --cp-success: #4ade80;
+  --cp-danger: #f87171;
+  --cp-warning: #fbbf24;
+  --cp-success-soft: rgba(74, 222, 128, .16);
+  --cp-danger-soft: rgba(248, 113, 113, .16);
+  --cp-warning-soft: rgba(251, 191, 36, .16);
+  --cp-warning-fg: #fbbf24;
+  --cp-overlay: rgba(13, 20, 40, .8);
+  --cp-panel: rgba(21, 29, 53, .86);
+  --cp-panel-strong: #111930;
+  --cp-sheen: rgba(255, 255, 255, .55);
+  --cp-highlight: rgba(82, 160, 245, .18);
+  --cp-backdrop: rgba(3, 7, 18, .7);
+  --cp-auth-wash: linear-gradient(180deg, #0d1428 0%, #111930 100%);
+  --cp-code-bg: #050c1a;
+  --cp-code-fg: #dce6f5;
+  --brand-ink: #e8edf6;
+  --brand-cloud: rgba(82, 160, 245, .14);
+  --elev-1: 0 1px 2px rgba(0, 0, 0, .5);
+  --elev-2: 0 2px 8px rgba(0, 0, 0, .55);
+  --elev-3: 0 12px 40px rgba(0, 0, 0, .6);
+}
+
+/* Two rules the token layer cannot reach on its own.
+
+   --brand-blue stays #0058ab in both themes because it is the topbar's own band
+   and the primary button's fill, both of which carry white text and must keep
+   doing so. Where it is used as a colour on the page background instead, it
+   needs the lighter ramp, and those are the places. */
+/* The focus ring is the one thing still stated per theme. It is drawn outside the
+   element, on whatever happens to be behind it, so it cannot take its colour from
+   the element it belongs to. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) :where(button, a, input, select, textarea):focus-visible {
+    outline-color: var(--cap-lightblue-300);
+  }
+}
+
+:root[data-theme="dark"] :where(button, a, input, select, textarea):focus-visible {
+  outline-color: var(--cap-lightblue-300);
+}
+
+/* ============================================================ theme toggle ==
+   The sun and moon pill, the control Capgemini puts in its own header. Both
+   icons stay visible and the ball moves between them, so it reads as a position
+   rather than as a guess about what pressing it will do.
+
+   It lives in the topbar, which is ink in both themes, so its colours are fixed
+   rather than themed. */
+
+.theme-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 62px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, .08);
+  color: #fff;
+}
+
+.theme-toggle:hover { background: rgba(255, 255, 255, .14); }
+
+.theme-toggle-icon {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  opacity: .6;
+  transition: opacity .25s var(--ease-out);
+}
+
+.theme-toggle[aria-checked="false"] .theme-toggle-icon:first-of-type,
+.theme-toggle[aria-checked="true"] .theme-toggle-icon:last-of-type { opacity: 1; }
+
+.theme-toggle-ball {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--cap-lightblue-600);
+  transition: transform .28s var(--ease-out);
+}
+
+.theme-toggle[aria-checked="true"] .theme-toggle-ball { transform: translateX(30px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle-ball, .theme-toggle-icon { transition: none; }
+}
+
+/* ======================================================= the capgemini button ==
+   Measured off the subscribe button on capgemini.com rather than approximated: a
+   pill at 24px, 14px type at weight 300 with 0.0105em of tracking, 38px tall, 8px
+   by 16px of padding. The product's buttons were square-cornered and weight 700,
+   which is a different design language from both the public site and the brand.
+
+   The hover is the part that carries it. Capgemini does not brighten a border, it
+   fills the shape with a pale grey and flips the text to near black. Both values
+   are theirs.
+
+   Applied to the two that are actually buttons. .text-button and the bare
+   .secondary-button stay as they are, because those are inline links wearing a
+   button class and a pill around them would be wrong. */
+
+:root {
+  --cap-hover-fill: #c7ccd3;
+  --cap-hover-ink: #171a22;
+}
+
+.primary-button,
+.auth-signin,
+.export-actions .primary-button,
+.export-actions .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 38px;
+  padding: 8px 20px;
+  border: 1px solid transparent;
+  border-radius: 24px;
+  font-size: 14px;
+  font-weight: 300;
+  letter-spacing: .0105em;
+  line-height: 1.3;
+  white-space: nowrap;
+  transition: background .2s var(--ease-out), border-color .2s var(--ease-out), color .2s var(--ease-out);
+}
+
+.primary-button,
+.auth-signin,
+.export-actions .primary-button {
+  background: var(--brand-blue);
+  border-color: var(--brand-blue);
+  color: var(--cp-on-brand);
+}
+
+.primary-button:hover,
+.auth-signin:hover,
+.export-actions .primary-button:hover,
+.export-actions .secondary-button:hover {
+  background: var(--cap-hover-fill);
+  border-color: var(--cap-hover-fill);
+  color: var(--cap-hover-ink);
+  text-decoration: none;
+}
+
+.export-actions .secondary-button {
+  background: transparent;
+  border-color: var(--cp-accent);
+  color: var(--cp-accent);
+}
+
+/* The chevron that follows a primary button was sized for a heavier, larger label. */
+.primary-button span { font-size: 16px; }
+
+/* ============================================== the header controls, one height ==
+   The language picker computed to about 28px and the light and dark switch was
+   pinned at 32px, so two controls that sit side by side in the same bar were
+   visibly different sizes. Both are 38px now, which is the height of the button
+   beside them and the height Capgemini gives its own. */
+
+.language-picker select {
+  height: 38px;
+  padding: 0 30px 0 14px;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 300;
+  letter-spacing: .0105em;
+}
+
+.theme-toggle {
+  width: 68px;
+  height: 38px;
+  padding: 0 10px;
+  border-radius: 24px;
+}
+
+.theme-toggle-ball {
+  top: 4px;
+  left: 4px;
+  width: 28px;
+  height: 28px;
+}
+
+.theme-toggle[aria-checked="true"] .theme-toggle-ball { transform: translateX(30px); }
+
+
+/* ================================================= the header on a phone ==
+   Three changes, all of them about the width a phone actually has.
+
+   The lockup gives way to the spade. At 112px wide the wordmark plus the rule
+   plus INTENT MINER left the product name wrapping onto two lines inside a 68px
+   bar, which looks like a fault rather than a layout.
+
+   The burger becomes three bars, the same control the public site uses, rather
+   than a boxed glyph. Two surfaces of one product should not have two different
+   ideas of what a menu button looks like.
+
+   And it moves to the far right, which is where a thumb reaches and where every
+   other application on the device puts it. It is last in the DOM too, so the tab
+   order agrees with the visual order. */
+@media (max-width: 680px) {
+  .wordmark-logo { display: none; }
+  .wordmark-spade { display: block; }
+  .product-name { display: none; }
+  .wordmark { gap: 0; }
+
+  .menu-toggle { display: flex; margin-left: 4px; }
+
+  .menu-toggle span[aria-hidden] {
+    display: block;
+    width: 22px;
+    height: 2px;
+    margin-inline: auto;
+    background: var(--cp-on-brand);
+    transition: transform .3s var(--ease-out), opacity .2s var(--ease-out);
+  }
+
+  .menu-toggle[aria-expanded="true"] span[aria-hidden]:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .menu-toggle[aria-expanded="true"] span[aria-hidden]:nth-child(2) { opacity: 0; }
+  .menu-toggle[aria-expanded="true"] span[aria-hidden]:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-toggle span[aria-hidden] { transition: none; }
+}

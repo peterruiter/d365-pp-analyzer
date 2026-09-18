@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <!-- Test names are sentences. A failing test report is where a name is read most. -->
+    <NoWarn>$(NoWarn);CA1707;CA1034;CA1861</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="NSubstitute" />
+    <PackageReference Include="coverlet.collector" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\PowerPete.Analyzer.Analysis\PowerPete.Analyzer.Analysis.csproj" />
+    <ProjectReference Include="..\..\src\PowerPete.Analyzer.DevOps\PowerPete.Analyzer.DevOps.csproj" />
+    <ProjectReference Include="..\..\src\PowerPete.Analyzer.Estimation\PowerPete.Analyzer.Estimation.csproj" />
+    <ProjectReference Include="..\..\src\PowerPete.Analyzer.Export\PowerPete.Analyzer.Export.csproj" />
+    <ProjectReference Include="..\..\src\PowerPete.Analyzer.Extraction\PowerPete.Analyzer.Extraction.csproj" />
+    <ProjectReference Include="..\..\src\PowerPete.Analyzer.Pipeline\PowerPete.Analyzer.Pipeline.csproj" />
+  </ItemGroup>
+
+</Project>

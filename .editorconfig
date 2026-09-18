@@ -1,0 +1,32 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+
+[*.{json,yml,yaml,md,ts,tsx,js,jsx,css}]
+indent_size = 2
+
+[*.{ps1,psm1}]
+end_of_line = crlf
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.cs]
+dotnet_sort_system_directives_first = true
+csharp_new_line_before_open_brace = all
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_style_var_when_type_is_apparent = true:suggestion
+dotnet_diagnostic.CA1848.severity = none
+dotnet_diagnostic.CA2007.severity = none
+
+[tests/**/*.cs]
+# Test names are sentences, because a failing test report is the place where a name is
+# read most and understood least. CA1707 wants PascalCase with no underscores, which turns
+# "The_apply_order_never_places_an_entity_before_something_it_depends_on" into a wall.
+dotnet_diagnostic.CA1707.severity = none

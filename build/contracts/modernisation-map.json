@@ -1,0 +1,196 @@
+{
+  "contract": "modernisation-map",
+  "version": "1.0.0",
+  "description": "What replaces what. Every entry carries more than one option where more than one exists, and every entry carries a reason to do nothing, because a report where every finding leads to work is a report a client stops believing around page four.",
+
+  "rules": {
+    "optionsNotAnswers": "A finding points at an entry here and the entry offers options. Which one is right depends on things this tool cannot see: who maintains it, what the team can write, what the licence position is. The product presents the options and the trade, and a consultant chooses.",
+    "doNothingIsAnOption": "Every entry has 'leaveItAlone'. It is not a disclaimer. On most estates it is the correct choice for most components, and saying so is what makes the rest of the report credible.",
+    "effortIsPerComponent": "The bands here are per component, before the complexity factors in estimate-model.json. A statement about forty workflows is forty estimates, not one multiplied."
+  },
+
+  "entries": [
+    {
+      "id": "classicWorkflow",
+      "from": "Classic workflow",
+      "options": [
+        {
+          "to": "Cloud flow",
+          "when": "Background workflow, no requirement to run inside the transaction, and the trigger maps to a Dataverse trigger.",
+          "gains": "Current tooling, connectors, run history, a designer under active development, and it travels through a pipeline with a connection reference.",
+          "costs": "Different failure model. What used to retry inside the platform now needs a retry policy you write. Licensing changes if it touches anything premium.",
+          "band": "medium"
+        },
+        {
+          "to": "Low code plugin",
+          "when": "Real time workflow whose job is validation or field derivation on save.",
+          "gains": "Stays in the transaction, so the save still blocks. Power Fx rather than the classic designer.",
+          "costs": "Needs the Dataverse accelerator in every environment. Narrower capability than the classic designer for anything that is not a data operation.",
+          "band": "medium"
+        },
+        {
+          "to": "Plugin",
+          "when": "Real time workflow that rolls back, calls a custom activity, or does anything a Power Fx expression cannot.",
+          "gains": "Full control, testable, source controlled.",
+          "costs": "Moves the component from low code to pro code, which is the opposite direction from where most of these reports are pointing. Say so out loud when recommending it.",
+          "band": "large"
+        },
+        {
+          "to": "Business rule",
+          "when": "The workflow only sets a field from other fields on the same row.",
+          "gains": "Cheapest option here by a distance.",
+          "costs": "Scope has to be entity level or the validation is not enforced anywhere but one form.",
+          "band": "small"
+        }
+      ],
+      "leaveItAlone": "It is activated, it runs, it has not been changed in three years and nothing else on the table is being touched. Classic workflows are not deprecated. Replacing one that works buys a regression risk and a nicer architecture diagram."
+    },
+    {
+      "id": "dialog",
+      "from": "Dialog",
+      "options": [
+        {
+          "to": "Deletion",
+          "when": "Always, in the first instance.",
+          "gains": "The record goes. It has not executed since 2020.",
+          "costs": "None.",
+          "band": "trivial"
+        },
+        {
+          "to": "Canvas app or custom page",
+          "when": "The guided data entry the dialog described is still being done, by hand, by somebody.",
+          "gains": "The process comes back, properly.",
+          "costs": "A build, not a migration. Estimate it as new work.",
+          "band": "large"
+        }
+      ],
+      "leaveItAlone": "Never. There is nothing to leave alone: the component does not run."
+    },
+    {
+      "id": "customWorkflowActivity",
+      "from": "Custom workflow activity",
+      "options": [
+        {
+          "to": "Custom API",
+          "when": "The logic is callable and the calling workflow is going to become a cloud flow.",
+          "gains": "Callable from a flow, from client script and from an integration. The current answer.",
+          "costs": "The assembly is rewritten, not moved. Registration, messages and parameters are all different.",
+          "band": "large"
+        },
+        {
+          "to": "Plugin on a message",
+          "when": "The logic should have been event driven and was put in a workflow because that was easier at the time.",
+          "gains": "Removes the workflow entirely rather than replacing it.",
+          "costs": "Changes when it runs, which changes behaviour. Needs testing against real data.",
+          "band": "large"
+        }
+      ],
+      "leaveItAlone": "Nothing on that table is changing and the workflow is not being touched. This is expensive work with no user visible outcome, and it competes for the same budget as the things in the operability category."
+    },
+    {
+      "id": "formScript",
+      "from": "Form script doing visibility and validation",
+      "options": [
+        {
+          "to": "Business rule",
+          "when": "Fields on the same form, simple conditions, no subgrids and no tabs.",
+          "gains": "A maker can change it. No deployment.",
+          "costs": "Business rules have real limits and people hit them and then write a script anyway, next to the business rule, which is worse than either.",
+          "band": "small"
+        },
+        {
+          "to": "Modern commanding with Power Fx",
+          "when": "The script is behind a button rather than on load.",
+          "gains": "Removes ribbon XML as well as the script.",
+          "costs": "Not everything the command bar could do has a Power Fx equivalent.",
+          "band": "medium"
+        }
+      ],
+      "leaveItAlone": "The script works, it is small and it is registered on one form. This is the cheapest finding in the catalogue to raise and one of the least valuable to act on."
+    },
+    {
+      "id": "rdlReport",
+      "from": "RDL report",
+      "options": [
+        {
+          "to": "Deletion",
+          "when": "No run recorded in twelve months.",
+          "gains": "Most of the reports in a mature estate go this way, and the ones that remain get a real conversation.",
+          "costs": "Somebody will ask for it in month thirteen. Keep the definition.",
+          "band": "trivial"
+        },
+        {
+          "to": "Power BI",
+          "when": "It is run regularly and read by more than one person.",
+          "gains": "Interactive, refreshed, and the data is reusable for the next question.",
+          "costs": "A licensing decision and a data model, not a report conversion. Estimate accordingly and do not let a per report number stand in for the platform work.",
+          "band": "medium"
+        },
+        {
+          "to": "A view with a chart",
+          "when": "The report is a list with a total.",
+          "gains": "No new platform, no licence, in the app where the user already is.",
+          "costs": "No pagination and no print layout worth the name.",
+          "band": "small"
+        }
+      ],
+      "leaveItAlone": "It prints something a regulator asks for once a quarter in a fixed layout. RDL is still the best tool for a fixed layout document and Power BI is still not."
+    },
+    {
+      "id": "dataflow",
+      "from": "Dataflow",
+      "options": [
+        {
+          "to": "Fabric or a pipeline",
+          "when": "It is moving real volume on a schedule.",
+          "gains": "Versioned, observable, and the capacity consumption becomes visible before the invoice.",
+          "costs": "A platform decision. Do not put this in a backlog as a task.",
+          "band": "large"
+        },
+        {
+          "to": "Cloud flow",
+          "when": "Low volume, simple mapping, runs daily.",
+          "gains": "Travels in the solution. Has a run history anybody can read.",
+          "costs": "Slow at volume and expensive in actions if the row count grows.",
+          "band": "medium"
+        }
+      ],
+      "leaveItAlone": "It runs weekly, moves a few thousand rows, and somebody knows where it is. The risk is real and it is a governance risk rather than an outage risk."
+    },
+    {
+      "id": "customProcessAction",
+      "from": "Action",
+      "options": [
+        {
+          "to": "Custom API",
+          "when": "Anything calls it from outside a workflow.",
+          "gains": "Where the investment is. Better control over privilege and binding.",
+          "costs": "Every caller changes. Find them all first, and that includes callers outside this environment.",
+          "band": "medium"
+        }
+      ],
+      "leaveItAlone": "It is called by one workflow and both are working. Replace both together or neither."
+    },
+    {
+      "id": "htmlWebResource",
+      "from": "HTML web resource",
+      "options": [
+        {
+          "to": "PCF control",
+          "when": "It renders inside a form and behaves like a field or a grid.",
+          "gains": "Supported extension point, responsive, works on mobile, participates in the form's lifecycle.",
+          "costs": "A build toolchain and a repository. Moves the component further into pro code.",
+          "band": "large"
+        },
+        {
+          "to": "Custom page",
+          "when": "It is a full screen doing its own thing.",
+          "gains": "Low code, and a maker can change it.",
+          "costs": "A rewrite rather than a port.",
+          "band": "large"
+        }
+      ],
+      "leaveItAlone": "It works and it is not on a mobile form. This is the entry most likely to turn into a year of work for an aesthetic reason."
+    }
+  ]
+}

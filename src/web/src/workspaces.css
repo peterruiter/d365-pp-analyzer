@@ -1,0 +1,953 @@
+/* Styles for the analysis workspaces: Overview, Taxonomy, Flows and Runs.
+   The shell, administration and wizard styles stay in styles.css. */
+
+/* ------------------------------------------------------------------ shared -- */
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.tag.muted { background: var(--cp-surface-soft); color: var(--cp-text-muted); }
+.tag.danger { background: rgba(220, 38, 38, .1); color: var(--cp-danger); }
+/* Preview: the connector is built and tested, but has never read a real tenant. */
+.tag.warning { background: rgba(190, 77, 0, .12); color: var(--cp-terracotta, #BE4D00); }
+.connector-card.preview { border-style: dashed; }
+.tone-text-complete { color: var(--cp-success); }
+.tone-text-review { color: var(--cp-accent); }
+.tone-text-muted { color: var(--cp-text-muted); }
+.panel-note { margin: 0; padding: 0 23px 16px; color: var(--cp-text-muted); font-size: 12px; line-height: 1.6; }
+.panel-note.standalone { margin: 18px 0 14px; padding: 14px 18px; background: var(--cp-surface); border-left: 3px solid var(--brand-cyan); border-top: 1px solid var(--cp-border); border-right: 1px solid var(--cp-border); border-bottom: 1px solid var(--cp-border); }
+.link-button { padding: 0; border: 0; background: none; color: var(--cp-link); font-weight: 600; text-align: left; cursor: pointer; }
+.link-button:hover { text-decoration: underline; }
+.clickable-row { cursor: pointer; }
+.clickable-row:hover { background: var(--brand-cloud); }
+.filter-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.filter-bar.small { margin: 0; padding: 0 23px 14px; }
+.filter-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--cp-border); border-radius: 999px; background: var(--cp-surface); color: var(--cp-text-muted); font-size: 12px; cursor: pointer; }
+.filter-chip:hover { border-color: var(--cp-accent); color: var(--cp-accent); }
+.filter-chip.active { background: var(--brand-blue); border-color: var(--cp-accent); color: var(--cp-accent-fg); }
+.filter-chip span { padding: 1px 6px; border-radius: 999px; background: rgba(0, 0, 0, .12); font-size: 10px; font-weight: 700; }
+.modal-body { display: grid; gap: 16px; padding: 22px 30px; }
+.modal-body .panel-note { padding: 0; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 12px; padding: 18px 30px 26px; border-top: 1px solid var(--cp-border); }
+.tab-bar { display: flex; gap: 4px; padding: 0 23px; border-bottom: 1px solid var(--cp-border); }
+.tab { padding: 10px 14px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--cp-text-muted); font-size: 13px; cursor: pointer; }
+.tab:hover { color: var(--cp-accent); }
+.tab.active { border-bottom-color: var(--cp-accent); color: var(--brand-ink); font-weight: 600; }
+.tab-body { padding: 18px 0 6px; }
+
+/* --------------------------------------------------------------- overview -- */
+.saving-band { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(240px, 1fr); align-items: center; gap: 24px; margin-top: 14px; padding: 22px 26px; background: var(--cp-surface); border: 1px solid var(--cp-border); border-left: 4px solid var(--brand-cyan); }
+.saving-band h2 { margin: 6px 0 8px; color: var(--brand-ink); font-size: 30px; font-weight: 600; }
+.saving-band .lede { max-width: 60ch; margin: 0; color: var(--cp-text-muted); font-size: 13px; line-height: 1.6; }
+.saving-track { position: relative; display: block; height: 10px; background: var(--cp-surface-soft); border-radius: 999px; }
+.saving-fill { position: absolute; top: 0; bottom: 0; background: linear-gradient(90deg, var(--brand-cyan), var(--brand-blue)); border-radius: 999px; }
+.saving-marker { position: absolute; top: -4px; width: 3px; height: 18px; background: var(--brand-ink); }
+.saving-legend { display: flex; justify-content: space-between; margin-top: 8px; color: var(--cp-text-soft); font-size: 11px; }
+.run-context { padding: 16px 23px 20px; border-top: 1px solid var(--cp-border); }
+.run-context p { margin: 4px 0 8px; color: var(--cp-text-muted); font-size: 12px; }
+.quadrant-plot { position: relative; height: 300px; margin: 8px 23px 0; padding: 8px; background: var(--cp-surface-soft); }
+.quadrant-axes { position: absolute; inset: 0; }
+.quadrant-line { position: absolute; background: var(--cp-border-strong); opacity: .4; }
+.quadrant-line.vertical { top: 0; bottom: 0; width: 1px; }
+.quadrant-line.horizontal { left: 0; right: 0; height: 1px; }
+.quadrant-caption { position: absolute; color: var(--cp-text-soft); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+.quadrant-caption.top-right { top: 8px; right: 10px; }
+.quadrant-caption.bottom-left { bottom: 8px; left: 10px; }
+/* The number is what identifies a bubble: several intents share a band colour, so the
+   colour cannot. It matches the key below and the same chart in the PDF. */
+.quadrant-point { position: absolute; display: flex; align-items: center; justify-content: center; transform: translate(-50%, 50%); padding: 0; border: 2px solid var(--cp-surface); border-radius: 50%; color: #fff; font-weight: 700; line-height: 1; cursor: pointer; }
+.quadrant-point.tone-complete { background: rgba(22, 163, 74, .88); }
+.quadrant-point.tone-review { background: rgba(0, 88, 171, .82); }
+.quadrant-point.tone-muted { background: rgba(120, 126, 140, .82); }
+.quadrant-point:hover { outline: 2px solid var(--brand-ink); }
+.quadrant-key { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 14px 23px 0; padding: 0; list-style: none; color: var(--cp-text-muted); font-size: 11px; }
+.quadrant-key li { display: flex; align-items: center; gap: 6px; }
+.key-dot { width: 9px; height: 9px; border-radius: 50%; }
+.key-number { display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 3px; color: #fff; font-size: 10px; font-weight: 700; }
+.key-number.tone-complete { background: rgba(22, 163, 74, .88); }
+.key-number.tone-review { background: rgba(0, 88, 171, .82); }
+.key-number.tone-muted { background: rgba(120, 126, 140, .82); }
+.key-dot.tone-complete { background: rgba(22, 163, 74, .8); }
+.key-dot.tone-review { background: rgba(0, 88, 171, .7); }
+.key-dot.tone-muted { background: rgba(145, 145, 145, .7); }
+
+/* -------------------------------------------------------------- exports --- */
+.export-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px; margin-top: 14px; padding: 16px 20px; background: var(--cp-surface); border: 1px solid var(--cp-border); border-left: 4px solid var(--cp-accent); }
+.export-copy { flex: 1 1 380px; }
+.export-copy p { max-width: 74ch; margin: 4px 0 0; color: var(--cp-text-muted); font-size: 12px; line-height: 1.6; }
+.export-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+/* Both deliverables are the same kind of action, so both read as buttons. The shell's
+   .secondary-button is a text link everywhere else, which made the Excel export look like an
+   afterthought next to the PDF. */
+.export-actions .primary-button,
+/* Shape, type and radius come from the Capgemini button in styles.css. Only the
+   things particular to sitting in a row of deliverables are set here. */
+.export-actions .secondary-button { margin: 0; white-space: nowrap; }
+.export-actions .secondary-button { background: var(--cp-surface); color: var(--cp-accent); }
+.export-actions .secondary-button:hover { background: var(--brand-cloud); color: var(--cp-accent-hover); text-decoration: none; }
+.export-actions button:disabled { cursor: default; opacity: .6; }
+.export-actions button:disabled:hover { background: inherit; }
+.export-error { flex-basis: 100%; margin: 0; color: var(--cp-danger); font-size: 12px; }
+
+/* ------------------------------------------------------------------- runs -- */
+.runs-layout { display: grid; grid-template-columns: minmax(260px, .7fr) minmax(0, 1.3fr); gap: 14px; margin-top: 14px; align-items: start; }
+.runs-detail { display: grid; gap: 14px; }
+.runs-detail .content-grid { grid-template-columns: 1fr; gap: 14px; margin: 0; }
+.run-items { display: grid; }
+.run-item { display: grid; gap: 6px; padding: 16px 18px; border: 0; border-bottom: 1px solid var(--cp-border); background: var(--cp-surface); text-align: left; cursor: pointer; }
+.run-item:hover, .run-item.active { background: var(--brand-cloud); }
+.run-item-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.run-item-head strong { color: var(--brand-ink); font-size: 14px; }
+.run-item-head .tag { margin: 0; }
+.run-item-meta { color: var(--cp-text-muted); font-size: 11px; }
+.run-progress { display: block; height: 4px; background: var(--cp-surface-soft); }
+.run-progress span { display: block; height: 100%; background: var(--brand-blue); }
+.run-facts { padding: 18px 23px 0; }
+.run-facts dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin: 0; }
+.run-facts dt { color: var(--cp-text-soft); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+.run-facts dd { margin: 3px 0 0; color: var(--brand-ink); font-size: 14px; }
+.run-facts dd small { margin-left: 6px; font-size: 11px; }
+.variance-over { color: var(--cp-danger); }
+.variance-under { color: var(--cp-success); }
+.run-purpose { margin: 16px 0 0; color: var(--cp-text-muted); font-size: 12px; line-height: 1.6; }
+.run-watermark { margin: 10px 0 18px; padding: 10px 12px; background: var(--cp-surface-soft); color: var(--cp-text-muted); font-size: 12px; }
+.run-error { display: flex; gap: 12px; margin: 18px 23px 22px; padding: 14px 16px; background: rgba(220, 38, 38, .06); border-left: 3px solid var(--cp-danger); }
+.run-error p { margin: 4px 0 0; color: var(--cp-text-muted); font-size: 12px; line-height: 1.6; }
+/* A gate, not a failure. Same shape as the error callout so a reader recognises it as
+   something to attend to, in the accent rather than the danger colour because nothing
+   has gone wrong: the run is doing exactly what it was built to do. */
+.run-gate { display: flex; align-items: center; gap: 12px; margin: 18px 23px 22px; padding: 14px 16px; background: var(--brand-cloud); border-left: 3px solid var(--cp-accent); }
+.run-gate > div { flex: 1; min-width: 0; }
+.run-gate p { margin: 4px 0 0; color: var(--cp-text-muted); font-size: 12px; line-height: 1.6; }
+.run-gate .notice-mark { color: var(--cp-accent); }
+.run-gate .primary-button { flex: none; white-space: nowrap; }
+@media (max-width: 680px) {
+  .run-gate { flex-direction: column; align-items: flex-start; }
+  .run-gate .primary-button { width: 100%; justify-content: center; }
+}
+.stage-timeline { display: grid; margin: 0; padding: 0; list-style: none; }
+.stage-row { border-bottom: 1px solid var(--cp-border); }
+.stage-head { display: grid; grid-template-columns: 14px minmax(0, 1.4fr) minmax(80px, 1fr) auto; align-items: center; gap: 12px; width: 100%; padding: 12px 23px; border: 0; background: none; text-align: left; cursor: pointer; }
+.stage-head:hover { background: var(--brand-cloud); }
+.stage-marker { width: 10px; height: 10px; border-radius: 50%; background: var(--cp-border-strong); }
+.stage-completed .stage-marker { background: var(--cp-success); }
+.stage-running .stage-marker { background: var(--brand-blue); }
+.stage-failed .stage-marker { background: var(--cp-danger); }
+.stage-awaitinginput .stage-marker { background: var(--cp-warning); }
+.stage-title strong { display: block; color: var(--brand-ink); font-size: 13px; }
+.stage-title small { color: var(--cp-text-muted); font-size: 11px; }
+.stage-bar { display: block; height: 4px; background: var(--cp-surface-soft); }
+.stage-bar span { display: block; height: 100%; background: var(--brand-cyan); }
+.stage-head .tag { margin: 0; }
+.stage-body { padding: 4px 23px 18px 49px; }
+.stage-body p { margin: 0 0 12px; color: var(--cp-text-muted); font-size: 12px; line-height: 1.6; }
+.stage-body dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 0; }
+.stage-body dt { color: var(--cp-text-soft); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+.stage-body dd { margin: 3px 0 0; color: var(--cp-text); font-size: 12px; }
+.stage-error { margin-top: 12px; padding: 10px 12px; background: rgba(220, 38, 38, .06); color: var(--cp-danger); font-size: 12px; }
+.config-json { margin: 0 23px 22px; padding: 14px 16px; overflow-x: auto; background: var(--cp-surface-soft); color: var(--cp-text); font-family: ui-monospace, Consolas, monospace; font-size: 12px; line-height: 1.6; }
+
+/* ------------------------------------------------------------------ flows -- */
+/* No horizontal scrolling: the diagram is laid out to the width of this box rather than to
+   a fixed size, so there is nothing to scroll to. */
+.sankey-wrap { padding: 8px 23px 26px; }
+.sankey { display: block; width: 100%; height: auto; overflow: visible; }
+.sankey-ribbon { fill: none; stroke: var(--brand-blue); stroke-opacity: .28; transition: stroke-opacity .12s ease; cursor: pointer; }
+.sankey-ribbon:hover { stroke-opacity: .62; }
+.sankey-ribbon.dimmed { stroke-opacity: .1; }
+.sankey-node { fill: var(--brand-ink); }
+/* Name over number, the way the report sets the same diagram. The number is the quieter of
+   the two, because the shape already carries the magnitude. */
+.sankey-label { fill: var(--brand-ink); font-size: 12px; }
+.sankey-value { fill: var(--cp-text-soft); font-size: 11px; font-variant-numeric: tabular-nums; }
+
+/* --------------------------------------------------------------- taxonomy -- */
+.taxonomy-page .taxonomy-layout { margin-top: 14px; align-items: start; }
+.taxonomy-detail-column { display: grid; gap: 14px; }
+.taxonomy-filters { display: grid; gap: 10px; padding: 16px 23px 4px; border-bottom: 1px solid var(--cp-border); }
+.taxonomy-filters .filter-bar.small { padding: 0 0 8px; }
+.bulk-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 23px; background: var(--brand-cloud); color: var(--brand-ink); font-size: 12px; font-weight: 600; }
+.taxonomy-item { display: flex; align-items: flex-start; gap: 10px; }
+.taxonomy-item-main { display: grid; flex: 1; gap: 6px; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; }
+.taxonomy-item-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.taxonomy-item-title strong { color: var(--brand-ink); font-size: 14px; }
+.taxonomy-item-title .tag { margin: 0; }
+.taxonomy-item-meta { color: var(--cp-text-muted); font-size: 11px; }
+.taxonomy-item-bar { display: block; height: 3px; background: var(--cp-surface-soft); }
+.taxonomy-item-bar span { display: block; height: 100%; background: var(--brand-cyan); }
+.intent-description { margin: 0; padding: 0 23px 14px; color: var(--cp-text-muted); font-size: 13px; line-height: 1.6; }
+.intent-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 14px; padding: 0 23px 18px; }
+.intent-stats span { display: block; color: var(--cp-text-soft); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+.intent-stats strong { display: block; margin-top: 4px; color: var(--brand-ink); font-size: 20px; font-weight: 600; }
+.intent-stats small { color: var(--cp-text-muted); font-size: 11px; }
+.evidence-tab { padding: 0 23px; }
+.evidence-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin: 0 0 16px; }
+.evidence-list dt { color: var(--cp-text-soft); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+.evidence-list dd { margin: 3px 0 0; color: var(--brand-ink); font-size: 13px; }
+.evidence-tab .panel-note { padding: 0 0 12px; }
+.confidence-note { margin: 0; padding: 12px 14px; background: rgba(22, 163, 74, .07); color: var(--cp-text); font-size: 12px; line-height: 1.6; }
+.confidence-note.weak { background: var(--cp-accent-soft); }
+.exemplar-list { display: grid; gap: 8px; margin: 0; padding: 0 23px; list-style: none; }
+.exemplar-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; background: var(--cp-surface-soft); }
+.exemplar-list q { color: var(--brand-ink); font-size: 13px; }
+.exemplar-list .tag { margin: 0; }
+.contact-list { display: grid; margin: 0; padding: 0; list-style: none; }
+.contact-list li { border-top: 1px solid var(--cp-border); }
+.contact-head { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 12px; width: 100%; padding: 12px 23px; border: 0; background: none; text-align: left; cursor: pointer; }
+.contact-head:hover { background: var(--brand-cloud); }
+.contact-quote { overflow: hidden; color: var(--brand-ink); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.contact-meta { color: var(--cp-text-muted); font-size: 11px; white-space: nowrap; }
+.contact-head .tag { margin: 0; }
+.contact-body { padding: 0 23px 16px; }
+.contact-body dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 0 0 10px; }
+.contact-body dt { color: var(--cp-text-soft); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+.contact-body dd { margin: 3px 0 0; font-size: 12px; }
+.contact-agent { margin: 0; color: var(--cp-text-muted); font-size: 12px; line-height: 1.6; }
+.contact-agent strong { margin-right: 6px; color: var(--brand-ink); }
+.history-list { display: grid; gap: 4px; margin: 0; padding: 0 23px; list-style: none; }
+.history-list li { display: grid; grid-template-columns: 12px minmax(0, 1fr); gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--cp-border); }
+.history-mark { width: 8px; height: 8px; margin-top: 5px; border-radius: 50%; background: var(--brand-cyan); }
+.history-list strong { display: block; color: var(--brand-ink); font-size: 13px; }
+.history-list p { margin: 4px 0; color: var(--cp-text-muted); font-size: 12px; line-height: 1.6; }
+.history-list small { color: var(--cp-text-soft); font-size: 11px; }
+.curation-message { margin: 0 0 14px; padding: 12px 16px; background: var(--cp-accent-soft); color: var(--cp-accent-hover); font-size: 12px; }
+.taxonomy-detail .curation-actions { margin: 8px 0 0; padding: 20px 23px 24px; }
+.taxonomy-detail .curation-actions .secondary-button { margin: 0 20px 0 0; }
+.curation-primary-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 14px; }
+.split-assignments label span { display: grid; gap: 2px; }
+.split-assignments q { color: var(--brand-ink); font-size: 12px; }
+.split-assignments small { color: var(--cp-text-soft); font-size: 11px; }
+
+@media (max-width: 1180px) {
+  .runs-layout, .saving-band { grid-template-columns: 1fr; }
+}
+
+/* ---------------------------------------------------------------- feasibility -- */
+.feasibility-list { display: grid; gap: 0; }
+.feasibility-intent { border-bottom: 1px solid var(--cp-border); }
+.feasibility-intent-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 14px 23px; border: 0; background: none; text-align: left; cursor: pointer; }
+.feasibility-intent-head:hover { background: var(--brand-cloud); }
+.feasibility-intent-name { display: grid; gap: 2px; }
+.feasibility-intent-name strong { color: var(--brand-ink); font-size: 13px; }
+.feasibility-intent-name small { color: var(--cp-text-muted); font-size: 11px; }
+.feasibility-intent-body { padding: 4px 23px 20px; display: grid; gap: 16px; }
+.feasibility-dimensions { display: grid; gap: 12px; }
+.feasibility-dimension { padding: 12px 14px; background: var(--cp-surface-soft); }
+/* Set apart from the six dimensions below it with a left rule: it decides whether the
+   band becomes money, not what the band is, and a reader who takes it for a seventh
+   dimension will wonder why it has no score. */
+.feasibility-handle-time { display: grid; gap: 8px; margin-bottom: 12px; padding: 12px 14px; background: var(--cp-surface-soft); border-left: 3px solid var(--brand-cyan); }
+.feasibility-handle-time .feasibility-dimension-head span { display: inline-flex; align-items: center; gap: 8px; }
+.feasibility-handle-time .economics-editor { margin-top: 4px; }
+.feasibility-dimension-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.feasibility-dimension-head strong { color: var(--brand-ink); font-size: 12px; }
+.feasibility-evidence { margin: 6px 0 0; color: var(--cp-text-muted); font-size: 12px; line-height: 1.6; }
+.feasibility-dimension-form { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--cp-border); display: grid; gap: 10px; }
+.feasibility-dimension-description { margin: 0; color: var(--cp-text-muted); font-size: 12px; line-height: 1.6; }
+.feasibility-levels { display: grid; gap: 6px; }
+.feasibility-level { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; background: var(--cp-surface); border: 1px solid var(--cp-border); cursor: pointer; }
+.feasibility-level.selected { border-color: var(--cp-accent); background: var(--brand-cloud); }
+.feasibility-level input { margin-top: 3px; }
+.feasibility-level strong { display: block; color: var(--brand-ink); font-size: 12px; }
+.feasibility-level small { color: var(--cp-text-muted); font-size: 11px; }
+.feasibility-evidence-input { display: grid; gap: 4px; color: var(--cp-text-soft); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+.feasibility-evidence-input textarea { text-transform: none; letter-spacing: normal; font-size: 13px; padding: 8px 10px; border: 1px solid var(--cp-border); font-family: inherit; }
+.feasibility-containment { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 14px 16px; background: var(--brand-cloud); }
+.feasibility-containment strong { display: block; color: var(--brand-ink); font-size: 18px; }
+.secondary-button.small { padding: 6px 10px; font-size: 11px; }
+
+
+/* ---------------------------------------------------------- connections --- */
+.wizard-modal { width: min(820px, 100%); }
+.connector-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; margin-bottom: 8px; }
+.connector-card { display: grid; gap: 6px; padding: 14px; border: 1px solid var(--cp-border); border-radius: 6px; background: var(--cp-surface); text-align: left; cursor: pointer; }
+.connector-card:hover { border-color: var(--cp-accent); }
+.connector-card.selected { border-color: var(--cp-accent); border-width: 2px; padding: 13px; background: var(--brand-cloud); }
+.connector-card.planned { opacity: .72; }
+.connector-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.connector-card-head strong { color: var(--brand-ink); font-size: 13px; }
+.connector-card-head .tag { margin: 0; }
+.connector-card-body { display: -webkit-box; align-self: start; max-height: 49.5px; overflow: hidden; color: var(--cp-text-muted); font-size: 11px; line-height: 1.5; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+.connector-capabilities { display: flex; flex-wrap: wrap; gap: 4px; }
+.connector-capabilities span { padding: 2px 6px; border-radius: 3px; background: var(--cp-surface-soft); color: var(--cp-text-soft); font-size: 10px; }
+.field-label .hint { display: block; margin-top: 3px; color: var(--cp-text-soft); font-size: 11px; font-weight: 400; line-height: 1.5; }
+.field-label .hint.warning { color: var(--cp-terracotta, #BE4D00); }
+.field-label.has-problem input, .field-label.has-problem select { border-color: var(--cp-danger); }
+.field-problem { display: block; margin-top: 3px; color: var(--cp-danger); font-size: 11px; font-weight: 400; }
+.check-list { display: grid; gap: 2px; margin: 8px 0 0; padding: 0; list-style: none; }
+.check-list.compact { margin: 0 0 4px; padding: 0 0 8px; }
+.check-list li { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; align-items: start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--cp-border); }
+.check-list strong { display: block; color: var(--brand-ink); font-size: 12px; }
+.check-list p { margin: 2px 0 0; color: var(--cp-text-muted); font-size: 12px; line-height: 1.5; }
+.check-list .check-remedy { color: var(--cp-text); }
+.check-list .tag { margin: 0; }
+.check-mark { width: 8px; height: 8px; margin-top: 5px; border-radius: 50%; background: var(--cp-border-strong); }
+.check-passed .check-mark { background: var(--cp-success); }
+.check-failed .check-mark { background: var(--cp-danger); }
+.check-warning .check-mark { background: var(--cp-warning); }
+.connection-card { margin-bottom: 10px; padding: 14px 16px; background: var(--cp-surface); border: 1px solid var(--cp-border); }
+.connection-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.connection-summary strong { display: block; color: var(--brand-ink); font-size: 14px; }
+.connection-summary span { color: var(--cp-text-muted); font-size: 11px; }
+.connection-actions { display: flex; align-items: center; gap: 14px; }
+.connection-actions .tag { margin: 0; }
+.curation-message.danger { background: rgba(220, 38, 38, .08); color: var(--cp-danger); }
+.wizard-actions .hint { color: var(--cp-text-soft); font-size: 11px; }
+
+/* ---------------------------------------------------------------- delta --
+   The comparison screen. Movement gets colour, "too small to say" does not:
+   an intent the sample cannot speak for should not look like a finding. */
+.delta-periods { display: flex; align-items: center; gap: 18px; padding: 20px 23px; border-bottom: 1px solid var(--cp-border); flex-wrap: wrap; }
+.delta-period { display: flex; flex-direction: column; gap: 4px; }
+.delta-period strong { color: var(--brand-ink); font-size: 15px; font-weight: 600; }
+.delta-arrow { color: var(--cp-text-soft); font-size: 20px; }
+.delta-caveats { padding: 18px 23px; background: var(--cp-surface-soft); border-top: 1px solid var(--cp-border); }
+.delta-caveats strong { display: block; margin-bottom: 8px; color: var(--brand-ink); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
+.delta-caveats ul { margin: 0; padding-left: 18px; color: var(--cp-text-soft); font-size: 13px; }
+.delta-caveats li { margin-bottom: 6px; }
+.delta-up { color: var(--cp-danger); font-style: normal; font-weight: 600; }
+.delta-down { color: var(--cp-success); font-style: normal; font-weight: 600; }
+.delta-flat { color: var(--cp-text-muted); }
+.delta-margin { color: var(--cp-text-muted); font-variant-numeric: tabular-nums; }
+.delta-counts { display: block; margin-top: 3px; color: var(--cp-text-muted); font-size: 11px; font-weight: 400; }
+.delta-renamed { margin-left: 6px; padding: 2px 5px; background: var(--cp-surface-soft); color: var(--cp-text-muted); font-size: 10px; font-weight: 600; text-transform: uppercase; }
+.inline-select { display: flex; align-items: center; gap: 8px; color: var(--cp-text-soft); font-size: 12px; }
+.inline-select select { padding: 6px 8px; border: 1px solid var(--cp-border); background: var(--cp-surface); font-size: 12px; }
+
+/* ------------------------------------------------------------ run control --
+   Starting a run is the moment the money is committed, so the actions get room
+   rather than being tucked into a corner. */
+.run-actions { display: flex; align-items: center; gap: 12px; padding: 20px 23px; border-bottom: 1px solid var(--cp-border); flex-wrap: wrap; }
+.run-actions-note { color: var(--cp-text-soft); font-size: 12px; }
+.run-actions-note code { padding: 1px 4px; background: var(--cp-surface-soft); font-size: 11px; }
+.stage-actions { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--cp-border); }
+.run-facts-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 0 0 18px; }
+.run-facts-list div { display: flex; flex-direction: column; gap: 3px; }
+.run-facts-list dt { color: var(--cp-text-soft); font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.run-facts-list dd { margin: 0; color: var(--brand-ink); font-size: 14px; font-weight: 600; }
+.delta-picker { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+
+/* The engagement record and its privacy basis, as label and value pairs. Two columns on a
+   desktop and one on a phone, with a full-width row for the long text. */
+.record-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 28px; margin: 0; padding: 18px 0 0; }
+.record-grid > div { min-width: 0; }
+.record-grid .record-wide { grid-column: 1 / -1; }
+.record-grid dt { margin-bottom: 5px; color: var(--cp-text-soft); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.record-grid dd { margin: 0; color: var(--brand-ink); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+@media (max-width: 680px) { .record-grid { grid-template-columns: 1fr; gap: 14px; } }
+
+/* The template download on the file drop card. A link inside a button, so it stops the click
+   from also selecting the connector. */
+.connector-card-link { justify-self: start; color: var(--cp-accent); font-size: 11px; font-weight: 700; text-decoration: underline; cursor: pointer; }
+.connector-card-link:hover, .connector-card-link:focus-visible { color: var(--brand-ink); }
+
+/* A panel already has 24px of padding, and the heading, the note and the empty state each
+   carry another 23px of their own for when they are used outside one. Nested, the two add up
+   and the rule under a heading ends up 23px short of the text below it. Inside a panel the
+   panel's padding is the only one that applies. */
+.detail-panel > .panel-heading { padding: 0 0 18px; }
+.detail-panel > .panel-note { padding: 16px 0 0; }
+.detail-panel > .dashboard-empty { margin: 20px 0 0; }
+
+/* Field fill rates on the sources workspace. A bar rather than a number because the useful
+   reading is which of the four is short, not what any one of them is. */
+.coverage-bars { display: grid; gap: 16px; padding-top: 4px; }
+.coverage-bar-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+.coverage-bar-head span { color: var(--brand-ink); font-size: 13px; font-weight: 700; }
+.coverage-bar-head strong { color: var(--cp-accent); font-size: 13px; }
+.coverage-bar-head strong.weak { color: var(--brand-terracotta, #d0512d); }
+.coverage-track { height: 7px; background: var(--cp-surface-soft); border-radius: 4px; overflow: hidden; }
+.coverage-track span { display: block; height: 100%; background: var(--brand-blue); }
+.coverage-track span.weak { background: var(--brand-terracotta, #d0512d); }
+.coverage-bar small { display: block; margin-top: 6px; color: var(--cp-text-muted); font-size: 11px; line-height: 1.5; }
+
+/* The deliverables panel when it could not read its own availability. Muted rather than alarming:
+   it is a request that did not land, not a finding about the client's data. */
+.export-bar-problem { border-left-color: var(--cp-text-soft); }
+.export-bar-problem .export-copy p { color: var(--cp-text-muted); }
+
+/* The language selector beside a panel heading, and the row of document buttons under it. */
+.inline-field { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 12px; white-space: nowrap; }
+.inline-field select { padding: 7px 9px; border: 1px solid var(--cp-border); border-radius: 4px; background: var(--cp-surface); color: var(--brand-ink); font-family: inherit; font-size: 12px; }
+.document-actions { padding-top: 4px; }
+@media (max-width: 680px) { .inline-field { margin-top: 12px; } }
+
+/* Consecutive panels on a detail page sat flush against each other, reading as one long panel
+   with rules through it. Only the gap between them is added, so a page with a single panel is
+   unchanged. */
+.detail-panel + .detail-panel { margin-top: 18px; }
+
+/* ======================================= what the source did not supply ==
+   Two surfaces for one answer. The Overview gets a single line, because that
+   page is where somebody looks for the answer rather than for the caveats.
+   Sources gets the full account, next to what each connection delivered.
+
+   Severity is carried by a rule down the left edge rather than by the text
+   colour. A whole paragraph in red reads as an error in the product, and this
+   is not an error: it is a fact about the client's platform, and usually one
+   they can do something about. Every colour is a token, so both follow the
+   theme like everything else. */
+
+/* The one line version. margin-top matches the other Overview sections, which
+   set their own spacing rather than inheriting a gap from a parent. */
+.coverage-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 14px;
+  padding: 16px 22px;
+  background: var(--cp-surface);
+  border: 1px solid var(--cp-border);
+  border-left: 4px solid var(--cp-accent);
+}
+
+.coverage-summary-absent { border-left-color: var(--cp-danger); }
+.coverage-summary .eyebrow { margin: 0 0 2px; }
+.coverage-summary-text { margin: 0; max-width: 80ch; color: var(--cp-text); font-size: 13px; line-height: 1.5; }
+
+/* The full account, on Sources. */
+.coverage-panel { padding-bottom: 6px; }
+.coverage-intro { margin: 0; padding: 18px 23px 4px; max-width: 76ch; color: var(--cp-text-muted); font-size: 12.5px; line-height: 1.55; }
+
+.coverage-list { display: grid; gap: 14px; margin: 0; padding: 4px 23px 20px; list-style: none; }
+
+.coverage-item { padding: 2px 0 2px 14px; border-left: 3px solid var(--cp-border-strong); }
+.coverage-absent { border-left-color: var(--cp-danger); }
+.coverage-belowfloor { border-left-color: var(--cp-warning); }
+.coverage-present { border-left-color: var(--cp-accent); }
+
+.coverage-signal { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+.coverage-name { color: var(--cp-text); font-size: 13px; font-weight: 700; }
+.coverage-supplied { color: var(--cp-text-muted); font-size: 12px; }
+
+.coverage-consequence { margin: 4px 0 0; max-width: 68ch; color: var(--cp-text-muted); font-size: 12px; line-height: 1.5; }
+
+/* Two columns once there is room for two readable measures side by side. */
+@media (min-width: 1100px) {
+  .coverage-list { grid-template-columns: 1fr 1fr; column-gap: 28px; }
+}
+
+@media (max-width: 680px) {
+  .coverage-list, .coverage-intro { padding-inline: 16px; }
+  .coverage-summary { align-items: flex-start; flex-direction: column; gap: 10px; }
+}
+
+/* ============================================= guiding somebody through it ==
+   Three surfaces reading one answer: the strip at the top of every workspace,
+   the checklist that stands in for an empty Overview, and the state markers in
+   the sidebar. They cannot disagree because none of them decides anything.
+
+   The strip is accented rather than warned. This is not an error and not a
+   nag, it is the product saying what to do next, and a yellow bar would make
+   somebody's first hour feel like a list of faults. */
+.next-step {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+
+  /* The strip sits above whatever the workspace leads with, and not every page
+     gives its first section a top margin the way the Overview does. Owning the
+     gap here means the strip reads as a band above the page rather than as the
+     lid of the first card. */
+  margin-bottom: 18px;
+  padding: 20px 24px;
+  background: var(--cp-surface);
+  border: 1px solid var(--cp-border);
+  border-left: 4px solid var(--brand-orange);
+}
+
+.next-step-body { min-width: 0; }
+.next-step .eyebrow { display: flex; align-items: baseline; gap: 12px; margin: 0 0 6px; }
+.next-step-count { color: var(--cp-text-soft); font-size: 10px; font-weight: 400; letter-spacing: .08em; }
+.next-step h2 { margin: 0; color: var(--brand-ink); font-size: 19px; font-weight: 700; }
+.next-step-guidance { margin: 8px 0 0; max-width: 82ch; color: var(--cp-text-muted); font-size: 13px; line-height: 1.55; }
+.next-step .primary-button { flex-shrink: 0; margin: 0; }
+
+/* The checklist. The whole shape of the work in one read, so somebody meeting a
+   new engagement can see where they are going as well as where they are. */
+.checklist {
+  margin-top: 26px;
+  padding: 22px 24px 26px;
+  background: var(--cp-surface);
+  border: 1px solid var(--cp-border);
+  text-align: left;
+}
+
+.checklist-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.checklist-head h2 { margin: 0; color: var(--brand-ink); font-size: 17px; font-weight: 700; }
+.checklist-progress { color: var(--cp-text-soft); font-size: 12px; font-weight: 700; }
+
+.checklist-steps { display: grid; gap: 2px; margin: 18px 0 0; padding: 0; list-style: none; counter-reset: none; }
+
+.checklist-step {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 14px;
+  padding: 14px 0;
+  border-top: 1px solid var(--cp-border);
+}
+.checklist-step:first-child { border-top: 0; }
+
+.checklist-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--cp-border-strong);
+  border-radius: 50%;
+  color: var(--cp-text-soft);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.checklist-done .checklist-marker { background: var(--cp-success); border-color: var(--cp-success); color: #ffffff; }
+.checklist-current .checklist-marker { background: var(--cp-accent); border-color: var(--cp-accent); color: var(--cp-accent-fg); }
+
+.checklist-text { min-width: 0; }
+.checklist-name { color: var(--cp-text); font-size: 14px; font-weight: 600; }
+.checklist-current .checklist-name { font-weight: 700; }
+
+/* Blocked steps stay readable but recede. They are there to show the shape of
+   the work, not to be acted on yet. */
+.checklist-blocked .checklist-name { color: var(--cp-text-soft); font-weight: 400; }
+.checklist-done .checklist-name { color: var(--cp-text-muted); }
+
+.checklist-guidance { margin: 6px 0 0; max-width: 74ch; color: var(--cp-text-muted); font-size: 12.5px; line-height: 1.55; }
+.checklist-step .primary-button { flex-shrink: 0; margin: 0; align-self: center; }
+
+/* The sidebar, showing the same answer in the smallest space it can. A tick for
+   what is behind you, a dot for what to do now. Blocked items are muted rather
+   than disabled: somebody who wants to look ahead is entitled to, and a dead
+   control is a worse answer than a workspace that explains why it is empty. */
+.nav-state {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  flex-shrink: 0;
+  font-size: 11px;
+}
+
+.nav-done .nav-state { color: var(--cp-success); }
+.nav-current .nav-state { color: var(--brand-orange); font-size: 9px; }
+.nav-blocked { color: var(--cp-text-soft); }
+.nav-current { color: var(--brand-ink); font-weight: 600; }
+
+@media (max-width: 680px) {
+  .next-step { align-items: flex-start; flex-direction: column; gap: 14px; }
+  .next-step .primary-button { margin-top: 0; }
+  .checklist { padding-inline: 18px; }
+  .checklist-step { grid-template-columns: 26px minmax(0, 1fr); }
+  .checklist-step .primary-button { grid-column: 2; margin-top: 10px; }
+}
+
+/* An Overview with nothing to report yet. The checklist is the whole content,
+   so it only needs room rather than decoration of its own. */
+.empty-workspace { display: block; padding-top: 4px; }
+.empty-workspace .checklist { margin-top: 0; }
+
+/* The strip on the workspace the step belongs to. Nothing to click, because
+   the reader is already where the button would have sent them, so it needs
+   less room and reads as an instruction rather than a signpost. */
+.next-step-here { padding-block: 18px; }
+
+/* ========================================= the runs master and detail ==
+   The detail of one run is several times taller than the list of every run,
+   so the list scrolled out of view almost immediately and left two thousand
+   pixels of empty column beside the thing you were reading.
+
+   Sticking it keeps the other runs reachable while you read one, which is the
+   whole point of putting them side by side. The list scrolls inside itself
+   once there are more runs than fit, so a busy engagement does not push the
+   panel past the bottom of the screen.
+
+   Only where there are two columns. Below that the layout is stacked and a
+   sticky list would sit on top of the detail. */
+@media (min-width: 1100px) {
+  .runs-list {
+    position: sticky;
+    top: 90px;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 110px);
+  }
+
+  .runs-list .run-items {
+    overflow-y: auto;
+    min-height: 0;
+  }
+}
+
+/* ===================================== letting the detail column shrink ==
+   A grid track sized auto has a minimum of min-content, so one wide table
+   inside it pushed the whole column past the right edge of the window and the
+   page scrolled sideways. The table-wrap around it could not help: an element
+   can only scroll its own overflow if its ancestors will let it be narrower
+   than its contents, and none of them would.
+
+   minmax(0, 1fr) is what says they will. The wide thing then scrolls inside
+   its own wrapper, which is what that wrapper is for. */
+/* The columns themselves are declared once, further up, and stacked into one by the
+   1180px rule above. Restating them here put them back at every width and left the
+   history sitting beside the run on a phone instead of above it. Only the shrinking
+   belongs here. */
+.runs-layout > * { min-width: 0; }
+
+.runs-detail { grid-template-columns: minmax(0, 1fr); }
+.runs-detail > * { min-width: 0; }
+
+/* The same trap, everywhere else a panel holds a table. */
+.content-grid > *,
+.dashboard-grid > * { min-width: 0; }
+
+/* ====================================== the three run actions ============
+   Start, Cancel and Delete are the three things you can do to a run, so
+   they sit in one row and look like each other. .secondary-button is a text
+   link everywhere else in the product, which left Cancel reading as prose
+   beside a button, and Delete used to float below the panel entirely. */
+.outline-button,
+.danger-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  padding: 9px 16px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.outline-button {
+  background: var(--cp-surface);
+  border-color: var(--cp-border);
+  color: var(--cp-text);
+}
+
+.outline-button:hover:not(:disabled) { border-color: var(--brand-blue); color: var(--brand-blue); }
+
+.danger-button { background: var(--cp-danger, #b3261e); color: #fff; }
+
+/* Delete sits at the far end of the row, outlined rather than filled: it is
+   the one action here that cannot be undone, so it should be reachable
+   without being the thing your eye lands on. The filled red is kept for the
+   confirmation, where pressing it is the point. */
+.danger-button.outline {
+  margin-left: auto;
+  background: none;
+  border-color: var(--cp-danger, #b3261e);
+  color: var(--cp-danger, #b3261e);
+}
+
+.danger-button.outline:hover:not(:disabled) { background: var(--cp-danger, #b3261e); color: #fff; }
+
+.outline-button:disabled,
+.danger-button:disabled { opacity: .5; cursor: default; }
+
+.run-actions-note { padding: 0 23px 18px; margin: 0; }
+
+.run-danger { padding: 0 23px 18px; }
+
+.confirm-actions { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+
+/* On a phone the row wraps, and wrapped buttons of three different widths sit
+   at three different left edges, which reads as a mistake rather than a
+   layout. Stacked and stretched they read as a list of choices. The margin
+   that pushes Delete to the far end has nothing to push against here. */
+@media (max-width: 700px) {
+  .run-actions { flex-direction: column; align-items: stretch; }
+  .danger-button.outline { margin-left: 0; }
+  .confirm-actions { flex-direction: column; }
+}
+
+/* The retry confirmation sits inside the stage row, so it wraps rather than
+   stretching the row when the sentence is long. */
+.stage-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.stage-confirm > span { opacity: .85; }
+
+/* Says whether a field is needed before the button refuses to press, rather than
+   by the button refusing to press. */
+.field-note {
+  display: block;
+  margin: 2px 0 6px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--cp-text-soft);
+}
+
+/* The economics editor sits in the panel heading, so it wraps rather than
+   stretching the row when both fields are open. */
+.economics-editor {
+  display: grid;
+  gap: 10px;
+  min-width: 260px;
+  padding: 12px;
+  border: 1px solid var(--cp-border);
+  border-radius: 8px;
+  background: var(--cp-surface);
+}
+
+.economics-editor input { width: 100%; }
+
+/* ====================================== AI suggestions, human decisions ===
+   A suggestion sits beside the dimension it is about, looks like advice
+   rather than a value, and does nothing until somebody accepts it. The
+   stored score is always a person's. */
+.suggest-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 0 0 14px;
+}
+
+.suggest-bar .field-note { margin: 0; }
+
+.suggestion {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-left: 2px solid var(--cp-accent);
+  background: var(--cp-surface-soft);
+  border-radius: 0 6px 6px 0;
+}
+
+.suggestion .feasibility-evidence { margin: 6px 0 0; }
+
+.suggestion-actions { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+
+/* The connection light moved out of the top bar and under Support, where the
+   rest of "is this thing working" lives. In a column of links it needs to be
+   its own line rather than something trailing the last one.
+   Desktop only: on a phone the sidebar is a menu somebody opened to go
+   somewhere, and a status line in it is one more thing between them and the
+   place they were heading. */
+@media (min-width: 681px) {
+  .sidebar-footer .system-status {
+    display: flex;
+    margin-top: 10px;
+    padding-top: 12px;
+    border-top: 1px solid var(--cp-border);
+
+    /* The colour it carried was for the dark top bar it used to live in. On the
+       sidebar's own background that is white on white. */
+    color: var(--cp-text-soft);
+  }
+}
+
+/* ================================================================== handover ==
+   What is left to do, folded shut. A consultant opens the one they are working
+   on; a client is shown the list of titles and never has to look inside. */
+
+.handover-list { display: grid; gap: 10px; margin-top: 18px; }
+
+.handover-task {
+  background: var(--cp-surface);
+  border: 1px solid var(--cp-border);
+  border-radius: 6px;
+}
+
+.handover-task summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 15px 18px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.handover-task summary::-webkit-details-marker { display: none; }
+
+/* The triangle is drawn rather than inherited, because the native one sits in a
+   different place in every browser and this row has to line up with the tag. */
+.handover-task summary::before {
+  content: "";
+  width: 0;
+  height: 0;
+  flex: 0 0 auto;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 6px solid var(--brand-orange);
+  transition: transform .18s var(--ease-out);
+}
+
+.handover-task[open] summary::before { transform: rotate(90deg); }
+
+.handover-title { flex: 1 1 auto; color: var(--brand-ink); font-size: 15px; font-weight: 600; }
+
+.handover-body { padding: 0 18px 18px 34px; }
+
+.handover-means { margin: 0 0 14px; color: var(--cp-text-muted); font-size: 13px; line-height: 1.6; }
+
+.handover-steps { margin: 0; padding-left: 18px; color: var(--cp-text-muted); font-size: 13px; line-height: 1.6; }
+
+.handover-steps li { margin-bottom: 8px; }
+
+.handover-where, .handover-examples {
+  margin: 14px 0 0;
+  color: var(--cp-text-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.handover-where strong, .handover-examples strong { color: var(--brand-ink); }
+
+@media (max-width: 680px) {
+  .handover-task summary { flex-wrap: wrap; padding: 13px 14px; }
+  .handover-body { padding: 0 14px 14px 14px; }
+}
+
+/* ============================================================ small fixes ==
+   Four things that were each wrong in a different way and are all about the
+   same thing: a row should look like what it does. */
+
+/* A download row is a link, and every link in this product is underlined, which
+   made a whole panel of them read as a wall of hyperlinks. The row is the
+   target; the arrow is what says so. */
+.documentation-row { text-decoration: none; }
+.documentation-row:hover strong { color: var(--cp-accent); }
+
+.documentation-get {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--cp-border);
+  border-radius: 50%;
+  color: var(--cp-accent);
+  font-size: 15px;
+  transition: background .2s var(--ease-out), border-color .2s var(--ease-out), color .2s var(--ease-out);
+}
+
+.documentation-row:hover .documentation-get {
+  background: var(--cap-hover-fill);
+  border-color: var(--cap-hover-fill);
+  color: var(--cap-hover-ink);
+}
+
+/* The filter pills sat directly under the heading rule with nothing between
+   them, so the two read as one object. */
+.filter-bar.small { margin-top: 18px; }
+
+/* Every state badge the same width, whatever the word inside it. Working,
+   Degraded and Failed are different lengths and a column of ragged coloured
+   blocks reads as a mistake rather than as a status. */
+.health-row .tag {
+  min-width: 132px;
+  padding: 6px 10px;
+  text-align: center;
+}
+
+/* ================================================================ the plan ==
+   Four hundred rows of "queue / Create / msdyn_name" answers no question. How
+   many queues, how many skills, and then the detail for the one you are unsure
+   about. */
+
+.plan-groups { display: grid; gap: 10px; margin-top: 18px; }
+
+.plan-group { background: var(--cp-surface); border: 1px solid var(--cp-border); border-radius: 6px; }
+
+.plan-group summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.plan-group summary::-webkit-details-marker { display: none; }
+
+.plan-group summary::before {
+  content: "";
+  width: 0;
+  height: 0;
+  flex: 0 0 auto;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 6px solid var(--brand-orange);
+  transition: transform .18s var(--ease-out);
+}
+
+.plan-group[open] summary::before { transform: rotate(90deg); }
+
+.plan-group-name { flex: 1 1 auto; color: var(--brand-ink); font-size: 15px; font-weight: 600; }
+
+.plan-group-counts { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* The tags in a summary line up with the text rather than sitting below it,
+   because the shared rule gives every tag a top margin for use in a heading. */
+.plan-group-counts .tag { margin-top: 0; }
+
+.plan-group .table-wrap { padding: 0 18px 18px; }
+
+.conflict-options { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--cp-border); }
+
+.conflict-options h3 { margin: 0 0 12px; color: var(--brand-ink); font-size: 15px; font-weight: 600; }
+
+.conflict-options ol { margin: 0; padding-left: 18px; color: var(--cp-text-muted); font-size: 13px; line-height: 1.6; }
+
+.conflict-options li { margin-bottom: 10px; }
+
+@media (max-width: 680px) {
+  .plan-group summary { flex-wrap: wrap; }
+  .plan-group .table-wrap { padding: 0 12px 12px; }
+}
+
+/* ================================================================= the runs ==
+   A finished run said it finished and nothing about what it read. */
+
+.run-list { display: grid; gap: 10px; margin-top: 18px; }
+
+.run-row { background: var(--cp-surface); border: 1px solid var(--cp-border); border-radius: 6px; }
+
+.run-row summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.run-row summary::-webkit-details-marker { display: none; }
+
+.run-row summary::before {
+  content: "";
+  width: 0;
+  height: 0;
+  flex: 0 0 auto;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 6px solid var(--brand-orange);
+  transition: transform .18s var(--ease-out);
+}
+
+.run-row[open] summary::before { transform: rotate(90deg); }
+
+.run-mode { flex: 1 1 auto; color: var(--brand-ink); font-size: 15px; font-weight: 600; }
+
+.run-when { color: var(--cp-text-muted); font-size: 12px; text-align: right; }
+
+.run-when .hint { display: block; }
+
+.run-row summary .tag { margin-top: 0; }
+
+.run-body { padding: 0 18px 18px 34px; }
+
+@media (max-width: 680px) {
+  .run-row summary { flex-wrap: wrap; gap: 8px; }
+  .run-when { text-align: left; }
+  .run-body { padding: 0 14px 14px; }
+}

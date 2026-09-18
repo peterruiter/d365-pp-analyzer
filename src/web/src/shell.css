@@ -1,0 +1,246 @@
+/* ===========================================================================
+   Corrections to the shell, for this product.
+
+   styles.css and workspaces.css are byte-for-byte the Intent Miner's, so they
+   can be re-synced from it without a merge. Anything this product needs to
+   change lives here instead, with the reason next to it.
+   =========================================================================== */
+
+/* ------------------------------------------------- the crushed sidebar --
+   A flex item's default min-width is auto, which means it refuses to shrink
+   below its own content. The workspace is a flex row, and every table cell in
+   the product is white-space: nowrap, so one wide table gave .main-content a
+   min-content width larger than the window. The overflow had to come from
+   somewhere, and it came out of the sidebar: the navigation rail rendered as a
+   40px strip of first letters.
+
+   The upstream stylesheet sets min-width: 0 here, but only inside the 680px
+   media query, so the fault appeared on laptops and not on phones. That is the
+   opposite of where anybody looks for a responsive bug.
+
+   min-width: 0 lets the column be narrower than its contents, which is what
+   allows .table-wrap to do the job it exists for and scroll the table inside
+   itself. flex-shrink: 0 on the rail then says the navigation is never the
+   thing that gives way. */
+.main-content {
+  min-width: 0;
+}
+
+.sidebar {
+  flex: 0 0 auto;
+}
+
+/* ----------------------------------------------- notes that need to wrap --
+   nowrap is right for a table of short values and wrong for a column of
+   sentences: one long note is what made the matrix wider than the window in
+   the first place. These columns wrap and take a sensible maximum, so the
+   table is readable at any width instead of being readable by scrolling. */
+.wrapping-cell {
+  max-width: 44ch;
+  white-space: normal;
+  color: var(--cp-text-muted);
+  line-height: 1.5;
+}
+
+/* --------------------------------------------- callouts inside a panel --
+   .panel-note.standalone is designed to sit on the page, where its own margin
+   is the gap. Inside a panel it inherits nothing to inset it, so it ran edge
+   to edge while every other row in the panel sat at 23px. */
+.panel > .panel-note.standalone {
+  margin-inline: 23px;
+}
+
+/* ------------------------------------------------- stacked hint lines --
+   .hint is a block in a form, where it sits under its field. In a table cell
+   it follows a tag or a timestamp on the same line and needs the break. */
+td .hint,
+th .hint {
+  display: block;
+  margin-top: 4px;
+}
+
+/* A tag directly after text in a cell needs air, or it collides with it. */
+td .tag + .hint,
+th .tag + .hint {
+  margin-top: 6px;
+}
+
+th .tag {
+  margin-left: 8px;
+}
+
+/* ------------------------------------------------------- space between panels --
+   Panels are laid out by a grid in the Intent Miner, and its gap is what separates
+   them. This product renders them as plain siblings of the main column, where
+   nothing did: two panels butted together read as one panel with a rule through
+   the middle, which is exactly what the Sources screen looked like.
+
+   14px, the same gap the grids use, so a page that mixes a metrics grid with
+   loose panels has one rhythm rather than two. */
+.main-content > * + .panel,
+.main-content > * + .metrics-grid,
+.main-content > * + .documentation-page,
+.main-content > * + article,
+.main-content > * + section {
+  margin-top: 14px;
+}
+
+/* The checklist brings its own, larger, margin and should keep it. */
+.main-content > * + .checklist {
+  margin-top: 26px;
+}
+
+/* ------------------------------------------------------------ connector marks --
+   Every connector gets a mark, so the picker reads as a set of products rather
+   than a list of strings.
+
+   These are generated tiles carrying the platform's initials, not the vendors'
+   own logos. Shipping a real trademark inside a Capgemini product is somebody's
+   decision to take deliberately, with the actual asset files, and inventing an
+   approximation of a mark is worse than not having one. */
+.connector-mark {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+
+.connector-card-head .connector-mark {
+  margin-right: 10px;
+}
+
+/* A row of a connector's name beside its mark, used in the wizard and the table. */
+.connector-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* The card head, as a grid rather than a spread row.
+   
+   Flex with space-between threw the name to the far edge of the card, away from the
+   mark it belongs to, whenever there was no status tag. Left aligning it instead put
+   the tag hard against the name, and a name long enough to wrap ran underneath it:
+   "Amazon Connect" and "ServiceNow Advanced Work Assignment" were both half covered.
+
+   Two columns and two rows. The mark, then the name beside it, then the tag on its
+   own line under the name where it can never collide with anything. */
+.connector-card-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 10px;
+  justify-content: start;
+}
+
+.connector-card-head strong {
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.connector-card-head .tag {
+  grid-column: 2;
+  justify-self: start;
+  margin: 2px 0 0;
+}
+
+/* A vendor's own logo, at the size the tile occupied. contain, because these arrive at
+   wildly different aspect ratios: the Genesys mark is square and the Talkdesk one is a
+   wordmark three times as wide. */
+.connector-logo {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.connector-card-head .connector-logo {
+  margin-right: 10px;
+}
+
+/* ============================================== buttons read as buttons ====
+   Every action in this product is a pill, and the pill is the only shape an
+   action takes. Upstream this was not true: .primary-button carries a 24px
+   radius, .secondary-button outside an .export-actions row is a bare text
+   link, .danger-button is a 6px rectangle and .icon-button is a square. Three
+   different shapes for the same kind of thing, plus one that is not a shape at
+   all, and the one that is not a shape is the one that reads as prose.
+
+   The distinction that survives is between an action and a destination.
+   Actions are pills, filled when they are the point of the screen and outlined
+   when they are not. Destinations stay links: the engagement name in the
+   administration table opens the engagement, the sidebar goes somewhere, and
+   putting either in a pill would say something about them that is not true.
+
+   Corrections live here rather than in styles.css because that file is kept
+   byte identical to the Intent Miner's, and this is a place the two products
+   deliberately differ. */
+
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 38px;
+  padding: 8px 20px;
+  border: 1px solid var(--cp-accent);
+  border-radius: 24px;
+  background: transparent;
+  color: var(--cp-accent);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+  transition: background .2s var(--ease-out), border-color .2s var(--ease-out), color .2s var(--ease-out);
+}
+
+.secondary-button:hover:not(:disabled) {
+  background: var(--cp-accent);
+  color: var(--cp-on-brand);
+}
+
+.secondary-button:disabled { opacity: .5; cursor: default; }
+
+/* The same radius as everything else. Six pixels was close enough to a pill to
+   look like a mistake rather than a decision. */
+.danger-button,
+.outline-button {
+  border-radius: 24px;
+  min-height: 38px;
+}
+
+/* A round close, because a square one beside a row of pills is the only corner
+   left on the screen. */
+.icon-button { border-radius: 50%; }
+
+/* Table rows carry the same pills at a smaller size. A row of full sized
+   buttons pushes a table's line height around; these sit inside it. */
+.secondary-button.small,
+.danger-button.small {
+  min-height: 28px;
+  padding: 4px 14px;
+  font-size: 12px;
+  gap: 6px;
+}
+
+/* Several actions in one cell, kept on one line and away from the text above. */
+.connection-actions,
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* .danger-button.outline pushes itself to the far end of a run panel's action
+   row, which is right there and wrong in a table cell where it is simply one
+   of two buttons. */
+td .danger-button.outline,
+.admin-actions .danger-button.outline { margin-left: 0; }

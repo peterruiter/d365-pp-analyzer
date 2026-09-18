@@ -1,0 +1,72 @@
+<Project>
+  <!--
+    Central package version management. Individual projects reference a package by
+    name only; the version is decided here. Update a version once and every project
+    moves together.
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Azure -->
+    <PackageVersion Include="Azure.Identity" Version="1.13.1" />
+    <!-- Uploaded solution files. A client's export is their intellectual property and some
+         contain secrets in plain text, which is one of the things this product looks for, so
+         the container is private and read with a managed identity rather than a key. -->
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.23.0" />
+    <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.5.1" />
+    <PackageVersion Include="Azure.Security.KeyVault.Secrets" Version="4.7.0" />
+
+    <!-- Data -->
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="6.0.1" />
+    <PackageVersion Include="Dapper" Version="2.1.66" />
+
+    <!-- Hosting -->
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Identity.Web" Version="3.8.2" />
+    <PackageVersion Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.22.0" />
+    <PackageVersion Include="Microsoft.ApplicationInsights.WorkerService" Version="2.22.0" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="7.2.0" />
+
+    <!-- Reading who owns a flow, and whether that person still exists -->
+    <PackageVersion Include="Microsoft.Graph" Version="5.66.0" />
+
+    <!-- Export -->
+    <PackageVersion Include="ClosedXML" Version="0.104.2" />
+    <!--
+      Syncfusion rather than QuestPDF, whose Community licence is free only below one
+      million dollars of annual revenue and so does not cover commercial Capgemini work.
+      The licence key is version locked, so this stays on 34.x until a new key is issued.
+    -->
+    <PackageVersion Include="Syncfusion.Pdf.Net.Core" Version="34.2.3" />
+    <PackageVersion Include="Syncfusion.Licensing" Version="34.2.3" />
+
+    <!-- Data formats. -->
+    <PackageVersion Include="CsvHelper" Version="33.0.1" />
+
+    <!-- Reading an exported solution file. A solution zip is XML plus JSON plus a
+         handful of binaries, and the offline extraction mode reads all of it without
+         ever connecting to anything. System.IO.Compression covers the zip itself. -->
+    <PackageVersion Include="System.IO.Compression" Version="4.3.0" />
+
+    <!-- Estimating. One call per finding, never per solution. -->
+    <PackageVersion Include="Azure.AI.OpenAI" Version="2.1.0" />
+
+    <!-- Test -->
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageVersion Include="xunit" Version="2.9.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <!--
+      Held below 8.0 deliberately. Version 8 moved from Apache 2.0 to a paid Xceed
+      licence that charges per developer for commercial use. Version 7 and below stay
+      free indefinitely, so the range keeps a routine upgrade from quietly putting the
+      project out of compliance.
+    -->
+    <PackageVersion Include="FluentAssertions" Version="[6.12.2,8.0.0)" />
+    <PackageVersion Include="NSubstitute" Version="5.3.0" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.2" />
+  </ItemGroup>
+</Project>

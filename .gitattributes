@@ -1,0 +1,18 @@
+* text=auto eol=lf
+
+*.ps1   text eol=crlf
+*.psm1  text eol=crlf
+*.sln   text eol=crlf
+*.csproj text eol=crlf
+
+*.sql   text eol=lf
+*.bicep text eol=lf
+*.md    text eol=lf
+*.json  text eol=lf
+*.cs    text eol=lf
+
+*.png binary
+*.jpg binary
+*.pdf binary
+*.xlsx binary
+*.parquet binary

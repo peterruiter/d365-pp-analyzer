@@ -1,0 +1,60 @@
+# ---------------------------------------------------------------------------
+# Generated artefacts. Never committed. build/Invoke-CodeGen.ps1 recreates them
+# from build/contracts on every build, so they cannot drift.
+# ---------------------------------------------------------------------------
+src/PowerPete.Analyzer.Domain/Generated/*.g.cs
+db/migrations/*.generated.sql
+
+# Deployment state written by Deploy-Infrastructure.ps1. Contains resource names
+# and endpoints, no secrets, but it is per-machine and per-environment.
+.azure/
+
+# .NET
+bin/
+obj/
+artifacts/
+*.user
+*.suo
+.vs/
+
+# Node
+node_modules/
+src/PowerPete.Analyzer.Api/wwwroot/*
+
+# Never commit client data. Ever. Not a sample, not "just for testing".
+samples/demo-data/generated/
+*.client.csv
+*.client.parquet
+**/client-data/
+
+# Local settings
+appsettings.Development.json
+appsettings.Local.json
+.env
+*.local
+
+# Local development instructions. These are not project documentation.
+CLAUDE.md
+*.claude.md
+.claude/
+HANDOVER.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local noise.
+# Editor settings are personal.
+.vscode/
+# Test run output, regenerated on every run.
+TestResults/
+
+# Playwright MCP scratch output: page snapshots and screenshots from a browser session.
+.playwright-mcp/
+
+# Exported client solution files. These are client intellectual property and several
+# of them contain secrets in plain text, which is one of the things this product looks
+# for. Nothing uploaded for analysis is ever committed.
+samples/solutions/
+*.solution.zip
+uploads/

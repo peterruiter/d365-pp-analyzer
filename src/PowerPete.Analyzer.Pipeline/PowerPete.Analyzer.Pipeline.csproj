@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\PowerPete.Analyzer.Analysis\PowerPete.Analyzer.Analysis.csproj" />
+    <ProjectReference Include="..\PowerPete.Analyzer.DevOps\PowerPete.Analyzer.DevOps.csproj" />
+    <ProjectReference Include="..\PowerPete.Analyzer.Domain\PowerPete.Analyzer.Domain.csproj" />
+    <ProjectReference Include="..\PowerPete.Analyzer.Estimation\PowerPete.Analyzer.Estimation.csproj" />
+    <ProjectReference Include="..\PowerPete.Analyzer.Extraction\PowerPete.Analyzer.Extraction.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Http" />
+  </ItemGroup>
+
+</Project>

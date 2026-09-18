@@ -1,0 +1,232 @@
+{
+  "contract": "acceptance-criteria",
+  "version": "1.0.0",
+  "description": "One acceptance criterion per rule that produces a work item. Written per rule rather than generated per finding, and substituted with the component at publish time. Every rule in the catalogue with a work item type other than 'none' needs an entry here and the contract integrity check fails when one is missing.",
+
+  "rules": {
+    "shape": "Given, when, then, plus an explicit test requirement. The test requirement is separate because 'the flow now has error handling' is a state and 'a deliberate failure reaches the notification channel' is a test, and only the second one catches a handler wired to nothing.",
+    "noBoilerplate": "A criterion saying 'the finding is resolved' is worse than none. It teaches a team that these work items are generated noise, and after the third one they close the rest without reading them.",
+    "substitution": "{componentName}, {componentType}, {solutionName}, {tableName}, {evidenceValue} and {count} are replaced at publish time. A placeholder with nothing behind it is dropped with its sentence rather than published as a brace.",
+    "theTestIsTheHardPart": "Most of these findings sit in code nobody has ever tested. The test requirement is usually the larger half of the estimate and is written first for that reason."
+  },
+
+  "criteria": {
+    "lifecycle.dialogPresent": {
+      "given": "The dialog {componentName} in solution {solutionName}",
+      "when": "It has been deleted",
+      "then": "No dialog records remain in the solution, and no security role, form or site map entry refers to one",
+      "testRequirement": "Confirm nothing referenced it before deleting. A dialog is unreachable in the interface, so the only way it is still doing anything is through a link somebody built to it."
+    },
+    "lifecycle.deprecatedClientApi": {
+      "given": "The web resource {componentName} calling a removed client API",
+      "when": "Each call has been replaced with its documented successor",
+      "then": "The Power Apps checker reports no deprecated client API findings for this web resource, and every form that loads it behaves as it did",
+      "testRequirement": "Open each form the web resource is registered on and exercise the behaviour it controls. A removed API fails silently in some browsers and loudly in others, so a single browser check proves less than it appears to."
+    },
+    "lifecycle.classicWorkflowInUse": {
+      "given": "The classic workflow {componentName} on table {tableName}",
+      "when": "Its replacement is in place and the workflow is deactivated",
+      "then": "The same records are produced, with the same values, for every trigger condition the workflow handled",
+      "testRequirement": "Run both for an agreed period against the same data and compare the output before deactivating the original. A workflow replaced and deactivated in one deployment has no way back inside a change window."
+    },
+    "lifecycle.classicWorkflowDormant": {
+      "given": "The classic workflow {componentName}, activated and with no execution recorded in ninety days",
+      "when": "Somebody has established which of the two explanations applies",
+      "then": "Either it is deactivated and deleted, or a defect is raised saying why it should have run and did not",
+      "testRequirement": "Create a record that matches its trigger conditions in a non production environment and watch whether it fires. That answers the question in ten minutes and no amount of reading the definition will."
+    },
+    "lifecycle.customWorkflowActivity": {
+      "given": "The custom workflow activity {componentName}, called by at least one activated workflow",
+      "when": "Its logic has been moved to a custom API or a plugin and every calling workflow has been repointed",
+      "then": "No activated workflow references the activity, and the assembly can be removed without breaking an import",
+      "testRequirement": "Exercise every calling workflow end to end against the new implementation. The activity's inputs and outputs are typed differently from a custom API's parameters, and a mapping error here produces a wrong value rather than an error."
+    },
+    "lifecycle.rdlReport": {
+      "given": "The report {componentName}",
+      "when": "A decision has been recorded to delete it, rebuild it in Power BI, or replace it with a view",
+      "then": "The decision names who uses the report and how often, and the replacement produces the same figures for an agreed reporting period",
+      "testRequirement": "Run the original and the replacement over the same period and reconcile the totals line by line. Reports disagree for reasons nobody predicts, usually a filter on a status nobody documented."
+    },
+    "lifecycle.dataflowPresent": {
+      "given": "The dataflow {componentName}",
+      "when": "It has been rebuilt somewhere it can be versioned, or retired",
+      "then": "The destination tables hold the same data after a full cycle, and the new implementation exists in source control",
+      "testRequirement": "Run both against the same source for one full cycle and compare row counts and a sample of values. Also confirm the Dataverse capacity consumption after the change, because that was half the reason for the finding."
+    },
+
+    "architecture.logicSpread": {
+      "given": "The table {tableName}, with logic in {count} different places",
+      "when": "The execution order on create and on update has been mapped and the consolidation agreed in that map has been done",
+      "then": "The map exists as a document a new developer can read, and the number of distinct mechanisms firing on that table has gone down",
+      "testRequirement": "Create, update and delete a record and confirm every expected side effect happens, in the expected order, once. The failure this rule exists for is a side effect happening twice, or not at all, depending on which mechanism ran first."
+    },
+    "architecture.proCodeWhereConfigWouldDo": {
+      "given": "The form script {componentName}, doing only visibility and validation",
+      "when": "It has been replaced with a business rule",
+      "then": "The same fields show, hide, enable and require under the same conditions, and the script is no longer registered on the form",
+      "testRequirement": "Walk every branch of the original script on the form. Business rules evaluate differently from an onload handler, particularly on a record that opens with the condition already met."
+    },
+    "architecture.externalLogicInvisible": {
+      "given": "The {componentType} {componentName}, pointing at {evidenceValue}",
+      "when": "An owner and a repository have been recorded for what sits behind it",
+      "then": "The architecture documentation names the service, its owner, its repository and what happens when it is unavailable",
+      "testRequirement": "Confirm the recorded owner acknowledges it. An owner written down without being told is a name, not an owner."
+    },
+
+    "quality.flowNoErrorHandling": {
+      "given": "The flow {componentName} in solution {solutionName}",
+      "when": "An action inside it fails",
+      "then": "The failure is reported to the agreed channel within one run, carrying the flow name, the run identifier and the failing action",
+      "testRequirement": "Force a failure in a non production environment and confirm the notification arrives. A configure run after setting that points at nothing looks identical to a working one in the designer."
+    },
+    "quality.flowFailureRate": {
+      "given": "The flow {componentName}, failing {evidenceValue} of its runs",
+      "when": "The cause has been found and fixed",
+      "then": "The failure rate over the following thirty days is below two percent, and any run that still fails does so for a reason somebody has written down",
+      "testRequirement": "Reproduce the original failure before fixing anything. A flow fixed without reproducing the failure is a flow that will fail again on the same input."
+    },
+    "quality.flowSize": {
+      "given": "The flow {componentName}, with {evidenceValue} actions",
+      "when": "It has been split into child flows along the steps a person would describe out loud",
+      "then": "No resulting flow exceeds forty actions, and each one has a name saying what it does rather than what it is part of",
+      "testRequirement": "Run the whole chain end to end with the same trigger data as the original and compare the outcome. Splitting a flow changes the failure boundaries, so a child that fails now leaves the parent in a state the original never had."
+    },
+    "quality.canvasDelegationWarnings": {
+      "given": "The canvas app {componentName}, with delegation warnings against {tableName}",
+      "when": "Each query over a table with real volume has been made delegable",
+      "then": "The app returns correct results against the full table, not only against the first five hundred rows",
+      "testRequirement": "Test against production volume, or a copy of it. Every one of these works in a development environment with two hundred rows, which is why the finding exists."
+    },
+    "quality.pluginNoTracing": {
+      "given": "The plugin assembly {componentName}",
+      "when": "Tracing has been added at the entry and exit of each handler and at every branch that can throw",
+      "then": "A failure in production leaves a trace log entry naming the handler, the branch and the record",
+      "testRequirement": "Force an exception in a non production environment and read the trace log. Tracing that is written but never flushed, or written below the configured level, produces nothing and looks identical in the code."
+    },
+    "quality.pluginNotSandboxed": {
+      "given": "The plugin assembly {componentName}, registered outside sandbox isolation",
+      "when": "It has been rebuilt to run in sandbox isolation and registered in the database rather than on disk",
+      "then": "It imports into an online environment, and the behaviour that needed full trust either works within the sandbox or has been moved outside the platform",
+      "testRequirement": "Import into a clean environment and exercise every registered step. Expect to find at least one thing that needed full trust, because that is usually why it was registered this way."
+    },
+    "quality.formScriptOnLoadWeight": {
+      "given": "The form {componentName}, loading {count} script libraries",
+      "when": "Libraries are registered only on the forms that use them",
+      "then": "Every form still behaves as it did, and the onload payload is smaller",
+      "testRequirement": "Measure form load before and after, and exercise each form. A library removed from a form where a handler still references it fails at the point the user clicks something, not at load."
+    },
+
+    "alm.unmanagedInProduction": {
+      "given": "Unmanaged customisations in the production environment {evidenceValue}",
+      "when": "A development environment is the source of truth and a pipeline promotes managed solutions into production",
+      "then": "No new unmanaged customisation appears in production, and what is there has been captured into a solution that can be exported",
+      "testRequirement": "Make a change in development, promote it, and confirm it arrives in production without anybody opening a maker portal there. Also confirm a change made directly in production is visible as an unmanaged layer, because that is how the next one gets caught."
+    },
+    "alm.defaultSolutionComponents": {
+      "given": "{count} custom components whose only solution membership is the default solution",
+      "when": "Each has been added to a named solution with a meaningful publisher prefix",
+      "then": "An export of the named solutions carries every one of them, and an import into a clean environment produces a working application",
+      "testRequirement": "Export and import into a clean environment and use the application. The components that get missed are the ones nothing visibly depends on until somebody runs the process that needs them."
+    },
+    "alm.publisherPrefixSprawl": {
+      "given": "Solution {solutionName}, carrying {count} publisher prefixes",
+      "when": "A prefix has been agreed for new work and written where a new developer will find it",
+      "then": "Components created after that date use the agreed prefix",
+      "testRequirement": "None on the existing components. Renaming a prefix is not something the platform permits, and attempting it is how a solution gets broken by a finding whose severity is low."
+    },
+    "alm.missingConnectionReference": {
+      "given": "The flow {componentName}, carrying a connection rather than a connection reference",
+      "when": "A connection reference exists per connector and the flow points at it",
+      "then": "The solution imports into a second environment and the flow runs there after the reference is bound, with no edit to the flow itself",
+      "testRequirement": "Import into an environment that has never held this solution and run the flow. Testing in an environment where the connection already exists proves nothing, because it resolves by accident."
+    },
+    "alm.hardCodedEnvironmentValue": {
+      "given": "The {componentType} {componentName}, containing the literal value {evidenceValue}",
+      "when": "The value comes from an environment variable with no default",
+      "then": "The component resolves the value per environment, and an import into an environment where it is unset surfaces it as missing",
+      "testRequirement": "Import into a second environment with the variable unset and confirm it fails visibly rather than running against the wrong target. A default value shipped with the definition reproduces the original problem with more steps."
+    },
+    "alm.environmentVariableWithDefault": {
+      "given": "The environment variable {componentName}, shipping a default value",
+      "when": "The default has been removed and the value is set per environment by the pipeline",
+      "then": "An import into an environment where the pipeline has not set it leaves the variable visibly empty",
+      "testRequirement": "Import into a clean environment and confirm the dependent component fails or warns rather than silently using the development value."
+    },
+
+    "governance.orphanedColumn": {
+      "given": "{count} custom columns on {tableName} with no form, view, flow or plugin reference",
+      "when": "Each has been checked for integration traffic and a decision recorded",
+      "then": "Columns confirmed unused are deleted, and columns written by an integration are documented as such rather than deleted",
+      "testRequirement": "Check the audit history or API usage for writes to each column over a full business cycle before deleting any of them. This rule cannot see an integration, and its finding is a question rather than an instruction."
+    },
+    "governance.securityRoleSprawl": {
+      "given": "The security role {componentName}, assigned to no user and no team",
+      "when": "It has been confirmed that nothing assigns it and it has been deleted",
+      "then": "The role no longer appears in the role picker",
+      "testRequirement": "Check whether a provisioning process assigns it on a schedule before deleting. A role assigned monthly by an automated job looks unassigned for twenty-nine days out of thirty."
+    },
+    "security.organisationLevelWrite": {
+      "given": "The security role {componentName}, granting organisation level write on {tableName}",
+      "when": "The privilege has been narrowed to business unit or user level",
+      "then": "The people who hold the role can still do their work, and can no longer change records outside their scope",
+      "testRequirement": "Have somebody who holds the role walk their actual daily tasks in a non production environment. Something will break, and finding out which thing in test is the entire purpose of this work item."
+    },
+    "security.secretInDefinition": {
+      "given": "The {componentType} {componentName}, containing a credential in its definition",
+      "when": "The credential has been rotated and the component reads it from Key Vault through an environment variable",
+      "then": "The exported solution contains no credential, and the component works with the new one",
+      "testRequirement": "Rotate first and confirm the old value stops working. Moving the secret without rotating leaves a live credential in every copy of the solution file that has already been exported, and in source control history."
+    },
+    "governance.orphanedByOwner": {
+      "given": "The {componentType} {componentName}, owned by a disabled or absent user",
+      "when": "Ownership has moved to a service principal or a solution owned by a group",
+      "then": "The component runs on credentials that do not belong to one person, and its run history continues uninterrupted",
+      "testRequirement": "Confirm the connections it uses were also reassigned. Changing the owner without changing the connections leaves it running on the departed person's authentication until that expires."
+    },
+
+    "performance.plugSyncSlow": {
+      "given": "The synchronous step {componentName}, averaging {evidenceValue} milliseconds",
+      "when": "Work that does not need to be in the transaction has moved out of it",
+      "then": "The average execution time is below five hundred milliseconds, and the behaviour that moved still happens",
+      "testRequirement": "Measure the save time a user experiences, not the step duration in the trace. They are different numbers and the user only ever sees the first one."
+    },
+    "performance.stepNoFilteringAttributes": {
+      "given": "The update step {componentName}, registered with no filtering attributes",
+      "when": "The columns the handler actually reads are listed on the registration",
+      "then": "The step no longer fires on changes to unrelated columns",
+      "testRequirement": "Update a column outside the filter and confirm the handler does not run, then update one inside it and confirm it does. Getting the filter too narrow is as common as having none, and it fails silently in the other direction."
+    },
+    "performance.viewComplexity": {
+      "given": "The default view {componentName} on {tableName}, with {count} columns or linked entities",
+      "when": "The default view has been trimmed and the wide version kept as a named alternative",
+      "then": "The table opens on a smaller default view and the wide view is still reachable",
+      "testRequirement": "Confirm nothing depends on the default view's column set: an export, a template or a script reading the grid. Trimming a default view is the kind of change that breaks something a fortnight later."
+    },
+
+    "operability.noFailureAlerting": {
+      "given": "The analysed solutions, with no component reporting a failure to a person",
+      "when": "A failure path exists that reaches an agreed channel",
+      "then": "A failure in any monitored component produces a message naming the component, the time and the identifier needed to find the run",
+      "testRequirement": "Force a failure and confirm somebody receives it. Every other operability finding in this report assumes this one is done, so a notification that goes to an unmonitored mailbox invalidates the lot."
+    },
+    "operability.noEnvironmentSeparation": {
+      "given": "The same solution present unmanaged in {count} environments with diverging versions",
+      "when": "One environment has been made the source and the others receive managed solutions from it",
+      "then": "A change made in the source environment reaches the others through a pipeline, and the divergence that existed has been reconciled and recorded",
+      "testRequirement": "Before anything else, produce a written comparison of what differs between the environments. Picking a source without knowing what the others have that it does not is how a fortnight of somebody's undocumented work disappears."
+    },
+
+    "quality.namingInconsistent": {
+      "given": "Solution {solutionName}, using {count} naming conventions for {componentType}",
+      "when": "A convention has been agreed and written where a new developer will find it",
+      "then": "Components created after that date follow it",
+      "testRequirement": "None on existing components. Renaming a schema name is not possible and renaming a display name breaks scripts, views and documentation that reference it, for a cosmetic gain."
+    },
+    "quality.missingDescription": {
+      "given": "{count} custom {componentType} with no description in solution {solutionName}",
+      "when": "A description has been written saying what the component is for and who asked for it",
+      "then": "Somebody who has never seen the solution can tell what each one does from its description alone",
+      "testRequirement": "Have somebody outside the team read ten of them and say what each component does. A description repeating the display name passes every automated check and helps nobody."
+    }
+  }
+}

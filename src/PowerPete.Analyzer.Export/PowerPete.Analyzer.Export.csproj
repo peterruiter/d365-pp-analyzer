@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\PowerPete.Analyzer.Domain\PowerPete.Analyzer.Domain.csproj" />
+    <ProjectReference Include="..\PowerPete.Analyzer.Analysis\PowerPete.Analyzer.Analysis.csproj" />
+    <ProjectReference Include="..\PowerPete.Analyzer.DevOps\PowerPete.Analyzer.DevOps.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Syncfusion renders the PDF. Without a licence key it does not fail, it stamps a trial
+      banner across every page, so the renderer refuses to start rather than letting a
+      watermarked document reach a client who was asked to sign it. The key is version locked
+      to the pinned packages: a major upgrade means asking Syncfusion for a new one.
+    -->
+    <PackageReference Include="ClosedXML" />
+    <PackageReference Include="Syncfusion.Pdf.Net.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      The Capgemini wordmark and the Ubuntu typeface ship inside the assembly. The report is
+      rendered in a container with no font cache and no asset share, so anything the PDF needs
+      has to travel with the code.
+
+      Ubuntu is used under the Ubuntu Font Licence 1.0. The wordmark is a Capgemini asset and
+      is used only in Capgemini deliverables.
+    -->
+    <EmbeddedResource Include="Brand/*.png" />
+    <EmbeddedResource Include="Brand/*.ttf" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="PowerPete.Analyzer.Tests" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

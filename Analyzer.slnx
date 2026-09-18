@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PowerPete.Analyzer.Analysis/PowerPete.Analyzer.Analysis.csproj" />
+    <Project Path="src/PowerPete.Analyzer.Api/PowerPete.Analyzer.Api.csproj" />
+    <Project Path="src/PowerPete.Analyzer.Data/PowerPete.Analyzer.Data.csproj" />
+    <Project Path="src/PowerPete.Analyzer.Dataverse/PowerPete.Analyzer.Dataverse.csproj" />
+    <Project Path="src/PowerPete.Analyzer.DevOps/PowerPete.Analyzer.DevOps.csproj" />
+    <Project Path="src/PowerPete.Analyzer.Domain/PowerPete.Analyzer.Domain.csproj" />
+    <Project Path="src/PowerPete.Analyzer.Estimation/PowerPete.Analyzer.Estimation.csproj" />
+    <Project Path="src/PowerPete.Analyzer.Export/PowerPete.Analyzer.Export.csproj" />
+    <Project Path="src/PowerPete.Analyzer.Extraction/PowerPete.Analyzer.Extraction.csproj" />
+    <Project Path="src/PowerPete.Analyzer.Jobs/PowerPete.Analyzer.Jobs.csproj" />
+    <Project Path="src/PowerPete.Analyzer.Pipeline/PowerPete.Analyzer.Pipeline.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PowerPete.Analyzer.Tests/PowerPete.Analyzer.Tests.csproj" />
+  </Folder>
+</Solution>

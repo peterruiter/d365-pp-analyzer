@@ -1,0 +1,142 @@
+{
+  "contract": "estimate-model",
+  "version": "1.0.0",
+  "description": "How a finding becomes a number somebody has to defend. Three layers, in a fixed order of precedence: a per engagement override, then a model estimate, then the band the rule declares. Every layer produces a range and a rationale, and nothing in this product produces a point estimate.",
+
+  "rules": {
+    "rangesOnly": "Every estimate has a low and a high. The schema has no column for a single number, which is the rule enforced rather than written down. A consultant who wants one figure can take the midpoint and own that decision.",
+    "precedence": "engagementOverride > modelEstimate > bandDefault. The first one present wins outright. Blending them produces a number nobody can explain, and explaining the number is most of what this product is for.",
+    "rationaleAlways": "No estimate reaches a report or a work item without a rationale in the reader's language. This holds for all three layers: a band default's rationale is the band's own description, an override's is whatever the person typed, and the model's is what it wrote. An estimate with no rationale is rejected at the schema, not silently defaulted.",
+    "frozenOnIssue": "When a report is issued, its estimates are frozen with the report. A re-run produces a new version. An estimate that quietly changes because a band was retuned three weeks later is an estimate nobody can be held to, and the figure in a statement of work has to be the figure the tool produced on the day.",
+    "noFalsePrecision": "Below five findings of a kind, the estimate is presented as an order of magnitude rather than a range. Four workflows do not support a seventeen to forty-one hour estimate.",
+    "fixedCostsAreNotPerFinding": "Discovery, environment access, test setup and handover exist once per engagement. They are added at the end, visibly, and are never distributed across findings to make individual numbers look bigger."
+  },
+
+  "bands": {
+    "description": "The fallback. Hours of consultant time per finding, used when no model estimate and no override exist. Deliberately wide, because a band is what you get when nobody has looked at the specific component yet.",
+    "trivial": { "low": 0.25, "high": 1, "rationale": "A deletion, a setting, a description. The work is finding it, not doing it." },
+    "small": { "low": 1, "high": 4, "rationale": "One component, understood, changed and tested in a sitting." },
+    "medium": { "low": 4, "high": 16, "rationale": "One component that needs to be understood first, changed, and regression tested against something it touches." },
+    "large": { "low": 16, "high": 60, "rationale": "A rebuild, or a change that reaches other components. Needs a design decision before anybody starts." },
+    "none": { "low": 0, "high": 0, "rationale": "Informational. Counted and reported, never estimated, never in the backlog." }
+  },
+
+  "complexityFactors": {
+    "description": "Multipliers on a specific finding's estimate, driven by something measured rather than judged. A factor with no measurable input does not belong here.",
+    "factors": [
+      {
+        "id": "flowActionCount",
+        "appliesTo": ["cloudFlow"],
+        "measure": "actionCount",
+        "bands": [
+          { "upTo": 10, "multiplier": 0.6, "label": "Small flow" },
+          { "upTo": 40, "multiplier": 1.0, "label": "Typical flow" },
+          { "upTo": 100, "multiplier": 2.0, "label": "Large flow" },
+          { "upTo": null, "multiplier": 3.5, "label": "Recommend redesign rather than conversion" }
+        ]
+      },
+      {
+        "id": "workflowStepCount",
+        "appliesTo": ["classicWorkflowBackground", "classicWorkflowRealtime"],
+        "measure": "stepCount",
+        "bands": [
+          { "upTo": 5, "multiplier": 0.6, "label": "A few steps" },
+          { "upTo": 20, "multiplier": 1.0, "label": "Typical" },
+          { "upTo": null, "multiplier": 2.2, "label": "Large, and probably does more than one job" }
+        ]
+      },
+      {
+        "id": "downstreamReferences",
+        "appliesTo": ["table", "column", "customApi", "customProcessAction"],
+        "measure": "referenceCount",
+        "bands": [
+          { "upTo": 2, "multiplier": 1.0, "label": "Isolated" },
+          { "upTo": 10, "multiplier": 1.6, "label": "Referenced across the solution" },
+          { "upTo": null, "multiplier": 2.8, "label": "Referenced everywhere. The change is the smaller half of the work" }
+        ]
+      },
+      {
+        "id": "rowVolume",
+        "appliesTo": ["canvasApp", "view", "pluginStep"],
+        "measure": "rowCount",
+        "bands": [
+          { "upTo": 2000, "multiplier": 0.8, "label": "Small table" },
+          { "upTo": 500000, "multiplier": 1.0, "label": "Normal" },
+          { "upTo": null, "multiplier": 1.8, "label": "Volume makes this a performance job as well as a correctness one" }
+        ]
+      },
+      {
+        "id": "regulatedEnvironment",
+        "appliesTo": ["*"],
+        "measure": "engagementFlag",
+        "bands": [
+          { "upTo": 0, "multiplier": 1.0, "label": "Standard" },
+          { "upTo": null, "multiplier": 1.4, "label": "Regulated. Change control, evidence and a test record for every change" }
+        ]
+      }
+    ]
+  },
+
+  "modelEstimate": {
+    "description": "A language model estimating one finding at a time. Chosen deliberately over a fixed calibration table, and the risk is equally deliberate: a model will produce a confident number for a component it has not understood. Everything below exists to make that visible rather than to pretend it does not happen.",
+    "scope": "One finding, with its component attributes, its evidence, its rule and the modernisation options. Never a whole solution in one call, and never a total.",
+    "required": {
+      "low": "Hours, lower bound.",
+      "high": "Hours, upper bound. Rejected when below low.",
+      "rationale": "Two or three sentences saying what the number assumes. Rejected when empty. This is what goes in the work item description and what gets read in the room.",
+      "confidence": "high, medium or low. A low confidence estimate is still used and is marked in the report and in the work item.",
+      "assumptions": "A list. The things that would change the number if they turn out differently.",
+      "storyPoints": "Fibonacci, from the same call. Derived from complexity rather than from the hours, because a team's points are not hours and mapping one to the other is what makes story points meaningless."
+    },
+    "recorded": {
+      "description": "Stored with every estimate so a number can be traced back to what produced it, and so a re-run that halves an estimate is investigable rather than mysterious.",
+      "fields": ["model", "promptVersion", "promptHash", "findingPayloadHash", "requestedUtc", "temperature", "tokensIn", "tokensOut"]
+    },
+    "guards": {
+      "rangeSanity": "An estimate whose high is more than eight times its low is rejected and retried once, then falls back to the band. A range that wide is the model saying it does not know, in a format that looks like an answer.",
+      "bandAnchor": "The band for the rule is passed in as an anchor. An estimate more than four times the band's high, or below a quarter of its low, is flagged in the report rather than silently accepted.",
+      "temperature": 0,
+      "noAggregation": "The model never sees or produces a total. Totals are summed from findings, which is the only way the arithmetic in a report is checkable.",
+      "offlineFallback": "Where no model is configured or the call fails, the band default is used and the report says which findings were estimated that way. It never silently degrades."
+    },
+    "confidenceLabels": {
+      "high": "The component's attributes were complete and the rule is one with a well understood fix.",
+      "medium": "Some attributes missing, or the fix depends on a choice between modernisation options.",
+      "low": "Evidence thin, or the finding needs somebody to look at the component before anybody can size it. Presented as a question in the report rather than as a number to plan with."
+    }
+  },
+
+  "engagementOverride": {
+    "description": "The per engagement table that beats the model. Filled by the consultant, from the engagement's own rates, team and history. The first override on an engagement usually appears about ten minutes after the first client conversation about a number, which is exactly when it should.",
+    "scopes": {
+      "rule": "Every finding of this rule in this engagement.",
+      "ruleAndComponentType": "Every finding of this rule against this kind of component.",
+      "finding": "One named finding. The narrowest and the most common."
+    },
+    "precedence": "finding > ruleAndComponentType > rule. Narrowest wins.",
+    "fields": ["scope", "ruleId", "componentTypeId", "findingId", "low", "high", "storyPoints", "rationale", "setBy", "setUtc"],
+    "rationaleRequired": true,
+    "rationaleNote": "Required for the same reason the model's is. An override with no reason is indistinguishable from a typo three months later, and it is the number that ends up in the statement of work.",
+    "carryForward": {
+      "withinEngagement": "An override survives re-runs and applies to the same finding on the next run, matched on the finding's stable key. That is the whole point: nobody re-types forty corrections after a re-extraction.",
+      "acrossEngagements": "Never automatically. An override can be copied from another engagement through the interface, explicitly, with its original rationale carried along. A client's numbers silently becoming another client's numbers is not something to leave to a default."
+    }
+  },
+
+  "fixedCosts": {
+    "description": "Per engagement, in hours, added once. Named so a client can see them rather than discovering them inside a per component rate.",
+    "items": [
+      { "id": "access", "name": "Environment access and permissions", "low": 4, "high": 24, "note": "Getting a reader into a client tenant. The most reliably underestimated item in any of these products." },
+      { "id": "validation", "name": "Validating the findings with the team who built it", "low": 8, "high": 24, "note": "Every estate has findings that are wrong because the tool cannot see something. Budgeting zero for this is how a report loses a room." },
+      { "id": "prioritisation", "name": "Prioritisation workshop", "low": 4, "high": 16, "note": "Turning a backlog into a plan somebody owns." },
+      { "id": "testSetup", "name": "Test approach for the changes", "low": 8, "high": 40, "note": "Most findings here have no test coverage today. Changing them without any is how a cleanup becomes an incident." },
+      { "id": "handover", "name": "Handover and documentation", "low": 4, "high": 16, "note": null }
+    ]
+  },
+
+  "storyPoints": {
+    "scale": [1, 2, 3, 5, 8, 13, 21],
+    "rule": "Produced by the model from complexity, or set in an override. Never derived from hours by a formula. A team whose velocity is calibrated against their own points cannot use points that were secretly hours all along.",
+    "aboveThirteen": "Anything the model puts at 21 is reported as needing to be split before it goes in a sprint, and the work item is created as a feature rather than a story."
+  }
+}

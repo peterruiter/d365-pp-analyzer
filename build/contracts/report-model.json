@@ -1,0 +1,161 @@
+{
+  "contract": "report-model",
+  "version": "1.0.0",
+  "description": "The assessment report, section by section, modelled on the CRM assessments Capgemini already delivers by hand. Its job is to draw the line between what this product can produce from an estate and what only a consultant who sat in the interviews can write, and to stop the second kind being generated.",
+
+  "principles": {
+    "threeKinds": "Every section is generated, written, or hybrid. A generated section comes entirely from the run. A written section has no automated input at all and the product provides a prompt and an empty box. A hybrid section is generated numbers with a consultant's paragraph over the top, and the report says which half is which.",
+    "doNotFakeTheConsulting": "The assessment this format comes from contained interviews with twenty-plus stakeholders, an ADKAR readiness scoring per person and direct quotes. None of that is derivable from a solution file and none of it is generated here. A tool that produced a plausible readiness score from metadata would be producing a lie that reads exactly like the real thing.",
+    "everyNumberCarriesItsDefinition": "The ratio, the complexity split and the maturity scores each travel with the sentence that defines them, into the PDF and into the workbook. The number gets quoted without the sentence otherwise.",
+    "unassessedIsASection": "Not a footnote. A reader who does not know that a third of the checks never ran will read a short findings list as a clean estate.",
+    "benchmarksNeedASource": "A comparison against an industry average is the single most quotable thing in a report of this kind and the easiest to invent. Any benchmark shipped here names where the figure came from and when, or it is not shipped."
+  },
+
+  "sections": [
+    {
+      "id": "cover",
+      "name": "Cover",
+      "kind": "generated",
+      "content": "Client, engagement, date, the solutions in scope and the extraction mode. The mode is on the cover rather than in an appendix, because a report from an offline export and one from a live connection answer different questions."
+    },
+    {
+      "id": "readingThis",
+      "name": "How to read this",
+      "kind": "generated",
+      "content": "The caveats from the score: how many checks could not run, how many solutions were analysed out of how many, how many estimates are band defaults, how many are low confidence. First page after the cover, deliberately."
+    },
+    {
+      "id": "managementSummary",
+      "name": "Management summary",
+      "kind": "hybrid",
+      "generated": "The headline counts, the ratio, the debt total as a range, and the three highest severity findings by name.",
+      "written": "What it means for this client and what to do about it. A paragraph nobody can generate, because it depends on what the client said they were trying to do.",
+      "prompt": "What were they trying to achieve, and does what you found help or block it? Name the one thing you would fix first and why."
+    },
+    {
+      "id": "estate",
+      "name": "What is in the estate",
+      "kind": "generated",
+      "content": "Component counts by type, domain and solution. The inventory table everybody asks for and few read.",
+      "visuals": ["componentsByDomain", "componentsBySolution"]
+    },
+    {
+      "id": "craftAndComplexity",
+      "name": "Customisation and complexity",
+      "kind": "generated",
+      "content": "The low code to high code ratio with its definition, and the components by customisation chart: counts per component category split simple, medium, complex and unrated. This is the chart a technical audience reads first.",
+      "visuals": ["lowCodeRatio", "componentsByCustomisation"]
+    },
+    {
+      "id": "lifecycle",
+      "name": "Lifecycle position",
+      "kind": "generated",
+      "content": "What Microsoft has removed, deprecated or stopped investing in, per component, with the verification state of every claim. A claim marked inferred is labelled as this product's reading rather than Microsoft's position.",
+      "visuals": ["lifecycleProfile"]
+    },
+    {
+      "id": "findings",
+      "name": "Findings",
+      "kind": "generated",
+      "content": "Every finding by category and severity, with its evidence. The body of the report.",
+      "visuals": ["findingsBySeverity", "debtByDomain"]
+    },
+    {
+      "id": "delivery",
+      "name": "Delivery and ALM",
+      "kind": "hybrid",
+      "generated": "The ALM category findings: unmanaged in production, default solution components, missing connection references, hard coded values, environment separation.",
+      "written": "How the team actually works. Whether there is a pipeline, how deployments happen, whether more than one team shares an environment, what the test process is.",
+      "prompt": "Describe the deployment path from a developer's machine to production, in the words the team used. The findings tell you what the estate looks like; only they can tell you why."
+    },
+    {
+      "id": "functionalMaturity",
+      "name": "Functional maturity",
+      "kind": "written",
+      "content": "Scored per capability against a benchmark. Entirely a consultant's judgement from interviews and demonstrations: no metadata says whether campaign management is any good. The product provides the axes, the scoring form and the chart, and none of the numbers.",
+      "visuals": ["maturityRadar", "maturityVersusBenchmark"],
+      "prompt": "Score each capability nought to five from what you saw and heard. Say who told you, per axis."
+    },
+    {
+      "id": "readiness",
+      "name": "Readiness for change",
+      "kind": "written",
+      "content": "ADKAR per person and the PCT assessment for the organisation. Nothing here is derivable from an estate and nothing here is generated. The product holds the scores somebody entered and draws the charts.",
+      "visuals": ["adkarProfile", "pctTriangle"],
+      "prompt": "Score from the interviews. If you did not interview anybody, leave this section out rather than filling it in from impressions."
+    },
+    {
+      "id": "roadmap",
+      "name": "Roadmap",
+      "kind": "generated",
+      "content": "Every finding placed on the two by two grid, in the band its rule declares. Generated, and the placement is per rule rather than invented per client.",
+      "visuals": ["roadmapGrid"]
+    },
+    {
+      "id": "backlog",
+      "name": "Backlog and estimate",
+      "kind": "generated",
+      "content": "The work items with their ranges, rationales and confidence, the fixed costs shown separately, and the total as a range. Never a single figure.",
+      "visuals": ["estimateByCategory"]
+    },
+    {
+      "id": "notAssessed",
+      "name": "What was not assessed",
+      "kind": "generated",
+      "content": "Every rule that could not run, by name, with the reason and the evidence source that was missing. Its own section rather than an appendix."
+    },
+    {
+      "id": "scenarios",
+      "name": "Scenarios",
+      "kind": "written",
+      "content": "Carry on, extend, or rebuild, with the characteristics, preconditions and watch-outs of each. A recommendation between them is a consulting judgement about a client's strategy, budget and appetite, and this product does not have an opinion about any of those.",
+      "prompt": "Name the scenarios the client is actually choosing between, in their words. For each, what it gives them, what it needs from them, and what worries you."
+    },
+    {
+      "id": "method",
+      "name": "How this was produced",
+      "kind": "generated",
+      "content": "The run, the date, the extraction mode, the identity it ran as, the ruleset version and the rule catalogue version. What makes a number in this report traceable in six months."
+    }
+  ],
+
+  "visuals": [
+    {
+      "id": "componentsByCustomisation",
+      "name": "Components by customisation",
+      "type": "stackedBar",
+      "axis": "Component category",
+      "series": ["simple", "medium", "complex", "unrated"],
+      "note": "Unrated is its own series rather than folded into simple. A chart showing four hundred simple components and forty unread ones is a different chart from one showing four hundred and forty simple ones."
+    },
+    { "id": "lowCodeRatio", "name": "Low code to high code", "type": "donut", "series": ["lowCode", "proCode", "external"], "note": "Configuration and content shown beside it as counts, never inside it." },
+    { "id": "componentsByDomain", "name": "Components by domain", "type": "bar", "axis": "Domain" },
+    { "id": "componentsBySolution", "name": "Components by solution", "type": "bar", "axis": "Solution" },
+    { "id": "lifecycleProfile", "name": "Lifecycle position", "type": "stackedBar", "series": ["current", "dated", "deprecated", "removed", "preview"] },
+    { "id": "findingsBySeverity", "name": "Findings by severity", "type": "stackedBar", "axis": "Category", "series": ["critical", "high", "medium", "low", "info"] },
+    { "id": "debtByDomain", "name": "Estimated effort by domain", "type": "bar", "axis": "Domain", "note": "Midpoints, and the axis label says so." },
+    { "id": "estimateByCategory", "name": "Estimate by category", "type": "rangeBar", "axis": "Category", "note": "A range bar rather than a column, because the estimate is a range and a column would be a point estimate drawn by the chart library." },
+    { "id": "roadmapGrid", "name": "Roadmap", "type": "quadrant", "rows": ["business", "process"], "columns": ["architecture", "technology"], "bands": ["unclutter", "accelerate", "innovate"] },
+    { "id": "maturityRadar", "name": "Functional maturity", "type": "radar", "source": "consultantEntered" },
+    { "id": "maturityVersusBenchmark", "name": "Maturity against benchmark", "type": "groupedBar", "source": "consultantEntered", "note": "A benchmark series only appears when one is configured with a source and a date. There is none in the box." },
+    { "id": "adkarProfile", "name": "ADKAR", "type": "bar", "source": "consultantEntered" },
+    { "id": "pctTriangle", "name": "PCT", "type": "triangle", "source": "consultantEntered" }
+  ],
+
+  "maturityAxes": {
+    "description": "The capability axes a functional assessment is scored on. Shipped as a form for a consultant to fill in, never as something this product infers. Taken from the assessment format rather than invented, so two engagements are comparable.",
+    "scale": "0 to 5. The scale label goes on the chart, because a 1.9 with no scale beside it is meaningless and gets quoted anyway.",
+    "groups": [
+      { "id": "marketing", "axes": ["campaignManagement", "leadManagement", "customerFeedbackLoops"] },
+      { "id": "sales", "axes": ["pipelineManagement", "salesTeamManagement", "onboarding", "customerSegmentation"] },
+      { "id": "service", "axes": ["serviceRequestManagement", "omnichannel", "contactCentre", "customerSatisfaction", "selfService"] },
+      { "id": "foundation", "axes": ["customer360", "biAndAnalytics", "businessAdoption", "dataQuality"] }
+    ]
+  },
+
+  "benchmark": {
+    "shipped": false,
+    "why": "An industry average is the most quotable figure in a report of this kind and the easiest to make up. Nothing ships in the box. A benchmark configured per engagement carries its source and the date it was collected, and both print on the chart.",
+    "fields": ["label", "source", "collectedOn", "sampleSize", "scores"]
+  }
+}

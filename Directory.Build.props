@@ -1,0 +1,41 @@
+<Project>
+  <!--
+    Shared settings for every project in this repository. Change things here rather
+    than in individual csproj files.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- Warnings are errors. A warning nobody fixes is a warning nobody reads. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+
+    <!--
+      The version comes from the VERSION file at the root, which is the one place it is
+      written and the number the container image is tagged with. Left unset, every assembly
+      reports 1.0.0.0, and on a product where the tag is how you tell two deploys apart that
+      is a footer that lies to a consultant.
+    -->
+    <VersionFile>$(MSBuildThisFileDirectory)VERSION</VersionFile>
+    <Version Condition="Exists('$(VersionFile)')">$([System.IO.File]::ReadAllText('$(VersionFile)').Trim())</Version>
+
+    <Company>Capgemini</Company>
+    <Product>Power Platform Solution Analyzer</Product>
+    <Authors>Peter Ruiter</Authors>
+    <Copyright>Copyright Capgemini. All rights reserved.</Copyright>
+
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- CS1591: missing XML comment. Generated files carry their own docs and
+         internal plumbing does not need a comment on every member. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <Deterministic>true</Deterministic>
+    <DebugType>portable</DebugType>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Translations travel with the assembly. A bundle read from disk is one a container can
+      be deployed without, and a screen showing resource keys to a client is not something to
+      find out about in production.
+
+      WithCulture and LogicalName are both load bearing. Left to itself MSBuild reads
+      'ui.nl.json' the way it reads 'Strings.nl.resx': it infers the culture, strips it from
+      the manifest name, and puts the file in a satellite assembly under nl\. Every bundle
+      then embeds correctly, under a name with the language removed, in an assembly the
+      loader never looks at, and every screen renders resource keys without one word of
+      complaint from the build.
+    -->
+    <EmbeddedResource Include="Localization\Resources\*.json"
+                      WithCulture="false"
+                      LogicalName="PowerPete.Analyzer.Domain.Localization.Resources.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

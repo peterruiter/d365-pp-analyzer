@@ -1,0 +1,65 @@
+# Everything the image build does not need.
+#
+# The Dockerfile restores and builds from source inside the image, so build output on the
+# host is not only useless to it, it is most of the upload.
+#
+# Every project path is spelled out in full, with no wildcard inside it. The az CLI packer
+# does not reliably honour `**/bin/`, and it does not honour a `*` standing in for a single
+# path segment either: `src/*/bin/` looks right and still lets gigabytes of build output
+# through. The failure is worse than a slow upload, because it does not fail. The client sits
+# there packing with nothing on screen and no run ever appears in the registry.
+#
+# If a project is added, add its two lines here. That is the whole maintenance burden, and it
+# is cheaper than working out why a build never starts.
+
+src/PowerPete.Analyzer.Api/bin
+src/PowerPete.Analyzer.Api/obj
+src/PowerPete.Analyzer.Connectors/bin
+src/PowerPete.Analyzer.Connectors/obj
+src/PowerPete.Analyzer.Data/bin
+src/PowerPete.Analyzer.Data/obj
+src/PowerPete.Analyzer.Dataverse/bin
+src/PowerPete.Analyzer.Dataverse/obj
+src/PowerPete.Analyzer.Domain/bin
+src/PowerPete.Analyzer.Domain/obj
+src/PowerPete.Analyzer.Export/bin
+src/PowerPete.Analyzer.Export/obj
+src/PowerPete.Analyzer.Jobs/bin
+src/PowerPete.Analyzer.Jobs/obj
+src/PowerPete.Analyzer.Pipeline/bin
+src/PowerPete.Analyzer.Pipeline/obj
+tests/PowerPete.Analyzer.Tests/bin
+tests/PowerPete.Analyzer.Tests/obj
+tests/PowerPete.Analyzer.Tests/TestResults
+
+# The web build runs inside the image and installs its own packages.
+src/web/node_modules
+src/web/dist
+
+# Produced inside the image, not copied into it. The build stage creates the directory
+# itself, so there is no placeholder to keep an exception for.
+src/PowerPete.Analyzer.Api/wwwroot
+
+# Kept as a second line of defence, for anything outside a known project.
+**/bin/
+**/obj/
+**/node_modules/
+bin/
+obj/
+node_modules/
+
+# NOT excluded, deliberately: src/PowerPete.Analyzer.Domain/Generated and
+# db/migrations/*.generated.sql. Both are gitignored because they are rebuilt from the
+# contracts, and both have to reach the image because the SDK stage has no PowerShell to
+# rebuild them with. The Dockerfile checks they arrived.
+
+.git
+.github
+.azure
+.vscode
+.claude
+.playwright-mcp
+artifacts
+*.user
+*.suo
+*.png

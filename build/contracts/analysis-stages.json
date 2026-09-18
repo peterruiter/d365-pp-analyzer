@@ -1,0 +1,198 @@
+{
+  "contract": "analysis-stages",
+  "version": "1.0.0",
+  "description": "Every stage an analysis run passes through, in order, plus the run modes and the one gate that matters. Generates the stage enumeration, the resume logic and the status screens.",
+
+  "principles": {
+    "nothingWritesToThePlatform": "No stage writes to a Power Platform environment in any mode. There is no flag that changes this, because the value of a discovery that is safe to run in a first meeting exceeds anything a write would add.",
+    "publishIsTheOnlyWrite": "The publish stage writes work items to Azure DevOps and is the only stage in the product that writes anywhere outside its own database. It sits behind an approval recorded against a named person and the exact backlog they saw.",
+    "approvalBindsToAHash": "The approval records a hash of the backlog as it was presented. A backlog that changes afterwards no longer matches and the publish refuses. Approving one thing and publishing another is the failure this exists to prevent.",
+    "resumable": "Every stage checkpoints. A run that dies during extraction resumes rather than restarting, because re-extracting a large estate costs an hour and re-running a checker job costs a queue place.",
+    "idempotentPublish": "Publishing twice creates no duplicates. Every work item carries a deterministic key derived from the engagement, the rule and the component, and an existing item is updated rather than added."
+  },
+
+  "modes": [
+    {
+      "id": "quickScan",
+      "name": "Quick scan",
+      "purpose": "Counts, the low code ratio, lifecycle findings and the top of the debt list. Fifteen minutes, no checker job, no model estimates. The mode for the meeting where somebody asks how bad it is.",
+      "stopsAfter": "score",
+      "runsChecker": false,
+      "estimates": "bandDefault",
+      "requiresApproval": false
+    },
+    {
+      "id": "assessment",
+      "name": "Assessment",
+      "purpose": "The full rule set, the checker, model estimates with rationale, the report and the backlog. The deliverable for a paid discovery.",
+      "stopsAfter": "backlog",
+      "runsChecker": true,
+      "estimates": "model",
+      "requiresApproval": false
+    },
+    {
+      "id": "publish",
+      "name": "Publish to Azure DevOps",
+      "purpose": "Writes the approved backlog into a project as work items. The only mode that writes anything to a client system.",
+      "stopsAfter": "publish",
+      "runsChecker": false,
+      "estimates": "asApproved",
+      "requiresApproval": true,
+      "note": "Runs against an existing assessment rather than re-analysing. Re-analysing here would mean the thing published is not the thing approved."
+    },
+    {
+      "id": "compare",
+      "name": "Compare",
+      "purpose": "This run against a previous one. What was fixed, what appeared, what moved. The mode that makes a second engagement worth buying.",
+      "stopsAfter": "score",
+      "runsChecker": true,
+      "estimates": "model",
+      "requiresApproval": false
+    }
+  ],
+
+  "stages": [
+    {
+      "id": "connect",
+      "name": "Check connections",
+      "order": 10,
+      "writes": "nothing",
+      "description": "Authenticates every configured source and reports the identity it authenticated as, what it is allowed to read, and which evidence sources are therefore reachable. A connection that succeeds with too few privileges fails later in a way that looks exactly like an estate with nothing in it.",
+      "retryable": true,
+      "maxAttempts": 3,
+      "failureIsFatal": true
+    },
+    {
+      "id": "selectSolutions",
+      "name": "Select solutions",
+      "order": 20,
+      "writes": "own",
+      "description": "Lists the solutions in the environment with their component counts, managed state, publisher and version, and records which were chosen. A run always states what it looked at, because a report covering four of nineteen solutions and a report covering all nineteen look identical on the cover page.",
+      "retryable": true,
+      "maxAttempts": 2,
+      "failureIsFatal": true
+    },
+    {
+      "id": "extract",
+      "name": "Extract",
+      "order": 30,
+      "writes": "own",
+      "description": "Reads components from every reachable source into staging, uninterpreted. Each entity read is recorded separately with its own success or failure, so a partial read is visibly partial rather than arithmetically invisible.",
+      "retryable": true,
+      "maxAttempts": 3,
+      "failureIsFatal": false,
+      "partialFailureBehaviour": "A run continues when some entities fail and marks every rule depending on them as not assessed. A run where more than a quarter of entities failed stops, because at that point the report would describe an environment nobody read."
+    },
+    {
+      "id": "checker",
+      "name": "Run the Power Apps checker",
+      "order": 40,
+      "writes": "nothing",
+      "description": "Uploads the solution to the checker service, polls for completion and downloads the report. Long running: a minute at best and five or more on a large solution.",
+      "retryable": true,
+      "maxAttempts": 2,
+      "failureIsFatal": false,
+      "pollIntervalSeconds": 20,
+      "timeoutMinutes": 20
+    },
+    {
+      "id": "normalise",
+      "name": "Normalise",
+      "order": 50,
+      "writes": "own",
+      "description": "Staged records become components in the model declared by component-model.json, with craft and lifecycle attached. Normalising twice updates rather than duplicating, so a mapping defect is fixed and replayed without going back to the client's environment for the data again.",
+      "retryable": true,
+      "maxAttempts": 3,
+      "failureIsFatal": true
+    },
+    {
+      "id": "resolve",
+      "name": "Resolve references",
+      "order": 60,
+      "writes": "own",
+      "description": "Builds the dependency graph: which form loads which script, which flow uses which connection reference, which column appears on nothing. Most of the interesting rules need this and none of them can run before it.",
+      "retryable": true,
+      "maxAttempts": 2,
+      "failureIsFatal": true
+    },
+    {
+      "id": "analyse",
+      "name": "Apply the rules",
+      "order": 70,
+      "writes": "own",
+      "description": "Every rule in the catalogue against every component in scope, plus the checker results folded in. Produces findings with evidence attached. A rule whose evidence source was unreachable produces a not assessed record rather than nothing.",
+      "retryable": true,
+      "maxAttempts": 2,
+      "failureIsFatal": true
+    },
+    {
+      "id": "score",
+      "name": "Score",
+      "order": 80,
+      "writes": "own",
+      "description": "The low code ratio, the debt profile per domain, the lifecycle position and the comparison against a previous run where one exists. Every number carries its own definition into the export.",
+      "retryable": true,
+      "maxAttempts": 2,
+      "failureIsFatal": true
+    },
+    {
+      "id": "estimate",
+      "name": "Estimate",
+      "order": 90,
+      "writes": "own",
+      "description": "One model call per finding, with the band as an anchor and the engagement override table consulted first. Rationale required on every estimate. Falls back to the band when no model is configured and says so in the report.",
+      "retryable": true,
+      "maxAttempts": 2,
+      "failureIsFatal": false
+    },
+    {
+      "id": "backlog",
+      "name": "Build the backlog",
+      "order": 100,
+      "writes": "own",
+      "description": "Findings grouped into work items per devops-mapping.json, with acceptance criteria and test requirements written per rule. Produces the hash the approval binds to.",
+      "retryable": true,
+      "maxAttempts": 2,
+      "failureIsFatal": true
+    },
+    {
+      "id": "approve",
+      "name": "Approval",
+      "order": 110,
+      "writes": "own",
+      "description": "A named person approves the backlog they are looking at. Not a setting and not a configuration flag: a row, inserted, recording who and when and which hash.",
+      "retryable": false,
+      "maxAttempts": 1,
+      "failureIsFatal": true,
+      "manual": true
+    },
+    {
+      "id": "publish",
+      "name": "Publish to Azure DevOps",
+      "order": 120,
+      "writes": "target",
+      "description": "Creates or updates work items in the configured project. Refuses without a matching approval. Records every item created with its identifier, so a publish can be reported on and, if it was wrong, found again.",
+      "retryable": true,
+      "maxAttempts": 3,
+      "failureIsFatal": true
+    },
+    {
+      "id": "export",
+      "name": "Export",
+      "order": 130,
+      "writes": "own",
+      "description": "The report as PDF, the findings and backlog as Excel. Produced from the stored run rather than recomputed, so the document and the screen agree.",
+      "retryable": true,
+      "maxAttempts": 2,
+      "failureIsFatal": false
+    }
+  ],
+
+  "deliverables": [
+    { "id": "managementReport", "name": "Assessment report", "format": "pdf", "description": "The document a client reads. Findings, the ratio, the debt profile, the modernisation options and the estimate with its assumptions." },
+    { "id": "findingsWorkbook", "name": "Findings", "format": "xlsx", "description": "Every finding, one row each, with component, rule, severity, evidence, estimate range, rationale and confidence. The sheet that gets filtered in a workshop." },
+    { "id": "backlogWorkbook", "name": "Backlog", "format": "xlsx", "description": "The work items as they would be created, with acceptance criteria and points. Exported whether or not anybody publishes to DevOps." },
+    { "id": "inventory", "name": "Component inventory", "format": "xlsx", "description": "Everything found, by type and solution, with craft and lifecycle. The appendix nobody reads and everybody asks for." },
+    { "id": "comparison", "name": "Comparison", "format": "pdf", "description": "This run against a previous one." }
+  ]
+}
