@@ -264,5 +264,10 @@
   "theme.switch-to-light": "Cambiar al modo claro",
   "theme.switch-to-dark": "Cambiar al modo oscuro",
   "theme.dark-mode-on": "El modo oscuro está activado",
-  "theme.light-mode-on": "El modo claro está activado"
+  "theme.light-mode-on": "El modo claro está activado",
+  "connections.new-source": "Orígenes",
+  "connections.new-target": "Destinos",
+  "connections.add": "Añadir una conexión",
+  "connections.last-tested": "Última prueba {0}",
+  "connections.not-tested": "Nunca probada"
 }

@@ -264,5 +264,10 @@
   "theme.switch-to-light": "Switch to light mode",
   "theme.switch-to-dark": "Switch to dark mode",
   "theme.dark-mode-on": "Dark mode is on",
-  "theme.light-mode-on": "Light mode is on"
+  "theme.light-mode-on": "Light mode is on",
+  "connections.new-source": "Sources",
+  "connections.new-target": "Targets",
+  "connections.add": "Add a connection",
+  "connections.last-tested": "Last tested {0}",
+  "connections.not-tested": "Never tested"
 }

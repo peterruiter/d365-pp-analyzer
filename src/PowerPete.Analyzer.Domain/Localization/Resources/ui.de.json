@@ -264,5 +264,10 @@
   "theme.switch-to-light": "Zum hellen Modus wechseln",
   "theme.switch-to-dark": "Zum dunklen Modus wechseln",
   "theme.dark-mode-on": "Dunkler Modus ist an",
-  "theme.light-mode-on": "Heller Modus ist an"
+  "theme.light-mode-on": "Heller Modus ist an",
+  "connections.new-source": "Quellen",
+  "connections.new-target": "Ziele",
+  "connections.add": "Verbindung hinzufügen",
+  "connections.last-tested": "Zuletzt geprüft {0}",
+  "connections.not-tested": "Nie geprüft"
 }

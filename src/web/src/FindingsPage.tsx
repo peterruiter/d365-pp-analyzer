@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useTranslation } from './i18n';
-import { api } from './workspace';
+import { useT } from './i18n';
+import { getJson, sendJson } from './workspace';
 
 /**
  * One finding, as the API returns it.
@@ -49,7 +49,7 @@ interface FindingsResponse {
 const severityOrder = ['critical', 'high', 'medium', 'low', 'info'];
 
 export function FindingsPage({ engagementId }: { engagementId: string }) {
-  const { t } = useTranslation();
+  const t = useT();
   const [data, setData] = useState<FindingsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [severity, setSeverity] = useState<string>('all');
@@ -59,9 +59,11 @@ export function FindingsPage({ engagementId }: { engagementId: string }) {
   useEffect(() => {
     let cancelled = false;
 
-    api<FindingsResponse>(`/api/engagements/${engagementId}/findings`)
-      .then(result => { if (!cancelled) setData(result); })
-      .catch(reason => { if (!cancelled) setError(String(reason)); });
+    void getJson<FindingsResponse>(`/api/engagements/${engagementId}/findings`).then((result) => {
+      if (cancelled) return;
+      if (result.data) setData(result.data);
+      else setError(result.error ?? 'The findings could not be read.');
+    });
 
     return () => { cancelled = true; };
   }, [engagementId]);
@@ -218,7 +220,7 @@ export function FindingsPage({ engagementId }: { engagementId: string }) {
  * it is the number that ends up in the statement of work.
  */
 function OverrideForm({ engagementId, finding }: { engagementId: string; finding: Finding }) {
-  const { t } = useTranslation();
+  const t = useT();
   const [low, setLow] = useState(String(finding.lowHours));
   const [high, setHigh] = useState(String(finding.highHours));
   const [rationale, setRationale] = useState('');
@@ -231,18 +233,15 @@ function OverrideForm({ engagementId, finding }: { engagementId: string; finding
     setSaving(true);
 
     try {
-      await api(`/api/engagements/${engagementId}/overrides`, {
-        method: 'POST',
-        body: JSON.stringify({
-          scope: 'finding',
-          findingKey: finding.stableKey,
-          lowHours: Number(low),
-          highHours: Number(high),
-          rationale: rationale.trim()
-        })
+      const result = await sendJson(`/api/engagements/${engagementId}/overrides`, 'POST', {
+        scope: 'finding',
+        findingKey: finding.stableKey,
+        lowHours: Number(low),
+        highHours: Number(high),
+        rationale: rationale.trim()
       });
 
-      setSaved(true);
+      if (!result.error) setSaved(true);
     } finally {
       setSaving(false);
     }

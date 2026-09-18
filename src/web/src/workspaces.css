@@ -1007,3 +1007,17 @@
 .override-form .field-row { display: flex; flex-wrap: wrap; gap: 12px; }
 .override-form .field-row > label { flex: 1 1 140px; }
 .override-form label.full { display: block; width: 100%; }
+
+/* ------------------------------------------------------------- connections --
+   The connection list and the monogram beside each one. The mark is drawn from
+   the name rather than loaded, because the vendor logos lived in the microsite
+   and a broken image next to a client's platform reads worse than no image. */
+
+.connector-mark { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex: 0 0 28px; border-radius: 6px; color: #ffffff; font-size: 11px; font-weight: 700; letter-spacing: .02em; }
+
+.connection-list { display: grid; gap: 10px; margin: 0; padding: 4px 23px 20px; list-style: none; }
+.connection-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; background: var(--cp-surface); border: 1px solid var(--cp-border); border-radius: 6px; }
+.connection-item-body { display: grid; gap: 2px; min-width: 0; flex: 1 1 auto; }
+.connection-item-body strong { color: var(--brand-ink); font-size: 13px; }
+.connection-item-body .hint { color: var(--cp-text-soft); font-size: 11px; line-height: 1.5; }
+.connection-item .tag { margin: 0; flex: 0 0 auto; }

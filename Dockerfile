@@ -98,4 +98,10 @@ WORKDIR /app
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 COPY --from=publish /app/publish .
+
+# The translation bundles, which /api/locales/{code}/{ns} reads at run time. They are data
+# rather than code, so nothing in the publish output carries them and the language picker
+# would offer six languages and serve one.
+COPY src/PowerPete.Analyzer.Domain/Localization/Resources ./src/PowerPete.Analyzer.Domain/Localization/Resources
+
 ENTRYPOINT ["dotnet", "PowerPete.Analyzer.Api.dll"]

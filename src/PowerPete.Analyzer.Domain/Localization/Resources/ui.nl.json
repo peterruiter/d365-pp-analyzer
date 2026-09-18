@@ -264,5 +264,10 @@
   "theme.switch-to-light": "Overschakelen naar lichte modus",
   "theme.switch-to-dark": "Overschakelen naar donkere modus",
   "theme.dark-mode-on": "Donkere modus staat aan",
-  "theme.light-mode-on": "Lichte modus staat aan"
+  "theme.light-mode-on": "Lichte modus staat aan",
+  "connections.new-source": "Bronnen",
+  "connections.new-target": "Doelen",
+  "connections.add": "Verbinding toevoegen",
+  "connections.last-tested": "Laatst getest {0}",
+  "connections.not-tested": "Nooit getest"
 }

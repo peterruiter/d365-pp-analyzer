@@ -380,6 +380,45 @@ app.MapGet("/api/engagements/{engagementId:guid}/backlog",
     });
 }).RequireAuthorization();
 
+// -------------------------------------------------------------------- locales --
+// The web application imports English at build time and fetches every other language from
+// here. Without this endpoint the picker offers six languages and quietly renders five of
+// them in English, because the fetch fails and the client is written to keep English rather
+// than blank the screen. A silent fallback is the right behaviour and a missing endpoint is
+// not the reason to exercise it.
+app.MapGet("/api/locales", () => Results.Ok(LocaleCatalogue.All.Select(locale => new
+{
+    code = locale.Code,
+    englishName = locale.EnglishName,
+    nativeName = locale.NativeName,
+    culture = locale.Culture
+})));
+
+app.MapGet("/api/locales/{code}/{ns}", (string code, string ns) =>
+{
+    // Both halves are path segments and both end up in a file name, so neither is allowed to
+    // be anything but a name this product already knows. A catalogue lookup rather than a
+    // sanitising pass: there is a fixed list of each and anything outside it is not a typo to
+    // be corrected, it is a path being probed.
+    var locale = LocaleCatalogue.All.FirstOrDefault(candidate =>
+        string.Equals(candidate.Code, code, StringComparison.OrdinalIgnoreCase));
+
+    if (locale is null) return Results.NotFound();
+
+    if (!LocaleCatalogue.Namespaces.Contains(ns, StringComparer.Ordinal)) return Results.NotFound();
+
+    var path = Path.Combine(
+        AppContext.BaseDirectory,
+        "src", "PowerPete.Analyzer.Domain", "Localization", "Resources",
+        $"{ns}.{locale.Code}.json");
+
+    // An absent bundle is not an error. A namespace nobody has translated yet falls back to
+    // English on the client, which is the documented behaviour of every locale but English.
+    if (!File.Exists(path)) return Results.Ok(new Dictionary<string, string>());
+
+    return Results.Text(File.ReadAllText(path), "application/json");
+});
+
 // --------------------------------------------------------------------- health --
 app.MapHealthChecks("/healthz");
 

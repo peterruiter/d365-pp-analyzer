@@ -264,5 +264,10 @@
   "theme.switch-to-light": "Passa alla modalità chiara",
   "theme.switch-to-dark": "Passa alla modalità scura",
   "theme.dark-mode-on": "La modalità scura è attiva",
-  "theme.light-mode-on": "La modalità chiara è attiva"
+  "theme.light-mode-on": "La modalità chiara è attiva",
+  "connections.new-source": "Origini",
+  "connections.new-target": "Destinazioni",
+  "connections.add": "Aggiungi una connessione",
+  "connections.last-tested": "Ultimo test {0}",
+  "connections.not-tested": "Mai testata"
 }

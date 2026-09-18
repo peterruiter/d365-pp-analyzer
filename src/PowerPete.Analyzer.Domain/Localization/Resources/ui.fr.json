@@ -264,5 +264,10 @@
   "theme.switch-to-light": "Passer au mode clair",
   "theme.switch-to-dark": "Passer au mode sombre",
   "theme.dark-mode-on": "Le mode sombre est activé",
-  "theme.light-mode-on": "Le mode clair est activé"
+  "theme.light-mode-on": "Le mode clair est activé",
+  "connections.new-source": "Sources",
+  "connections.new-target": "Cibles",
+  "connections.add": "Ajouter une connexion",
+  "connections.last-tested": "Dernier test {0}",
+  "connections.not-tested": "Jamais testée"
 }
