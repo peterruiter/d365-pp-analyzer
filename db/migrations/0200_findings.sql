@@ -274,8 +274,12 @@ BEGIN
         CONSTRAINT PK_BacklogItemFinding PRIMARY KEY (BacklogItemId, FindingId),
         CONSTRAINT FK_BacklogItemFinding_Item FOREIGN KEY (BacklogItemId)
             REFERENCES findings.BacklogItem (BacklogItemId) ON DELETE CASCADE,
+        -- No cascade on this side. Both a backlog item and a finding cascade from the
+        -- run, so cascading here as well gives this row two delete paths from the same
+        -- run and SQL Server refuses to create the table. Deleting a run still clears
+        -- these rows, through the backlog item above.
         CONSTRAINT FK_BacklogItemFinding_Finding FOREIGN KEY (FindingId)
-            REFERENCES findings.Finding (FindingId) ON DELETE CASCADE
+            REFERENCES findings.Finding (FindingId)
     );
 END
 GO

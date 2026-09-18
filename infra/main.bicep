@@ -140,7 +140,11 @@ output sqlServer string = sql.outputs.serverFullyQualifiedDomainName
 output sqlDatabase string = sql.outputs.databaseName
 
 @description('Connection string. No secret in it; authentication is Entra.')
-output sqlConnectionString string = sql.outputs.connectionString
+// Carries the authentication mode, because the server is Entra only and a string without it
+// fails the login with 18456, which reads like a missing permission rather than a missing
+// clause. This output is what Deploy-Infrastructure.ps1 prints for a person to paste into
+// Initialize-Database.ps1, so it has to be a string that actually connects.
+output sqlConnectionString string = '${sql.outputs.connectionString}Authentication=Active Directory Default;'
 
 @description('Key Vault name.')
 output keyVaultName string = keyVault.outputs.vaultName

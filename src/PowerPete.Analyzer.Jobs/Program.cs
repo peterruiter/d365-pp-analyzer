@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using PowerPete.Analyzer.Analysis;
+using PowerPete.Analyzer.Data;
 using PowerPete.Analyzer.Domain;
 using PowerPete.Analyzer.Export;
 using PowerPete.Analyzer.Extraction;
@@ -41,6 +42,7 @@ public static class Program
                 "rules" => ShowRules(args),
                 "components" => ShowComponents(),
                 "work" => await WorkAsync().ConfigureAwait(false),
+                "migrate-database" => await MigrateDatabaseAsync().ConfigureAwait(false),
                 _ => Unknown(args[0])
             };
         }
@@ -49,6 +51,41 @@ public static class Program
             Console.Error.WriteLine(exception.Message);
             return 1;
         }
+    }
+
+    /// <summary>
+    /// Applies the migrations, as the person running it.
+    /// </summary>
+    /// <remarks>
+    /// Separate from the worker on purpose. The worker applies migrations when it starts so a
+    /// container cannot be pointed at a database it does not know how to build, but a first
+    /// run happens before any container exists and is done by somebody signed in as
+    /// themselves, against a server that authenticates with Entra and has no password.
+    /// </remarks>
+    private static async Task<int> MigrateDatabaseAsync()
+    {
+        var connectionString = Environment.GetEnvironmentVariable("MIGRATOR_SQL_CONNECTION");
+
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            Console.Error.WriteLine(
+                "No connection string. Set MIGRATOR_SQL_CONNECTION, which Deploy-Infrastructure.ps1 prints when it finishes.");
+            return 1;
+        }
+
+        var results = await new DatabaseMigrator(connectionString)
+            .ApplyAsync(Console.WriteLine, CancellationToken.None)
+            .ConfigureAwait(false);
+
+        foreach (var result in results)
+        {
+            Console.WriteLine(result.Applied
+                ? $"  applied  {result.Name}  ({result.Batches} batch(es), {result.Elapsed.TotalSeconds:0.0}s)"
+                : $"  already  {result.Name}");
+        }
+
+        Console.WriteLine($"{results.Count(result => result.Applied)} applied, {results.Count} in total.");
+        return 0;
     }
 
     private static void Usage()
@@ -65,6 +102,9 @@ public static class Program
               components                        Lists the component types, with craft and lifecycle.
               work                              Polls the command queue and runs the pipeline.
                                                 This is what the deployed container does.
+              migrate-database                  Applies the migrations in db/migrations to the
+                                                database in MIGRATOR_SQL_CONNECTION, as you.
+                                                Run by ./build/Initialize-Database.ps1.
 
             Start with: analyse samples/SampleSolution.zip
             """);

@@ -113,9 +113,9 @@ GO
 -- No secret is ever stored here. SecretRef names a Key Vault secret and the
 -- settings column holds everything else. A connection row is therefore safe to
 -- read, log and export, which matters because it will be.
-IF OBJECT_ID('ops.Connection') IS NULL
+IF OBJECT_ID('ops.[Connection]') IS NULL
 BEGIN
-    CREATE TABLE ops.Connection
+    CREATE TABLE ops.[Connection]
     (
         ConnectionId        UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_Connection PRIMARY KEY,
         EngagementId        UNIQUEIDENTIFIER NOT NULL,
@@ -154,7 +154,7 @@ BEGIN
         CONSTRAINT CK_Connection_Reach CHECK (ReachJson IS NULL OR ISJSON(ReachJson) = 1)
     );
 
-    CREATE INDEX IX_Connection_Engagement ON ops.Connection (EngagementId, Mode);
+    CREATE INDEX IX_Connection_Engagement ON ops.[Connection] (EngagementId, Mode);
 END
 GO
 
@@ -187,9 +187,9 @@ BEGIN
         CONSTRAINT FK_AnalysisRun_Engagement FOREIGN KEY (EngagementId)
             REFERENCES ops.Engagement (EngagementId) ON DELETE CASCADE,
         CONSTRAINT FK_AnalysisRun_Source FOREIGN KEY (SourceConnectionId)
-            REFERENCES ops.Connection (ConnectionId),
+            REFERENCES ops.[Connection] (ConnectionId),
         CONSTRAINT FK_AnalysisRun_Target FOREIGN KEY (TargetConnectionId)
-            REFERENCES ops.Connection (ConnectionId),
+            REFERENCES ops.[Connection] (ConnectionId),
         CONSTRAINT FK_AnalysisRun_BasedOn FOREIGN KEY (BasedOnRunId)
             REFERENCES ops.AnalysisRun (RunId),
         CONSTRAINT CK_AnalysisRun_Mode CHECK (Mode IN ('quickScan', 'assessment', 'publish', 'compare')),

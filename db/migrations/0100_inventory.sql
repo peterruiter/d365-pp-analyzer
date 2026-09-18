@@ -177,8 +177,13 @@ BEGIN
         TargetDescription     NVARCHAR(400)    NOT NULL,
         CONSTRAINT FK_UnresolvedReference_Run FOREIGN KEY (RunId)
             REFERENCES ops.AnalysisRun (RunId) ON DELETE CASCADE,
+        -- No cascade on this one. A component belongs to a run, so deleting the run
+        -- already takes these rows with it through FK_UnresolvedReference_Run. Cascading
+        -- here as well gives the same row two delete paths from ops.AnalysisRun, which
+        -- SQL Server refuses outright: the table cannot be created at all. Every other
+        -- table in this schema cascades from the run and from nothing else.
         CONSTRAINT FK_UnresolvedReference_From FOREIGN KEY (FromComponentId)
-            REFERENCES inv.Component (ComponentId) ON DELETE CASCADE
+            REFERENCES inv.Component (ComponentId)
     );
 END
 GO
