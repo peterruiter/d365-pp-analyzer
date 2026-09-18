@@ -10,6 +10,17 @@ using PowerPete.Analyzer.Domain;
 
 // The four modes ops.Connection is constrained to. Kept beside the endpoint that writes one
 // so a mode the database would refuse is refused here, with a sentence rather than a 500.
+// Worst first. The catalogue declares the order and this keeps one copy of it, so a screen
+// cannot sort findings differently from the report.
+static int SeverityRank(string severity) => severity switch
+{
+    "critical" => 0,
+    "high" => 1,
+    "medium" => 2,
+    "low" => 3,
+    _ => 4
+};
+
 string[] ExtractionModesList() => ["servicePrincipal", "delegated", "offlineZip", "azureDevOps"];
 
 var builder = WebApplication.CreateBuilder(args);
@@ -163,6 +174,12 @@ app.MapGet("/api/engagements/{engagementId:guid}/connections",
         connection.LastTestSucceeded,
         connection.LastTestIdentity,
         connection.SecretExpiresUtc,
+
+        // Derived from the mode rather than stored. Azure DevOps is the one place this
+        // product writes, so it is the one connection that is a target, and a column nobody
+        // sets is a column that eventually says a Dataverse connection writes somewhere.
+        direction = string.Equals(connection.Mode, "azureDevOps", StringComparison.Ordinal) ? "target" : "source",
+        connection.LastTestMessage,
         expiringSoon = connection.SecretExpiresUtc is { } expiry && expiry < DateTime.UtcNow.AddDays(30),
         reach = connection.ReachJson is null ? null : (JsonElement?)JsonDocument.Parse(connection.ReachJson).RootElement
     }));
@@ -385,6 +402,164 @@ app.MapGet("/api/engagements/{engagementId:guid}/backlog",
     });
 }).RequireAuthorization();
 
+// The steps, and where each one is done. Built once rather than on every request to a screen
+// somebody opens at the start of every session.
+string[] stepIds = ["connect", "discover", "review", "approve", "publish"];
+string[] stepWorkspaces = ["Connections", "Runs", "Findings", "Backlog", "Backlog"];
+
+// -------------------------------------------------------------------- reports --
+// Honest rather than empty. The command line produces the workbook and the PDF today and the
+// service does not: there is no export stage in the pipeline, nowhere to keep a document and
+// no way to read the component inventory back out of the database. A screen that said
+// "nothing to report yet" would send somebody to run another analysis, and another one after
+// that, for a document this deployment cannot produce however many times they run it.
+app.MapGet("/api/engagements/{engagementId:guid}/reports",
+    async (HttpContext context, AnalysisStore store, Guid engagementId) =>
+{
+    if (await Denied(context, engagementId, EngagementRoles.Viewer) is { } denied) return denied;
+
+    var run = await store.GetLatestScoredRunAsync(engagementId, context.RequestAborted);
+
+    return Results.Ok(new
+    {
+        available = false,
+        reason = run is null ? "noRun" : "notProducedByService",
+        producedFrom = (DateTime?)null,
+        reports = Array.Empty<object>()
+    });
+}).RequireAuthorization();
+
+// ------------------------------------------------------ extraction modes --
+// Served from the contract rather than described again here. extraction-sources.json says it
+// generates the connection wizard and the capability matrix, and the moment this file carried
+// its own copy the screen and the report would start disagreeing about what a mode reaches.
+app.MapGet("/api/extraction-modes", () =>
+{
+    var path = Path.Combine(AppContext.BaseDirectory, "build", "contracts", "extraction-sources.json");
+
+    if (!File.Exists(path))
+    {
+        return Results.Problem(
+            "The extraction sources contract is not in this image. The connection wizard is generated from it.",
+            statusCode: StatusCodes.Status500InternalServerError);
+    }
+
+    using var document = JsonDocument.Parse(File.ReadAllText(path));
+
+    return Results.Ok(document.RootElement.GetProperty("modes").EnumerateArray().Select(mode => new
+    {
+        id = mode.GetProperty("id").GetString(),
+        name = mode.GetProperty("name").GetString(),
+        status = mode.GetProperty("status").GetString(),
+        summary = mode.GetProperty("summary").GetString(),
+        settings = mode.GetProperty("auth").GetProperty("settings")
+            .EnumerateArray().Select(setting => setting.GetString()).ToList(),
+        needsSecret = mode.GetProperty("auth").GetProperty("secretRef").ValueKind != JsonValueKind.Null,
+        reaches = mode.GetProperty("reaches").EnumerateObject()
+            .ToDictionary(entry => entry.Name, entry => entry.Value.GetString())
+    }));
+}).RequireAuthorization();
+
+// ------------------------------------------------------------------ overview --
+// What the latest finished analysis adds up to. The overview reads this and nothing else, so
+// the headline figures on the first screen of the product and the figures in the report come
+// from the same stored score rather than from two additions that can disagree.
+app.MapGet("/api/engagements/{engagementId:guid}/assessment",
+    async (HttpContext context, AnalysisStore store, Guid engagementId) =>
+{
+    if (await Denied(context, engagementId, EngagementRoles.Viewer) is { } denied) return denied;
+
+    var run = await store.GetLatestScoredRunAsync(engagementId, context.RequestAborted);
+
+    // No run is not an empty estate, and the difference is the whole point of this product.
+    // The screen draws "nothing discovered yet" from the null run rather than from zeros.
+    if (run is null) return Results.Ok(new { runId = (Guid?)null, componentCount = 0 });
+
+    var score = await store.GetScoreAsync(run.Value, context.RequestAborted);
+    if (score is null) return Results.Ok(new { runId = (Guid?)null, componentCount = 0 });
+
+    var findings = await store.GetFindingsAsync(run.Value, context.RequestAborted);
+
+    var breakdown = JsonDocument.Parse(score.Value.BreakdownJson).RootElement;
+
+    decimal? lowCodeShare = breakdown.TryGetProperty("LowCodeShare", out var share)
+        && share.ValueKind == JsonValueKind.Number
+        ? share.GetDecimal()
+        : null;
+
+    var componentTypes = breakdown.TryGetProperty("ByDomain", out var domains)
+        && domains.ValueKind == JsonValueKind.Object
+        ? domains.EnumerateObject().Count()
+        : 0;
+
+    return Results.Ok(new
+    {
+        runId = run,
+        componentCount = score.Value.ComponentsTotal,
+        componentTypeCount = componentTypes,
+        findingCount = score.Value.FindingsTotal,
+        notAssessedCount = score.Value.NotAssessedCount,
+        ruleCount = RuleCatalogue.All.Count,
+        lowCodeShare,
+        totalLowHours = score.Value.TotalLowHours,
+        totalHighHours = score.Value.TotalHighHours,
+
+        // The worst handful, for the panel under the figures. Severity order, not database
+        // order: the first thing somebody reads on this screen should be the worst thing in
+        // the estate rather than whichever row came back first.
+        topFindings = findings
+            .OrderBy(finding => SeverityRank(finding.Severity))
+            .Take(5)
+            .Select(finding => new
+            {
+                id = finding.FindingId,
+                finding.Severity,
+                detail = finding.ComponentName ?? finding.SolutionName ?? finding.RuleId,
+                consequence = finding.RuleId
+            })
+    });
+}).RequireAuthorization();
+
+// The order an engagement actually happens in, worked out from what exists rather than
+// stored. There is no progress column for anybody to forget to update, and deleting a run
+// puts the checklist back where it belongs on its own.
+app.MapGet("/api/engagements/{engagementId:guid}/next-steps",
+    async (HttpContext context, WorkspaceStore workspace, AnalysisStore analysis, Guid engagementId) =>
+{
+    if (await Denied(context, engagementId, EngagementRoles.Viewer) is { } denied) return denied;
+
+    var connections = await workspace.ListConnectionsAsync(engagementId, context.RequestAborted);
+    var runs = await workspace.ListRunsAsync(engagementId, context.RequestAborted);
+    var scored = await analysis.GetLatestScoredRunAsync(engagementId, context.RequestAborted);
+
+    var connected = connections.Count > 0;
+    var analysed = scored is not null;
+
+    var approved = false;
+    if (scored is not null)
+    {
+        approved = await workspace.GetApprovedHashAsync(scored.Value, context.RequestAborted) is not null;
+    }
+
+    var published = runs.Any(run =>
+        string.Equals(run.Mode, "publish", StringComparison.Ordinal)
+        && string.Equals(run.Status, "succeeded", StringComparison.Ordinal));
+
+    // Exactly one step is current: the first thing that is not done. Everything after it is
+    // blocked, because offering a button for work that cannot start yet is how somebody ends
+    // up publishing a backlog from an analysis that never ran.
+    var done = new[] { connected, analysed, analysed, approved, published };
+
+    var current = Array.IndexOf(done, false);
+
+    return Results.Ok(stepIds.Select((id, index) => new
+    {
+        id,
+        workspace = stepWorkspaces[index],
+        state = done[index] ? "done" : index == current ? "current" : "blocked"
+    }));
+}).RequireAuthorization();
+
 // ---------------------------------------------------------------- engagements --
 app.MapDelete("/api/engagements/{engagementId:guid}", async (HttpContext context, WorkspaceStore store, Guid engagementId) =>
 {
@@ -496,7 +671,7 @@ app.MapPost("/api/engagements/{engagementId:guid}/connections",
         JsonSerializer.Serialize(request.Settings ?? new Dictionary<string, string>()),
         secretRef,
         request.SecretExpiresUtc,
-        null, null, null, null);
+        null, null, null, null, null);
 
     await store.CreateConnectionAsync(connection, UserId(context.User), context.RequestAborted);
 

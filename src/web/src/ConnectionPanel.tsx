@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useT, useLanguage } from './i18n';
 import { ConnectionWizard } from './ConnectionWizard';
 import { ConnectorMark } from './ConnectorMark';
-import { getJson, when, type Connection, type ConnectorCapability } from './workspace';
+import { getJson, when, type Connection, type ExtractionMode } from './workspace';
 
 /**
  * The connections in one direction, and the way to add another.
@@ -13,11 +13,11 @@ import { getJson, when, type Connection, type ConnectorCapability } from './work
  * whatever is true of one is worth reading in the other.
  */
 export function ConnectionPanel({
-  engagementId, direction, connectors, connections, onChanged
+  engagementId, direction, modes, connections, onChanged
 }: {
   engagementId: string;
   direction: 'source' | 'target';
-  connectors: ConnectorCapability[];
+  modes: ExtractionMode[];
   connections: Connection[];
   onChanged: (connections: Connection[]) => void;
 }) {
@@ -49,8 +49,8 @@ export function ConnectionPanel({
       ) : (
         <ul className="connection-list">
           {mine.map((connection) => (
-            <li className="connection-item" key={connection.sourceConnectionId}>
-              <ConnectorMark connectorId={connection.connectorId} name={connection.name} />
+            <li className="connection-item" key={connection.connectionId}>
+              <ConnectorMark connectorId={connection.mode} name={connection.name} />
 
               <div className="connection-item-body">
                 <strong>{connection.name}</strong>
@@ -88,7 +88,7 @@ export function ConnectionPanel({
         <ConnectionWizard
           engagementId={engagementId}
           direction={direction}
-          connectors={connectors}
+          modes={modes}
           onClose={() => setAdding(false)}
           onSaved={() => { setAdding(false); void reload(); }}
         />

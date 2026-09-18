@@ -7,23 +7,6 @@
  */
 
 /** How much of an entity a source system will give up. */
-export const levelTag: Record<string, string> = {
-  Full: 'complete',
-  Partial: 'warning',
-  Derived: 'review',
-  Manual: 'muted',
-  None: 'danger'
-};
-
-/** How much of an entity can be written to Dynamics. */
-export const fidelityTag: Record<string, string> = {
-  Automatic: 'complete',
-  Assisted: 'warning',
-  Manual: 'muted',
-  NotMigratable: 'danger'
-};
-
-/** Where a run has got to. */
 export const statusTag: Record<string, string> = {
   pending: 'muted',
   running: 'review',

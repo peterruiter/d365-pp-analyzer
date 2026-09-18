@@ -12,7 +12,6 @@ type Check = {
   detail: string;
   remediation: string | null;
   command: string | null;
-  canRepair: boolean;
 };
 
 type Health = { checks: Check[]; checkedUtc: string };
@@ -37,7 +36,6 @@ export function SystemHealthPage({ isGlobalAdmin }: { isGlobalAdmin: boolean }) 
   const t = useT();
   const [health, setHealth] = useState<Health | null>(null);
   const [error, setError] = useState('');
-  const [busy, setBusy] = useState<string | null>(null);
 
   const load = useCallback(() => {
     if (!isGlobalAdmin) return;
@@ -50,25 +48,6 @@ export function SystemHealthPage({ isGlobalAdmin }: { isGlobalAdmin: boolean }) 
   }, [t, isGlobalAdmin]);
 
   useEffect(load, [load]);
-
-  async function repair(id: string) {
-    setBusy(id);
-
-    try {
-      const response = await fetch(`/api/system/health/${id}/repair`, { method: 'POST' });
-      if (!response.ok) throw new Error('repair failed');
-
-      const updated = await response.json() as Check;
-
-      setHealth((current) => current === null
-        ? current
-        : { ...current, checks: current.checks.map((check) => check.id === id ? updated : check) });
-    } catch {
-      setError(t('health.repair-did-not-work'));
-    } finally {
-      setBusy(null);
-    }
-  }
 
   if (!isGlobalAdmin) {
     // The detail names servers, identities and what they are refused, which is a map of the
@@ -134,18 +113,12 @@ export function SystemHealthPage({ isGlobalAdmin }: { isGlobalAdmin: boolean }) 
                     {check.command !== null && <pre className="config-json">{check.command}</pre>}
                   </div>
 
-                  {check.canRepair && (
-                    <div className="admin-actions">
-                      <button
-                        className="secondary-button"
-                        type="button"
-                        disabled={busy === check.id}
-                        onClick={() => void repair(check.id)}
-                      >
-                        {busy === check.id ? t('health.repairing') : t('health.repair-this')}
-                      </button>
-                    </div>
-                  )}
+                  {/*
+                    No repair button. Applying migrations and rotating credentials are things
+                    a person does as themselves, with a record of having done it, and the one
+                    thing a button used to fix was a demonstration engagement this product
+                    never built. Every check below says what to run instead.
+                  */}
                 </article>
               ))}
             </div>

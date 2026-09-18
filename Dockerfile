@@ -104,4 +104,8 @@ COPY --from=publish /app/publish .
 # would offer six languages and serve one.
 COPY src/PowerPete.Analyzer.Domain/Localization/Resources ./src/PowerPete.Analyzer.Domain/Localization/Resources
 
+# The contracts, which /api/extraction-modes serves. The connection wizard is generated from
+# extraction-sources.json rather than describing the modes a second time in the API.
+COPY build/contracts ./build/contracts
+
 ENTRYPOINT ["dotnet", "PowerPete.Analyzer.Api.dll"]

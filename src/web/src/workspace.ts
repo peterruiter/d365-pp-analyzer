@@ -8,26 +8,32 @@ export type Engagement = {
   createdUtc: string;
 };
 
-/** A configured way into one system. */
+/** A configured way into one estate. */
 export type Connection = {
-  sourceConnectionId: string;
-  connectorId: string;
+  connectionId: string;
+  mode: string;
   name: string;
-  direction: 'source' | 'target';
+  environmentRole: string;
   lastTestedUtc: string | null;
   lastTestSucceeded: boolean | null;
   lastTestMessage: string | null;
+  direction: 'source' | 'target';
 };
 
-/** One field on a connection form, described by the connector contract. */
-export type ConnectorSetting = {
+/**
+ * One way of reaching an estate, from the extraction sources contract.
+ *
+ * What a mode reaches decides which rules can run at all, so this travels with the mode
+ * rather than being worked out per screen.
+ */
+export type ExtractionMode = {
+  id: string;
   name: string;
-  type: string;
-  required: boolean;
-  default: string | null;
-  choices: string[];
-  description: string;
-  isSecret: boolean;
+  status: string;
+  summary: string;
+  settings: string[];
+  needsSecret: boolean;
+  reaches: Record<string, string>;
 };
 
 /** One person admitted to the product. */
@@ -52,100 +58,62 @@ export type EngagementGrant = {
   role: string;
 };
 
-/** What one source system will give up, per canonical entity. */
-export type ConnectorCapability = {
-  id: string;
-  name: string;
-  status: string;
-  deployment: string;
-  description: string;
-  verifiedAgainst: string | null;
-  discovery: Record<string, string>;
-  discoveryNotes: Record<string, string>;
-  settings: ConnectorSetting[];
+/**
+ * What the latest finished analysis adds up to.
+ *
+ * A null runId is not an estate with nothing in it. It means nothing has been analysed yet,
+ * and the overview draws a different screen for each, because they are different sentences.
+ */
+export type Assessment = {
+  runId: string | null;
+  componentCount: number;
+  componentTypeCount: number;
+  findingCount: number;
+  notAssessedCount: number;
+  ruleCount: number;
+  lowCodeShare: number | null;
+  totalLowHours: number;
+  totalHighHours: number;
+  topFindings: TopFinding[];
 };
 
-/** What happened the last time a connection's credentials were used. */
-export type ConnectionTestResult = {
-  succeeded: boolean;
-  identity: string | null;
-  message: string;
-};
-
-/** How one canonical entity is written to Dynamics, and how sure we are of the names. */
-export type TargetMapping = {
-  canonical: string;
-  fidelity: string;
-  verification: string;
-  table: string | null;
-  note: string | null;
-  hasUnverifiedNames: boolean;
-};
-
-/** What was found for one entity, and what it will cost. */
-export type EntityAssessment = {
-  canonicalEntityId: string;
-  name: string;
-  domain: string;
-  recordCount: number;
-  sourceLevel: string;
-  targetFidelity: string;
-  effectiveFidelity: string;
-  effortLowHours: number;
-  effortHighHours: number;
-  neverSupplied: string[];
-  partiallySupplied: string[];
-};
-
-/** Something that changes the shape of a project rather than its size. */
-export type Risk = {
+/** One of the worst few findings, for the panel under the figures. */
+export type TopFinding = {
   id: string;
   severity: string;
   detail: string;
   consequence: string;
 };
 
-/** What a discovery adds up to. */
-export type Assessment = {
-  totalRecords: number;
-  entities: EntityAssessment[];
-  risks: Risk[];
-  totalLowHours: number;
-  totalHighHours: number;
-  targetVerified: boolean;
+/** One attempt to read one component type, and what became of it. */
+export type EntityRead = {
+  componentTypeId: string;
+  evidenceSource: string;
+  succeeded: boolean;
+  recordCount: number | null;
+  error: string | null;
 };
 
-/** One record in a plan. */
-export type PlanItem = {
-  canonicalEntityId: string;
-  sourceRecordId: string;
-  displayName: string;
-  outcome: string;
-  table: string | null;
-  changedColumns: string[];
-  reason: string | null;
-  isDeferredPass: boolean;
-};
-
-/** What an apply would change. */
-export type Plan = {
-  runId: string;
-  environment: string;
-  createdUtc: string;
-  hash: string;
-  canBeApproved: boolean;
-  approvedBy: string | null;
-  items: PlanItem[];
-  creates: number;
-  updates: number;
-  unchanged: number;
-  conflicts: number;
+/** One item of remediation, as the backlog builder produced it. */
+export type BacklogItem = {
+  backlogItemId: string;
+  parentItemId: string | null;
+  workItemType: string;
+  title: string;
+  acceptanceCriteria: string;
+  testRequirement: string | null;
+  priority: number;
+  storyPoints: number | null;
+  lowHours: number;
+  highHours: number;
+  deterministicKey: string;
 };
 
 /** One pass through the pipeline. */
 export type Run = {
   runId: string;
   mode: string;
+  writes: boolean;
   status: string;
   createdUtc: string;
   createdBy: string;
@@ -154,13 +122,10 @@ export type Run = {
   error: string | null;
 };
 
-/** Something no tool can migrate, with the evidence. */
-export type BacklogEntry = {
-  canonicalEntityId: string;
-  sourceRecordId: string | null;
-  displayName: string;
-  reason: string;
-  evidence: string | null;
+/** A run's backlog, as the API returns it. */
+export type Backlog = {
+  runId: string | null;
+  items: BacklogItem[];
 };
 
 /**

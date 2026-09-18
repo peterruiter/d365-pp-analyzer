@@ -1,66 +1,68 @@
 import { useEffect, useState } from 'react';
 import { useT } from './i18n';
 import { ConnectionPanel } from './ConnectionPanel';
-import { levelTag } from './tags';
-import { getJson, type Connection, type ConnectorCapability } from './workspace';
+import { getJson, type Connection, type ExtractionMode } from './workspace';
 
-type Entity = { id: string; name: string; domain: string };
-
-const levelKey: Record<string, string> = {
-  Full: 'connections.read-over-an-api',
-  Partial: 'connections.read-over-an-api',
-  Derived: 'connections.constructed-by-this-tool',
-  Manual: 'connections.needs-a-manual-export',
-  None: 'connections.no-equivalent'
+/** How much of one evidence source a mode reaches, as a tag. */
+const reachTag: Record<string, string> = {
+  full: 'complete',
+  partial: 'warning',
+  none: 'muted'
 };
 
 /**
- * The source systems being read, and what each will honestly give up.
+ * How this engagement reads the client's environment, and what each way gives up.
  *
- * The matrix is the most useful thing on this screen and frequently the most useful thing
- * in a first client meeting. A client asks whether their IVR can be migrated, and the
- * answer differs by an order of magnitude between platforms. Saying so before an engagement
- * starts is worth more than any amount of code.
+ * The matrix is the most useful thing on this screen and frequently the most useful thing in
+ * a first client meeting. What a mode cannot reach decides which rules can run at all, and
+ * saying so before an engagement starts is worth more than any amount of code afterwards.
+ *
+ * Every figure comes from the extraction sources contract, which is the same file the report
+ * reads when it writes the not-assessed section. A screen that kept its own copy would
+ * eventually promise a client something the report then withdrew.
  */
 export function ConnectionsPage({ engagementId }: { engagementId: string }) {
   const t = useT();
   const [connections, setConnections] = useState<Connection[] | null>(null);
-  const [connectors, setConnectors] = useState<ConnectorCapability[]>([]);
-  const [entities, setEntities] = useState<Entity[]>([]);
-  const [selected, setSelected] = useState<string>('genesys-cloud');
+  const [modes, setModes] = useState<ExtractionMode[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
-      const [connectionResult, connectorResult, entityResult] = await Promise.all([
+      const [connectionResult, modeResult] = await Promise.all([
         getJson<Connection[]>(`/api/engagements/${engagementId}/connections`),
-        getJson<ConnectorCapability[]>('/api/connectors'),
-        getJson<Entity[]>('/api/canonical-entities')
+        getJson<ExtractionMode[]>('/api/extraction-modes')
       ]);
 
       if (cancelled) return;
+
       setConnections(connectionResult.data ?? []);
-      setConnectors(connectorResult.data ?? []);
-      setEntities(entityResult.data ?? []);
+      setModes(modeResult.data ?? []);
+      setError(connectionResult.error ?? modeResult.error);
     }
 
     void load();
     return () => { cancelled = true; };
   }, [engagementId]);
 
+  if (error && connections === null) {
+    return <p className="error">{error}</p>;
+  }
+
   if (!connections) {
     return <section className="panel"><p className="dashboard-empty">{t('common.loading')}</p></section>;
   }
 
-  const connector = connectors.find((candidate) => candidate.id === selected);
+  const sources = Object.keys(modes[0]?.reaches ?? {});
 
   return (
     <>
       <ConnectionPanel
         engagementId={engagementId}
         direction="source"
-        connectors={connectors.filter((candidate) => candidate.id !== 'dataverse')}
+        modes={modes.filter((mode) => mode.id !== 'azureDevOps')}
         connections={connections}
         onChanged={setConnections}
       />
@@ -71,68 +73,45 @@ export function ConnectionsPage({ engagementId }: { engagementId: string }) {
             <p className="eyebrow">{t('view.connections')}</p>
             <h2>{t('connections.what-this-platform-gives-up')}</h2>
           </div>
-          {connector && (
-            <span className={`tag ${connector.status === 'supported' ? 'complete' : connector.status === 'preview' ? 'warning' : 'muted'}`}>
-              {t('connector.status.' + connector.status)}
-            </span>
-          )}
         </div>
 
-        <div className="filter-bar small">
-          {connectors.map((candidate) => (
-            <button
-              key={candidate.id}
-              type="button"
-              className={`filter-chip ${candidate.id === selected ? 'active' : ''}`}
-              onClick={() => setSelected(candidate.id)}
-            >
-              {candidate.name}
-            </button>
-          ))}
+        <div className="wizard-body">
+          <table className="findings-table">
+            <thead>
+              <tr>
+                <th>{t('common.name')}</th>
+                {sources.map((source) => (
+                  <th key={source}>{t('source.' + source)}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {modes.map((mode) => (
+                <tr key={mode.id}>
+                  <th scope="row">
+                    <strong>{mode.name}</strong>
+                    <span className="hint">{mode.summary}</span>
+                  </th>
+
+                  {sources.map((source) => (
+                    <td key={source}>
+                      <span className={`tag ${reachTag[mode.reaches[source]] ?? 'muted'}`}>
+                        {t('source.reach.' + (mode.reaches[source] ?? 'none'))}
+                      </span>
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
-        {connector && (
-          <>
-            <p className="panel-note">{connector.description}</p>
-
-            {/* Said on every platform rather than buried in a footnote. Documentation is not
-                a tenant, and a claim nobody has checked is worth scoping an engagement with
-                and not worth promising a client. */}
-            {!connector.verifiedAgainst && (
-              <p className="panel-note standalone">{t('connections.never-verified')}</p>
-            )}
-
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th scope="col">{t('common.entity')}</th>
-                    <th scope="col">{t('common.source')}</th>
-                    <th scope="col" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {entities.map((entity) => {
-                    const level = connector.discovery[entity.id] ?? 'None';
-                    const note = connector.discoveryNotes[entity.id];
-
-                    return (
-                      <tr key={entity.id}>
-                        <th scope="row">{entity.name}</th>
-                        <td>
-                          <span className={`tag ${levelTag[level] ?? 'muted'}`}>
-                            {t(levelKey[level] ?? 'connections.no-equivalent')}
-                          </span>
-                        </td>
-                        <td className="wrapping-cell">{note ?? ''}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
+        {/*
+          Said on the screen rather than only in the report. A mode that cannot reach an
+          evidence source does not produce fewer findings, it produces findings nobody ran,
+          and the difference is what this whole product exists to keep visible.
+        */}
+        <p className="panel-note">{t('connections.reach-decides-what-runs')}</p>
       </section>
     </>
   );

@@ -10,7 +10,7 @@ using Azure.Security.KeyVault.Secrets;
 /// </summary>
 /// <remarks>
 /// Not the database. A connection row is read by every screen, written to every export and
-/// printed in every diagnostic, and a client's Genesys client secret has no business being
+/// printed in every diagnostic, and a client's application secret has no business being
 /// in any of them. The row carries a reference; this carries the value.
 /// </remarks>
 public interface ISecretStore
@@ -52,7 +52,7 @@ public interface ISecretStore
 /// by setting name, which keeps one column and still stores each credential separately.
 ///
 /// Key Vault allows letters, digits and hyphens and nothing else. Deriving the name rather
-/// than letting a caller choose one means a connection called "Client's Genesys (prod)"
+/// than letting a caller choose one means a connection called "Client's tenant (prod)"
 /// cannot produce a name the vault rejects at the last step of a wizard.
 /// </remarks>
 public static partial class SecretNames

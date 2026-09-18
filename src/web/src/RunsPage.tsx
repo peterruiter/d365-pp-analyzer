@@ -2,24 +2,12 @@ import { useEffect, useState } from 'react';
 import { useCan } from './access';
 import { useT, useLanguage } from './i18n';
 import { statusTag } from './tags';
-import { getJson, sendJson, when, type Run } from './workspace';
+import { getJson, sendJson, when, type EntityRead, type Run } from './workspace';
 
-/** One entity as a discovery found it. */
-type DiscoveredEntity = {
-  canonicalEntityId: string;
-  declaredLevel: string;
-  recordCount: number;
-  succeeded: boolean;
-  error: string | null;
-};
-
-/** Which modes touch a client's environment. The distinction is the product's whole safety story. */
-const writes: Record<string, boolean> = {
-  discover: false,
-  plan: false,
-  verify: false,
-  apply: true,
-  rollback: true
+/** What the discovery detail returns for one run. */
+type Discovery = {
+  runId: string;
+  entities: EntityRead[];
 };
 
 /** Every discovery, plan and apply, with what each one found. */
@@ -111,7 +99,7 @@ export function RunsPage({ engagementId }: { engagementId: string }) {
 function RunRow({ engagementId, run }: { engagementId: string; run: Run }) {
   const t = useT();
   const { culture } = useLanguage();
-  const [found, setFound] = useState<DiscoveredEntity[] | null>(null);
+  const [found, setFound] = useState<EntityRead[] | null>(null);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -119,21 +107,21 @@ function RunRow({ engagementId, run }: { engagementId: string; run: Run }) {
 
     let cancelled = false;
 
-    getJson<DiscoveredEntity[]>(`/api/engagements/${engagementId}/runs/${run.runId}/discovery`)
-      .then((result) => { if (!cancelled) setFound(result.data ?? []); });
+    void getJson<Discovery>(`/api/engagements/${engagementId}/runs/${run.runId}/discovery`)
+      .then((result) => { if (!cancelled) setFound(result.data?.entities ?? []); });
 
     return () => { cancelled = true; };
   }, [open, found, engagementId, run.runId]);
 
-  const total = found?.reduce((sum, entity) => sum + entity.recordCount, 0) ?? 0;
+  const total = found?.reduce((sum, entity) => sum + (entity.recordCount ?? 0), 0) ?? 0;
 
   return (
     <details className="run-row" onToggle={(event) => setOpen(event.currentTarget.open)}>
       <summary>
         <span className="run-mode">
           {t('runs.mode.' + run.mode)}
-          <span className={`tag ${writes[run.mode] ? 'danger' : 'complete'}`}>
-            {writes[run.mode] ? t('runs.writes-to-the-target') : t('runs.writes-nothing')}
+          <span className={`tag ${run.writes ? 'danger' : 'complete'}`}>
+            {run.writes ? t('runs.writes-to-the-target') : t('runs.writes-nothing')}
           </span>
         </span>
 
@@ -172,10 +160,10 @@ function RunRow({ engagementId, run }: { engagementId: string; run: Run }) {
                 </thead>
                 <tbody>
                   {found.map((entity) => (
-                    <tr key={entity.canonicalEntityId}>
-                      <th scope="row">{entity.canonicalEntityId}</th>
-                      <td>{entity.recordCount}</td>
-                      <td><span className="tag muted">{entity.declaredLevel}</span></td>
+                    <tr key={`${entity.componentTypeId}-${entity.evidenceSource}`}>
+                      <th scope="row">{entity.componentTypeId}</th>
+                      <td>{entity.recordCount ?? '—'}</td>
+                      <td><span className="tag muted">{t('source.' + entity.evidenceSource)}</span></td>
                       <td className="wrapping-cell">
                         {entity.succeeded
                           ? <span className="tag complete">{t('runs.status.succeeded')}</span>

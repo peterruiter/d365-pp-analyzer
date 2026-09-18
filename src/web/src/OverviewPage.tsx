@@ -60,7 +60,7 @@ export function OverviewPage({ engagementId, onNavigate }: {
   }
 
   const done = steps.filter((step) => step.state === 'done').length;
-  const discovered = assessment !== null && assessment.totalRecords > 0;
+  const discovered = assessment !== null && assessment.runId !== null;
 
   return (
     <>
@@ -110,11 +110,11 @@ export function OverviewPage({ engagementId, onNavigate }: {
           <section className="metrics-grid" aria-label={t('view.overview')}>
             <article className="metric-card metric-primary">
               <span className="metric-label">{t('overview.records-discovered')}</span>
-              <strong>{assessment!.totalRecords}</strong>
+              <strong>{assessment!.componentCount}</strong>
             </article>
             <article className="metric-card">
               <span className="metric-label">{t('overview.entities-covered')}</span>
-              <strong>{assessment!.entities.length}</strong>
+              <strong>{assessment!.componentTypeCount}</strong>
             </article>
             <article className="metric-card">
               {/* Two numbers, never one. A tool that scanned an estate it has never seen does
@@ -125,11 +125,11 @@ export function OverviewPage({ engagementId, onNavigate }: {
             </article>
             <article className="metric-card">
               <span className="metric-label">{t('overview.risks-raised')}</span>
-              <strong>{assessment!.risks.length}</strong>
+              <strong>{assessment!.findingCount}</strong>
             </article>
           </section>
 
-          {assessment!.risks.length > 0 && (
+          {assessment!.topFindings.length > 0 && (
             <section className="panel">
               <div className="panel-heading">
                 <div>
@@ -140,7 +140,7 @@ export function OverviewPage({ engagementId, onNavigate }: {
 
               <div className="wizard-body">
                 <ol className="check-list">
-                  {assessment!.risks.map((risk) => (
+                  {assessment!.topFindings.map((risk) => (
                     <li key={risk.id} className="check-warning">
                       <span className="check-mark" aria-hidden="true" />
                       <div>
@@ -148,7 +148,7 @@ export function OverviewPage({ engagementId, onNavigate }: {
                         <p>{risk.consequence}</p>
                       </div>
                       <span className={`tag ${severityTag[risk.severity.toLowerCase()] ?? 'muted'}`}>
-                        {t('risk.' + risk.severity.toLowerCase())}
+                        {t('severity.' + risk.severity.toLowerCase())}
                       </span>
                     </li>
                   ))}
@@ -160,14 +160,22 @@ export function OverviewPage({ engagementId, onNavigate }: {
           <section className="panel">
             <div className="panel-heading">
               <div>
-                <p className="eyebrow">{t('view.plan')}</p>
-                <h2>{t('overview.open-the-plan')}</h2>
+                <p className="eyebrow">{t('view.findings')}</p>
+                <h2>{t('overview.open-the-findings')}</h2>
               </div>
-              <button type="button" className="primary-button" onClick={() => onNavigate('Plan')}>
-                {t('overview.open-the-plan')}
+              <button type="button" className="primary-button" onClick={() => onNavigate('Findings')}>
+                {t('overview.open-the-findings')}
               </button>
             </div>
-            <p className="panel-note">{t('page.plan')}</p>
+
+            {/*
+              The caveat travels with the invitation to read the findings, not after it. A
+              short list of findings and a long list of checks that could not run are the same
+              screen, and somebody who reads only the first has been misled by the second.
+            */}
+            <p className="panel-note">
+              {t('findings.not-assessed-title', String(assessment!.notAssessedCount), String(assessment!.ruleCount))}
+            </p>
           </section>
         </>
       )}

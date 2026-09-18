@@ -34,6 +34,7 @@ public sealed record Engagement(
 /// <param name="LastTestedUtc">When it was last proved.</param>
 /// <param name="LastTestSucceeded">Whether it worked.</param>
 /// <param name="LastTestIdentity">Who it authenticated as. A connection that succeeds with too few privileges fails later in a way that looks like an empty estate.</param>
+/// <param name="LastTestMessage">What it said, on a failure. The screen shows it rather than "failed".</param>
 /// <param name="ReachJson">Which evidence sources it actually reached.</param>
 public sealed record Connection(
     Guid ConnectionId,
@@ -47,6 +48,7 @@ public sealed record Connection(
     DateTime? LastTestedUtc,
     bool? LastTestSucceeded,
     string? LastTestIdentity,
+    string? LastTestMessage,
     string? ReachJson);
 
 /// <summary>One pass through the pipeline.</summary>
@@ -177,7 +179,14 @@ public sealed class WorkspaceStore(string connectionString)
         await using var connection = Connect();
 
         var rows = await connection.QueryAsync<Connection>(new CommandDefinition(
-            "SELECT * FROM ops.Connection WHERE EngagementId = @engagementId ORDER BY Name;",
+            """
+            SELECT ConnectionId, EngagementId, Mode, Name, EnvironmentRole, SettingsJson,
+                   SecretRef, SecretExpiresUtc, LastTestedUtc, LastTestSucceeded,
+                   LastTestIdentity, LastTestMessage, ReachJson
+            FROM ops.[Connection]
+            WHERE EngagementId = @engagementId
+            ORDER BY Name;
+            """,
             new { engagementId },
             cancellationToken: cancellationToken));
 
