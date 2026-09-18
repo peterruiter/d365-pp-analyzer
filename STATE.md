@@ -6,9 +6,9 @@ the work.
 
 **Version:** 1.0.0
 **Last updated:** 2026-09-18
-**Current block:** it has read a real export. The offline path runs against a solution from
-`powerpete.crm4.dynamics.com` and the run found two component families the reader could not
-see. Nothing has been deployed to Azure and no migration has been applied to a database.
+**Current block:** it is deployed, apart from the container image. Azure holds the
+infrastructure and the schema is applied to a real database. The image does not build, because
+the web workspace references 202 strings that do not exist.
 
 ---
 
@@ -212,6 +212,71 @@ wrong.
 
 The first of the two is the more expensive: it was wrong on every estate rather than on some
 of them, and a clean flow is exactly what a client wants to hear.
+
+## The first deployment
+
+`rg-ppanalyzer` in **Sweden Central**, subscription PowerPete MVP. Entra application
+`PowerPete Analyzer`, app id `747be66d-dec8-4e67-a41b-e6f252ba1e0c`, secret expiring
+2027-09-18, redirect URI on the deployed API.
+
+Up: SQL server and database, Key Vault, container registry, container apps environment, the
+API and worker apps, Log Analytics and Application Insights. The API is at
+`https://ppanalyzer-api.calmforest-a31e153d.swedencentral.azurecontainerapps.io`, running the
+registry's placeholder image because ours does not build yet.
+
+**West Europe refused to create a SQL server at all** (`RegionDoesNotAllowProvisioning`). That
+is capacity, not the template. Sweden Central took it unchanged.
+
+### What the deployment found
+
+- **`Initialize-Database.ps1` called a command that did not exist.** `dotnet run --
+  migrate-database` was the documented way to build the schema and the command line had no
+  such verb, so the schema had never been buildable by the documented route. Added.
+- **The template's `sqlConnectionString` output carried no `Authentication` clause**, so the
+  string the script prints for a person to paste fails the login on an Entra only server with
+  18456, which reads like a missing permission. The container app was never affected:
+  `main.bicep` appends the clause for it, and only the human facing output was wrong.
+- **The Dockerfile built a microsite that is not in this repository.** `COPY src/microsite`
+  failed every build before it reached the compiler.
+- **`npm ci` had no lock file.** Committed one.
+
+### What the database rejected
+
+The schema had never met a database. It failed three times, and none of it was findable by
+reading:
+
+- **`CONNECTION` is reserved inside a `REFERENCES` clause.** `REFERENCES ops.Connection
+  (ConnectionId)` is a syntax error while the same name parses fine in a `SELECT` or a
+  `CREATE TABLE`, so the table could be created and then not be referenced. Bracketed.
+- **Two tables cascaded from two parents that both cascade from the run.** SQL Server refuses
+  outright, so `inv.UnresolvedReference` and `findings.BacklogItemFinding` could not be created
+  at all. Both cascade from one parent now, which is what every other table in the schema
+  already did.
+
+Applied: 24 tables in four schemas and 44 check constraints, including both constraints on
+`stg.EntityRead` and the rationale checks. `CK_EntityRead_Evidence` reads
+`Succeeded = 1 AND RecordCount IS NOT NULL OR Succeeded = 0 AND FailureReason IS NOT NULL`,
+which is rule three of the six enforced in the database rather than written down.
+
+### What is blocking the image
+
+`npm run build` runs `check-vocabulary.mjs`, which reports **221 problems**: 202 string keys
+used by the web pages with no entry in `ui.en.json`, across fourteen files, and nineteen CSS
+classes with no rule. `i18n.tsx` resolves a missing key as the key itself, so those screens
+render `people.admit` where the label should be.
+
+This is the web workspace being unfinished rather than anything about the deployment, and the
+missing strings are client facing copy. **Writing them is authoring, not repair.**
+
+`locales.json` declared Dutch, German, French, Spanish and Italian with no bundles and no
+documentation folders, so the picker offered five languages that would all have rendered in
+English. The contract now lists English alone, which is what it has. They come back one at a
+time, each with its bundles.
+
+### Not built, found while deploying
+
+`Initialize-Database.ps1` finishes by recommending `./build/Test-DatabaseRoundTrip.ps1`, which
+does not exist. The constraints above are verified to be present and not yet proven to fire.
 
 ## The first run against a real export
 
