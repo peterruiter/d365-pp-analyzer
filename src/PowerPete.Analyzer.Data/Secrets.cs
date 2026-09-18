@@ -160,3 +160,41 @@ public sealed class UnconfiguredSecretStore : ISecretStore
     /// <inheritdoc />
     public Task DeleteAsync(string reference, CancellationToken cancellationToken) => Task.CompletedTask;
 }
+
+/// <summary>
+/// Picks the store a deployment gets.
+/// </summary>
+/// <remarks>
+/// The decision is here rather than at each call site because there are several and they must
+/// agree. A host that resolved a vault one way and the system health page another would report
+/// a configured vault to an operator and refuse the next credential they tried to save.
+/// </remarks>
+public static class SecretStore
+{
+    /// <summary>
+    /// The store for a configured vault, or the one that refuses.
+    /// </summary>
+    /// <param name="vaultUri">
+    /// The vault, from configuration. Absent or empty in a local run, which is not an error:
+    /// everything except storing a credential works without one.
+    /// </param>
+    /// <exception cref="InvalidOperationException">The URI was set and is not a URI.</exception>
+    public static ISecretStore For(string? vaultUri)
+    {
+        if (string.IsNullOrWhiteSpace(vaultUri))
+        {
+            return new UnconfiguredSecretStore();
+        }
+
+        // A malformed vault URI fails here, at startup, naming the setting. Left to the first
+        // secret it would fail inside a wizard, on the step after the one that was wrong.
+        if (!Uri.TryCreate(vaultUri, UriKind.Absolute, out var uri))
+        {
+            throw new InvalidOperationException(
+                $"KeyVaultUri is '{vaultUri}', which is not an absolute URI. It should look like " +
+                "https://something.vault.azure.net/.");
+        }
+
+        return new KeyVaultSecretStore(uri);
+    }
+}

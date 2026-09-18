@@ -6,28 +6,23 @@ the work.
 
 **Version:** 1.0.0
 **Last updated:** 2026-09-18
-**Current block:** it compiles. Ten of twelve projects build with no warnings and the whole
-test suite passes. The API and the job host do not build, and no environment has been read.
+**Current block:** all twelve projects build with no warnings and all 56 tests pass. Nothing
+has read an environment yet, and no migration has been applied to a database.
 
 ---
 
 ## Honest status
 
-**It has met a compiler. The engine builds and its tests pass; the API does not build.**
+**It has met a compiler. The whole solution builds under warnings as errors and the tests pass.**
 
 The analysis engine is finished in the sense that every rule in the catalogue now has a
 handler, the reference graph is built, the scorer computes the numbers, the estimator has
 its three layers and the publisher has its gate. All of that now compiles under warnings as
 errors, and 56 tests exercise it. What it has still never done is read an environment.
 
-The two projects that do not build are `Api` and `Jobs`, and they fail for one reason: both
-were written against types that are not in this repository. `SystemHealth.cs` needs
-`ConnectorCatalogue` and `TargetCatalogue`, which are migrator concepts this product has no
-equivalent for, and `DemoSeeder`, `DemoEngagement` and `DatabaseAnalyzer`, which were planned
-and never written. `Program.cs` calls `SystemHealth` as a static class where it is an instance
-one, and both `Program.cs` and `Connections.cs` want a concrete `Secrets` type where
-`Secrets.cs` offers `ISecretStore` and two implementations. These files were written at
-different times against different assumptions about each other.
+`Api` and `Jobs` build too, now. They had been written against types that are not in this
+repository, because the files were written at different times against different assumptions
+about each other. What that cost is recorded under "what the API port left behind" below.
 
 | Layer | State |
 |---|---|
@@ -49,7 +44,7 @@ different times against different assumptions about each other.
 | Pipeline orchestrator | Runner, 8 stages, worker loop, credential plumbing |
 | Data layer | Stores written, schema never applied |
 | Command line | `analyse` (with `--xlsx`, `--pdf`), `rules`, `components`. `work` not wired |
-| API | 14 endpoints written. **Does not build**: see the honest status above |
+| API | 14 endpoints, building. Three system health checks removed: see below |
 | Web workspace | Shell ported, 6 workspaces, findings screen written |
 | Microsite | **Not started** |
 
@@ -172,6 +167,48 @@ is about.
 | Never write to a Power Platform environment | A discovery usable in a first meeting is worth more than any write | Remediation stays a recommendation. This product will never fix anything itself |
 | Publish to DevOps behind an approval bound to a hash | Ported from the migrator, where the same gate exists for the same reason | An extra step everybody will ask to skip once |
 
+## What the API port left behind
+
+Making `Api` and `Jobs` build meant deleting things rather than writing them, because what
+they referenced was never here. Each of these is reversible and each is a decision:
+
+- **The connector and target health checks are gone.** `Connectors`, `ConnectorReaders` and
+  `TargetContract` read `ConnectorCatalogue`, `TargetCatalogue` and
+  `PowerPete.Analyzer.Connectors.ConnectorFactory`. All three are migrator concepts. A
+  discovery product has no connectors and no target mapping, so the checks had nothing to
+  check. `Api.csproj` also referenced the `PowerPete.Analyzer.Connectors` project, which is
+  not in this repository at all.
+- **The demonstration engagement is gone with them, and it was never built.** `DemoAsync` and
+  the repair beside it needed `DemoSeeder`, `DemoEngagement` and an `ops.DemoSeed` table. The
+  table is not in any migration, the seeder was never written and the constants do not exist.
+  `RepairAsync` existed only to reseed it, so it went too, and with it the only thing on this
+  page that a button could fix. **If the demonstration engagement is wanted, it is a feature
+  to build, not a check to restore.**
+- **`SystemHealth` is an instance, not a static class.** `Program.cs` called
+  `SystemHealth.CheckAsync(connectionString, keyVaultUri, ct)`, which never existed; the class
+  reads its own configuration and exposes `RunAsync`. It is registered in the container now.
+- **`Secrets` never existed either.** `Secrets.cs` offers `ISecretStore` with a Key Vault
+  implementation and one that refuses. Three call sites wanted a concrete `Secrets(uri)`, so
+  `SecretStore.For(vaultUri)` now makes that choice in one place. Deciding it per call site
+  would let the health page report a configured vault while the next save refused.
+- **`UserAccess.Allows` is called `Holds`.** A rename, not a gap, and the access check is now
+  bound to the method that ranks roles rather than to nothing.
+
+### The web workspace and the API do not agree on routes
+
+Found while doing the above and **not changed**, because it is a runtime mismatch rather than
+a compile error and the right side to move is a decision:
+
+- `SystemHealthPage.tsx` calls `GET /api/system/health`. `Program.cs` maps
+  `GET /api/health/detail`.
+- It also calls `POST /api/system/health/{id}/repair`. There is no repair endpoint, and after
+  the demonstration engagement went there is nothing for one to do.
+- It lists `sources` and `target` as check groups. Nothing produces a check in either group
+  any more. The `SourcesGroup` and `TargetGroup` constants are still there, unused, because
+  the same two words are still in the web workspace and in `locales.json`.
+
+None of this fails a build and all of it fails a screen.
+
 ## What is not built at all
 
 - **Charts in the PDF.** Every visual in `report-model.json` renders as a table today. The
@@ -187,31 +224,17 @@ is about.
   stage later than the contract says it should be.
 - **Flow run history.** Needs the Power Automate management API, a second token and separate
   consent. Until then eight rules report as not assessed, correctly.
+- **The demonstration engagement.** No `ops.DemoSeed` table, no seeder, no constants. Until it
+  exists, everybody admitted sees an empty product on their first sign in.
 - **The microsite.** Not started.
 
 ## The thing that most needs doing next
 
-**Make `Api` and `Jobs` build.** The engine underneath them is compiled and tested; these two
-are the only things between this repository and a first real run.
+**Run it against the sample solution, then against a real export.** Everything builds and the
+tests pass, which proves the code is consistent with itself and nothing else. No component has
+been read out of a file yet.
 
-That is not a compile error to chase. Both projects were written against types that are not
-here, so the work is deciding what they should be:
-
-- `ConnectorCatalogue` and `TargetCatalogue` are migrator concepts. A discovery product has no
-  connectors and no targets, so the system health checks that use them have nothing to check
-  and should go rather than be ported.
-- `DemoSeeder`, `DemoEngagement` and `DatabaseAnalyzer` were planned and never written. The
-  demonstration engagement is the one worth keeping: its numbers come from the real assessor,
-  so the demo cannot disagree with the product.
-- `SystemHealth` is an instance class that `Program.cs` calls statically. One of the two is
-  wrong and it is worth deciding which before writing anything.
-- `Secrets.cs` offers `ISecretStore` with a Key Vault implementation and an unconfigured one.
-  `Program.cs` and `Connections.cs` both want a concrete `Secrets(Uri)`. The interface is the
-  better shape; the call sites are what should move.
-- `UserAccess` has no `Allows(engagementId, minimumRole)`, and the access check is the one
-  place in this product where being wrong is a security problem rather than a reporting one.
-
-After that, and in this order:
+In this order:
 
 1. `./build/New-SampleSolution.ps1` — a synthetic export with sixteen deliberate findings.
 2. `analyse samples/SampleSolution.zip`. A run finding fewer than sixteen tells you which
@@ -229,7 +252,7 @@ The build gates, for reference:
 1. `./build/Test-Contracts.ps1` — reads the contracts, connects to nothing. Passes.
 2. `./build/Test-Generators.ps1` — generates into a throwaway folder and checks the output.
    Passes.
-3. `./build/Invoke-CodeGen.ps1` — generates and builds. Ten of twelve projects, no warnings.
+3. `./build/Invoke-CodeGen.ps1` — generates and builds. Twelve of twelve, no warnings.
 4. `dotnet test` — 56 tests, all passing.
 
 ## What was ported rather than invented

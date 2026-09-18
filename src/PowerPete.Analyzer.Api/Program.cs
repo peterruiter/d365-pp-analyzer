@@ -22,7 +22,8 @@ var initialAdmin = builder.Configuration["InitialGlobalAdmin"] ?? Environment.Ge
 builder.Services.AddSingleton(new WorkspaceStore(connectionString));
 builder.Services.AddSingleton(new AnalysisStore(connectionString));
 builder.Services.AddSingleton(new AccessStore(connectionString));
-builder.Services.AddSingleton(new Secrets(keyVaultUri));
+builder.Services.AddSingleton(SecretStore.For(keyVaultUri));
+builder.Services.AddSingleton<SystemHealth>();
 
 // ------------------------------------------------------------ authentication --
 // Entra sign-in, cookie session. The product knows who somebody is from their token and what
@@ -58,7 +59,7 @@ static string UserId(ClaimsPrincipal user) =>
 static string DisplayName(ClaimsPrincipal user) =>
     user.FindFirstValue("name") ?? user.FindFirstValue(ClaimTypes.Name) ?? UserId(user);
 
-/// Reads what somebody may do, once per request rather than per endpoint.
+// Reads what somebody may do, once per request rather than per endpoint.
 async Task<UserAccess> AccessFor(HttpContext context)
 {
     var store = context.RequestServices.GetRequiredService<AccessStore>();
@@ -73,7 +74,7 @@ async Task<IResult?> Denied(HttpContext context, Guid engagementId, string minim
 {
     var access = await AccessFor(context);
 
-    if (!access.Allows(engagementId, minimumRole))
+    if (!access.Holds(engagementId, minimumRole))
     {
         return Results.Forbid();
     }
@@ -158,7 +159,7 @@ app.MapGet("/api/engagements/{engagementId:guid}/connections",
         connection.LastTestIdentity,
         connection.SecretExpiresUtc,
         expiringSoon = connection.SecretExpiresUtc is { } expiry && expiry < DateTime.UtcNow.AddDays(30),
-        reach = connection.ReachJson is null ? null : JsonDocument.Parse(connection.ReachJson).RootElement
+        reach = connection.ReachJson is null ? null : (JsonElement?)JsonDocument.Parse(connection.ReachJson).RootElement
     }));
 }).RequireAuthorization();
 
@@ -230,6 +231,13 @@ app.MapPost("/api/runs/{runId:guid}/approve",
 }).RequireAuthorization();
 
 // -------------------------------------------------------------------- findings --
+
+// The same sentence every time, so it is built once rather than on every request.
+string[] unreadEstate =
+[
+    "No analysis has completed on this engagement yet. This is not a clean estate; it is an unread one."
+];
+
 app.MapGet("/api/engagements/{engagementId:guid}/findings",
     async (HttpContext context, AnalysisStore store, Guid engagementId, Guid? runId) =>
 {
@@ -249,7 +257,7 @@ app.MapGet("/api/engagements/{engagementId:guid}/findings",
             findings = Array.Empty<object>(),
             notAssessed = Array.Empty<object>(),
             ruleCount = RuleCatalogue.All.Count,
-            caveats = new[] { "No analysis has completed on this engagement yet. This is not a clean estate; it is an unread one." }
+            caveats = unreadEstate
         });
     }
 
@@ -380,7 +388,9 @@ app.MapGet("/api/health/detail", async (HttpContext context) =>
     var access = await AccessFor(context);
     if (!access.IsGlobalAdmin) return Results.Forbid();
 
-    return Results.Ok(await SystemHealth.CheckAsync(connectionString, keyVaultUri, context.RequestAborted));
+    var health = context.RequestServices.GetRequiredService<SystemHealth>();
+
+    return Results.Ok(await health.RunAsync(context.RequestAborted));
 }).RequireAuthorization();
 
 // The single page application owns every route the API does not.

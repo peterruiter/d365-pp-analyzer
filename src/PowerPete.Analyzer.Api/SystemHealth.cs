@@ -61,9 +61,7 @@ public sealed record SystemCheck(
 /// precisely for the moment when something is broken, and a health page that returns a 500
 /// when the system is unhealthy is the one thing it must never do.
 /// </remarks>
-public sealed class SystemHealth(
-    IConfiguration configuration,
-    ILogger<SystemHealth> logger)
+public sealed class SystemHealth(IConfiguration configuration)
 {
     /// <summary>What must work at all.</summary>
     public const string PlatformGroup = "platform";
@@ -105,45 +103,17 @@ public sealed class SystemHealth(
             SchemaAsync(cancellationToken),
             VaultAsync(cancellationToken),
             SignInAsync(cancellationToken),
-            DemoAsync(cancellationToken),
             WorkerAsync(cancellationToken),
             StuckRunsAsync(cancellationToken));
 
         return
         [
             .. checks,
-            Connectors(),
-            ConnectorReaders(),
-            TargetContract(),
             SignInSecret(),
             Reporting(),
             PdfRenderer(),
             Documentation()
         ];
-    }
-
-    /// <summary>Attempts the one repair that is safe to perform from a web page.</summary>
-    /// <param name="id">Which check.</param>
-    /// <param name="cancellationToken">Cancellation.</param>
-    public async Task<SystemCheck> RepairAsync(string id, CancellationToken cancellationToken)
-    {
-        // Deliberately one. Applying migrations and rotating credentials are things a person
-        // does as themselves, with a record of having done it, not things a button does.
-        if (id == "demo" && ConnectionString is { Length: > 0 } connection)
-        {
-            try
-            {
-                await new DemoSeeder(connection).EnsureAsync(cancellationToken);
-            }
-#pragma warning disable CA1031 // A failed repair is output, not an exception.
-            catch (Exception failure)
-#pragma warning restore CA1031
-            {
-                logger.LogError(failure, "The demonstration engagement could not be repaired.");
-            }
-        }
-
-        return await DemoAsync(cancellationToken);
     }
 
     // ------------------------------------------------------------- platform --
@@ -195,7 +165,7 @@ public sealed class SystemHealth(
 
         try
         {
-            var shipped = DatabaseAnalyzer.LoadMigrations().Select(migration => migration.Name).ToHashSet(StringComparer.Ordinal);
+            var shipped = DatabaseMigrator.LoadMigrations().Select(migration => migration.Name).ToHashSet(StringComparer.Ordinal);
 
             await using var connection = new SqlConnection(connectionString);
 
@@ -390,48 +360,6 @@ public sealed class SystemHealth(
                 $"The client secret expires on {on}, in {days} days."));
     }
 
-    private async Task<SystemCheck> DemoAsync(CancellationToken cancellationToken)
-    {
-        if (ConnectionString is not { Length: > 0 } connectionString)
-        {
-            return new SystemCheck("demo", "Demonstration engagement", PlatformGroup, HealthState.NotConfigured,
-                "There is no database to seed it into.");
-        }
-
-        try
-        {
-            await using var connection = new SqlConnection(connectionString);
-
-            var version = await connection.ExecuteScalarAsync<int?>(new CommandDefinition(
-                """
-                SELECT seed.SeedVersion
-                FROM ops.DemoSeed seed
-                INNER JOIN ops.Engagement engagement ON engagement.EngagementId = seed.EngagementId
-                WHERE seed.EngagementId = @id;
-                """,
-                new { id = DemoEngagement.Id },
-                cancellationToken: cancellationToken));
-
-            if (version == DemoEngagement.SeedVersion)
-            {
-                return new SystemCheck("demo", "Demonstration engagement", PlatformGroup, HealthState.Ok,
-                    string.Create(CultureInfo.InvariantCulture, $"Seeded, at version {version}."));
-            }
-
-            return new SystemCheck("demo", "Demonstration engagement", PlatformGroup, HealthState.Degraded,
-                version is null
-                    ? "Not seeded. Everybody admitted sees an empty product on their first sign in."
-                    : string.Create(CultureInfo.InvariantCulture,
-                        $"Seeded at version {version}, and this image carries version {DemoEngagement.SeedVersion}."),
-                "Rewriting it is safe: it touches only the demonstration identifiers.",
-                CanRepair: true);
-        }
-        catch (SqlException failure)
-        {
-            return new SystemCheck("demo", "Demonstration engagement", PlatformGroup, HealthState.Failed, failure.Message);
-        }
-    }
-
     // ------------------------------------------------------------- pipeline --
 
     private async Task<SystemCheck> WorkerAsync(CancellationToken cancellationToken)
@@ -511,58 +439,6 @@ public sealed class SystemHealth(
         {
             return new SystemCheck("runs", "Runs", PipelineGroup, HealthState.Failed, failure.Message);
         }
-    }
-
-    // -------------------------------------------------------------- sources --
-
-    private static SystemCheck Connectors()
-    {
-        var total = ConnectorCatalogue.All.Count;
-        var verified = ConnectorCatalogue.All.Count(connector => connector.VerifiedAgainst is { Length: > 0 });
-
-        if (verified > 0)
-        {
-            return new SystemCheck("connectors", "Source capability contract", SourcesGroup, HealthState.Ok,
-                string.Create(CultureInfo.InvariantCulture,
-                    $"{total} platforms described, {verified} checked against a real instance."));
-        }
-
-        return new SystemCheck("connectors", "Source capability contract", SourcesGroup, HealthState.Degraded,
-            string.Create(CultureInfo.InvariantCulture,
-                $"{total} platforms described, none checked against a real instance."),
-            "Every capability claim comes from vendor documentation. Enough to scope an engagement, not enough to promise a client.");
-    }
-
-    private static SystemCheck ConnectorReaders()
-    {
-        var implemented = PowerPete.Analyzer.Connectors.ConnectorFactory.Implemented;
-
-        return new SystemCheck("readers", "Connectors built", SourcesGroup, HealthState.Degraded,
-            string.Create(CultureInfo.InvariantCulture,
-                $"{implemented.Count} of {ConnectorCatalogue.All.Count} platforms have a reader: {string.Join(", ", implemented)}."),
-            "The rest are described in the contract and will report a missing reader rather than an empty estate.");
-    }
-
-    // --------------------------------------------------------------- target --
-
-    private static SystemCheck TargetContract()
-    {
-        var unverified = TargetCatalogue.Unverified.Count;
-        var total = TargetCatalogue.All.Count;
-
-        if (unverified == 0)
-        {
-            return new SystemCheck("target", "Target mapping", TargetGroup, HealthState.Ok,
-                string.Create(CultureInfo.InvariantCulture,
-                    $"All {total} mappings have been reconciled against a real Dynamics environment."));
-        }
-
-        return new SystemCheck("target", "Target mapping", TargetGroup, HealthState.Degraded,
-            string.Create(CultureInfo.InvariantCulture,
-                $"{unverified} of {total} mappings carry names nobody has checked against a real environment."),
-            "A wrong table name fails loudly. A right column name meaning something else does not fail at all. " +
-            "The upper estimate is widened while this is true.",
-            "./build/Verify-TargetMetadata.ps1 -EnvironmentUrl https://<org>.crm4.dynamics.com");
     }
 
     // --------------------------------------------------------- deliverables --

@@ -23,7 +23,7 @@ using PowerPete.Analyzer.Pipeline.Stages;
 /// environment with nothing in it, and that is the report this whole product exists to avoid
 /// producing.
 /// </remarks>
-public sealed class ConnectionFactory(Secrets secrets)
+public sealed class ConnectionFactory(ISecretStore secrets)
 {
     private static readonly HttpClient Shared = new();
 

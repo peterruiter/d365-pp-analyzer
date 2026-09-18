@@ -217,7 +217,7 @@ public sealed class Worker(WorkerSettings settings)
 
         // Applied on start rather than by a deployment step. A container that carries its own
         // schema cannot be pointed at a database it does not know how to build.
-        var migrations = await new DatabaseMigrator(settings.ConnectionString).ApplyAsync(cancellationToken).ConfigureAwait(false);
+        var migrations = await new DatabaseMigrator(settings.ConnectionString).ApplyAsync(progress: null, cancellationToken).ConfigureAwait(false);
         Console.WriteLine($"{migrations.Count(result => result.Applied)} migration(s) applied, {migrations.Count} in total.");
 
         while (!cancellationToken.IsCancellationRequested)
@@ -292,7 +292,7 @@ public sealed class Worker(WorkerSettings settings)
         var source = engagements.FirstOrDefault(connection => connection.ConnectionId == run.SourceConnectionId);
         var target = engagements.FirstOrDefault(connection => connection.ConnectionId == run.TargetConnectionId);
 
-        var secrets = new Secrets(settings.KeyVaultUri);
+        var secrets = SecretStore.For(settings.KeyVaultUri);
         var factory = new StageServicesFactory(new ConnectionFactory(secrets), analysis, workspace, settings);
 
         var services = await factory.BuildAsync(

@@ -18,6 +18,9 @@ namespace PowerPete.Analyzer.Jobs;
 /// </remarks>
 public static class Program
 {
+    /// <summary>The one set of options the JSON output uses. Building these per call is not free.</summary>
+    private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
+
     /// <summary>Entry point.</summary>
     /// <param name="args">The command and its arguments.</param>
     public static async Task<int> Main(string[] args)
@@ -140,7 +143,7 @@ public static class Program
         if (args.Contains("--json", StringComparer.Ordinal))
         {
             Console.WriteLine(JsonSerializer.Serialize(new { score, findings = findings.Select(entry => entry.Finding) },
-                new JsonSerializerOptions { WriteIndented = true }));
+                Indented));
             return 0;
         }
 
@@ -173,7 +176,7 @@ public static class Program
 
         if (xlsx is null && pdf is null) return;
 
-        var solution = read.Solutions.FirstOrDefault();
+        var solution = read.Solutions.Count > 0 ? read.Solutions[0] : null;
         var withComponents = findings
             .Select(entry => (entry.Finding, entry.Estimate, (DiscoveredComponent?)null))
             .ToList();
@@ -243,7 +246,7 @@ public static class Program
     private static void Print(
         SolutionZipReader.Result read,
         RuleEngine.Outcome outcome,
-        IReadOnlyList<(Finding Finding, Estimate Estimate)> findings,
+        List<(Finding Finding, Estimate Estimate)> findings,
         RunScore score)
     {
         var culture = CultureInfo.InvariantCulture;
