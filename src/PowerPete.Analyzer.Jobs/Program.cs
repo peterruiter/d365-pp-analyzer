@@ -101,9 +101,9 @@ public static class Program
         }
 
         await using var file = File.OpenRead(path);
-        var read = new SolutionZipReader().Read(file);
+        var read = SolutionZipReader.Read(file);
 
-        var resolved = new ReferenceResolver().Resolve(read.Components, read.Links);
+        var resolved = ReferenceResolver.Resolve(read.Components, read.Links);
 
         var context = new AnalysisContext(
             read.Components,
@@ -134,7 +134,7 @@ public static class Program
             .Select(cost => new FixedCost(cost.Id, cost.Name, cost.Low, cost.High))
             .ToList();
 
-        var score = new Scorer().Score(read.Components, findings, outcome.NotAssessed, fixedCosts,
+        var score = Scorer.Score(read.Components, findings, outcome.NotAssessed, fixedCosts,
             read.Solutions.Count, read.Solutions.Count);
 
         if (args.Contains("--json", StringComparer.Ordinal))
@@ -182,7 +182,7 @@ public static class Program
         {
             try
             {
-                var bytes = new FindingsWorkbook().Build(new FindingsWorkbook.Model(
+                var bytes = FindingsWorkbook.Build(new FindingsWorkbook.Model(
                     solution?.UniqueName ?? "Local file",
                     Guid.Empty,
                     DateTime.UtcNow,
@@ -207,7 +207,7 @@ public static class Program
         {
             try
             {
-                var bytes = new AssessmentReportPdf().Build(new AssessmentReportPdf.Model(
+                var bytes = AssessmentReportPdf.Build(new AssessmentReportPdf.Model(
                     solution?.UniqueName ?? "Local file",
                     null,
                     Guid.Empty,

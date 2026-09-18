@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Web;
+using PowerPete.Analyzer.Api;
 using PowerPete.Analyzer.Data;
 using PowerPete.Analyzer.Domain;
 

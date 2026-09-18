@@ -43,7 +43,7 @@ public sealed class FindingsWorkbook
 
     /// <summary>Builds the workbook.</summary>
     /// <param name="model">What to write.</param>
-    public byte[] Build(Model model)
+    public static byte[] Build(Model model)
     {
         ArgumentNullException.ThrowIfNull(model);
 

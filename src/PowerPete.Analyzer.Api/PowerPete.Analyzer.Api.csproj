@@ -3,7 +3,6 @@
   <ItemGroup>
     <ProjectReference Include="..\PowerPete.Analyzer.Domain\PowerPete.Analyzer.Domain.csproj" />
     <ProjectReference Include="..\PowerPete.Analyzer.Data\PowerPete.Analyzer.Data.csproj" />
-    <ProjectReference Include="..\PowerPete.Analyzer.Connectors\PowerPete.Analyzer.Connectors.csproj" />
     <ProjectReference Include="..\PowerPete.Analyzer.Dataverse\PowerPete.Analyzer.Dataverse.csproj" />
     <ProjectReference Include="..\PowerPete.Analyzer.Export\PowerPete.Analyzer.Export.csproj" />
     <!-- For the demonstration engagement, whose numbers are produced by the real

@@ -52,7 +52,7 @@ public sealed class AssessmentReportPdf
 
     /// <summary>Builds the report.</summary>
     /// <param name="model">What to write.</param>
-    public byte[] Build(Model model)
+    public static byte[] Build(Model model)
     {
         ArgumentNullException.ThrowIfNull(model);
 
@@ -421,9 +421,9 @@ public sealed class AssessmentReportPdf
             return;
         }
 
-        Body(flow, string.Create(Culture,
-            $"{model.Score.NotAssessed.Count} of {RuleCatalogue.All.Count} checks could not run. None of them is " +
-            "reported as passing anywhere in this report."));
+        Body(flow, string.Create(
+            Culture,
+            $"{model.Score.NotAssessed.Count} of {RuleCatalogue.All.Count} checks could not run. None of them is reported as passing anywhere in this report."));
 
         flow.Table(table =>
         {

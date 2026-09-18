@@ -108,18 +108,18 @@ public interface IRunJournal
     /// <summary>Records a run's status.</summary>
     /// <param name="runId">Which run.</param>
     /// <param name="status">Where it is.</param>
-    /// <param name="error">Why, on a failure.</param>
+    /// <param name="failure">Why, on a failure.</param>
     /// <param name="cancellationToken">Cancellation.</param>
-    Task SetRunStatusAsync(Guid runId, string status, string? error, CancellationToken cancellationToken);
+    Task SetRunStatusAsync(Guid runId, string status, string? failure, CancellationToken cancellationToken);
 
     /// <summary>Records a stage's status and checkpoint.</summary>
     /// <param name="runId">Which run.</param>
     /// <param name="stageId">Which stage.</param>
     /// <param name="status">Where it is.</param>
-    /// <param name="error">Why, on a failure.</param>
+    /// <param name="failure">Why, on a failure.</param>
     /// <param name="checkpoint">What it needs to resume.</param>
     /// <param name="cancellationToken">Cancellation.</param>
-    Task SetStageAsync(Guid runId, string stageId, string status, string? error, string? checkpoint, CancellationToken cancellationToken);
+    Task SetStageAsync(Guid runId, string stageId, string status, string? failure, string? checkpoint, CancellationToken cancellationToken);
 
     /// <summary>Which stages already succeeded, with their checkpoints.</summary>
     /// <param name="runId">Which run.</param>

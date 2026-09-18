@@ -26,7 +26,7 @@ public sealed class ReferenceResolver
     /// </summary>
     /// <param name="components">Everything in scope.</param>
     /// <param name="existing">Links the extraction already produced.</param>
-    public Result Resolve(IReadOnlyList<DiscoveredComponent> components, IReadOnlyList<ComponentLink> existing)
+    public static Result Resolve(IReadOnlyList<DiscoveredComponent> components, IReadOnlyList<ComponentLink> existing)
     {
         ArgumentNullException.ThrowIfNull(components);
         ArgumentNullException.ThrowIfNull(existing);

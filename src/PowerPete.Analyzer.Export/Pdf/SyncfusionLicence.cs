@@ -34,7 +34,7 @@ public static class SyncfusionLicence
     /// without shipping watermarked documents in the meantime.
     /// </param>
     /// <exception cref="InvalidOperationException">No key was available from either source.</exception>
-    public static void Register(string? key, bool force = false)
+    public static void Register(string? key = null, bool force = false)
     {
         lock (Gate)
         {

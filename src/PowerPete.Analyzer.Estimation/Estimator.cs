@@ -276,6 +276,13 @@ public sealed class Estimator
 /// </remarks>
 public static class EstimatePrompt
 {
+    /// <summary>The shape the model must answer in. Literal JSON, so it carries no interpolation.</summary>
+    private const string ResponseSchema =
+        """
+        {"low": number, "high": number, "storyPoints": 1|2|3|5|8|13|21, "confidence": "high"|"medium"|"low",
+          "rationale": "string", "assumptions": ["string"]}
+        """;
+
     /// <summary>Renders the prompt for one finding.</summary>
     /// <param name="finding">The finding.</param>
     /// <param name="component">What it is about.</param>
@@ -346,8 +353,7 @@ public static class EstimatePrompt
               with whoever ships the solution rather than changing anything.
 
             Answer as JSON only, with no other text:
-            {{"low": number, "high": number, "storyPoints": 1|2|3|5|8|13|21, "confidence": "high"|"medium"|"low",
-              "rationale": "string", "assumptions": ["string"]}}
+            {ResponseSchema}
             """;
     }
 }

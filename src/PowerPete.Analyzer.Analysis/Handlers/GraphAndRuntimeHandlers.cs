@@ -26,7 +26,7 @@ public sealed class OrphanedColumnHandler : IRuleHandler
         var orphans = context.OfType("column")
             .Where(column => !column.IsManaged)
             .Where(column => column.Attribute<bool?>("isCustom") is not false)
-            .Where(column => context.Inbound(column.StableKey).Count(link => link.Kind != "belongsTo") == 0)
+            .Where(column => !context.Inbound(column.StableKey).Any(link => link.Kind != "belongsTo"))
             .GroupBy(column => column.Attribute<string>("table") ?? "unknown", StringComparer.OrdinalIgnoreCase);
 
         foreach (var table in orphans)

@@ -152,7 +152,7 @@ public sealed class ExtractStage(StageServices services) : StageBase(services)
         {
             if (file is not null)
             {
-                var result = new SolutionZipReader().Read(file);
+                var result = SolutionZipReader.Read(file);
 
                 Merge(state, result.Components);
                 state.Links.AddRange(result.Links);
@@ -307,7 +307,7 @@ public sealed class ResolveStage(StageServices services) : StageBase(services)
     {
         ArgumentNullException.ThrowIfNull(state);
 
-        var result = new ReferenceResolver().Resolve(state.Components, state.Links);
+        var result = ReferenceResolver.Resolve(state.Components, state.Links);
 
         state.Links.Clear();
         state.Links.AddRange(result.Links);
@@ -429,7 +429,7 @@ public sealed class ScoreStage(StageServices services) : StageBase(services)
         await Services.Persist.SaveFindingsAsync(state.RunId, state.EngagementId, state.Findings, cancellationToken)
             .ConfigureAwait(false);
 
-        var score = new Scorer().Score(
+        var score = Scorer.Score(
             state.Components,
             state.Findings,
             state.NotAssessed,

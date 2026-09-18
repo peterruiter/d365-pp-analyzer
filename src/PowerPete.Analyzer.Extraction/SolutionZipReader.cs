@@ -86,7 +86,7 @@ public sealed class SolutionZipReader
     /// </summary>
     /// <param name="stream">The zip. Left open: the caller owns it.</param>
     /// <exception cref="InvalidDataException">The file is not a solution export.</exception>
-    public Result Read(Stream stream)
+    public static Result Read(Stream stream)
     {
         ArgumentNullException.ThrowIfNull(stream);
 
@@ -178,7 +178,7 @@ public sealed class SolutionZipReader
 
     private static string? Value(XElement parent, string name) => parent.Element(None + name)?.Value?.Trim();
 
-    private int ReadEntities(XElement root, SolutionHeader solution, List<DiscoveredComponent> components, List<ComponentLink> links)
+    private static int ReadEntities(XElement root, SolutionHeader solution, List<DiscoveredComponent> components, List<ComponentLink> links)
     {
         var count = 0;
 
@@ -272,7 +272,7 @@ public sealed class SolutionZipReader
         return count;
     }
 
-    private int ReadWorkflows(
+    private static int ReadWorkflows(
         ZipArchive archive,
         XElement root,
         SolutionHeader solution,
@@ -470,7 +470,7 @@ public sealed class SolutionZipReader
                 or "AssignEntity" or "SendEmail" or "ActivityReference" or "If" or "Switch");
     }
 
-    private int ReadWebResources(ZipArchive archive, XElement root, SolutionHeader solution, List<DiscoveredComponent> components)
+    private static int ReadWebResources(ZipArchive archive, XElement root, SolutionHeader solution, List<DiscoveredComponent> components)
     {
         var count = 0;
 
@@ -528,7 +528,7 @@ public sealed class SolutionZipReader
         return count;
     }
 
-    private int ReadConnectionReferences(XElement root, SolutionHeader solution, List<DiscoveredComponent> components)
+    private static int ReadConnectionReferences(XElement root, SolutionHeader solution, List<DiscoveredComponent> components)
     {
         var count = 0;
 
@@ -555,7 +555,7 @@ public sealed class SolutionZipReader
         return count;
     }
 
-    private int ReadEnvironmentVariables(XElement root, SolutionHeader solution, List<DiscoveredComponent> components)
+    private static int ReadEnvironmentVariables(XElement root, SolutionHeader solution, List<DiscoveredComponent> components)
     {
         var count = 0;
 
@@ -580,7 +580,7 @@ public sealed class SolutionZipReader
         return count;
     }
 
-    private int ReadRoles(XElement root, SolutionHeader solution, List<DiscoveredComponent> components)
+    private static int ReadRoles(XElement root, SolutionHeader solution, List<DiscoveredComponent> components)
     {
         var count = 0;
 
@@ -609,7 +609,7 @@ public sealed class SolutionZipReader
         return count;
     }
 
-    private int ReadPluginAssemblies(XElement root, SolutionHeader solution, List<DiscoveredComponent> components)
+    private static int ReadPluginAssemblies(XElement root, SolutionHeader solution, List<DiscoveredComponent> components)
     {
         var count = 0;
 
@@ -633,7 +633,7 @@ public sealed class SolutionZipReader
         return count;
     }
 
-    private int ReadCanvasApps(XElement root, SolutionHeader solution, List<DiscoveredComponent> components)
+    private static int ReadCanvasApps(XElement root, SolutionHeader solution, List<DiscoveredComponent> components)
     {
         var count = 0;
 
@@ -658,7 +658,7 @@ public sealed class SolutionZipReader
         return count;
     }
 
-    private int ReadGlobalChoices(XElement root, SolutionHeader solution, List<DiscoveredComponent> components)
+    private static int ReadGlobalChoices(XElement root, SolutionHeader solution, List<DiscoveredComponent> components)
     {
         var count = 0;
 

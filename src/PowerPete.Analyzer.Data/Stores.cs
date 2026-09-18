@@ -330,9 +330,9 @@ public sealed class WorkspaceStore(string connectionString)
     /// <summary>Moves a run's status, and stamps the start and finish times with it.</summary>
     /// <param name="runId">Which run.</param>
     /// <param name="status">Where it is now.</param>
-    /// <param name="error">Why, on a failure.</param>
+    /// <param name="failure">Why, on a failure.</param>
     /// <param name="cancellationToken">Cancellation.</param>
-    public async Task SetRunStatusAsync(Guid runId, string status, string? error, CancellationToken cancellationToken)
+    public async Task SetRunStatusAsync(Guid runId, string status, string? failure, CancellationToken cancellationToken)
     {
         await using var connection = Connect();
 
@@ -345,7 +345,7 @@ public sealed class WorkspaceStore(string connectionString)
                 CompletedUtc = CASE WHEN @status IN ('succeeded','partial','failed','cancelled') THEN SYSUTCDATETIME() ELSE CompletedUtc END
             WHERE RunId = @runId;
             """,
-            new { runId, status, error },
+            new { runId, status, error = failure },
             cancellationToken: cancellationToken));
     }
 
@@ -353,14 +353,14 @@ public sealed class WorkspaceStore(string connectionString)
     /// <param name="runId">Which run.</param>
     /// <param name="stageId">Which stage.</param>
     /// <param name="status">Where it is.</param>
-    /// <param name="error">Why, on a failure.</param>
+    /// <param name="failure">Why, on a failure.</param>
     /// <param name="checkpointJson">Whatever it needs to pick up again.</param>
     /// <param name="cancellationToken">Cancellation.</param>
     public async Task SetStageAsync(
         Guid runId,
         string stageId,
         string status,
-        string? error,
+        string? failure,
         string? checkpointJson,
         CancellationToken cancellationToken)
     {
@@ -382,7 +382,7 @@ public sealed class WorkspaceStore(string connectionString)
                 INSERT (RunId, StageId, Status, Attempt, StartedUtc, CheckpointJson)
                 VALUES (@runId, @stageId, @status, 1, SYSUTCDATETIME(), @checkpointJson);
             """,
-            new { runId, stageId, status, error, checkpointJson },
+            new { runId, stageId, status, error = failure, checkpointJson },
             cancellationToken: cancellationToken));
     }
 

@@ -68,7 +68,7 @@ public sealed class Scorer
     /// <param name="fixedCosts">Per engagement costs from the contract.</param>
     /// <param name="solutionsAnalysed">How many solutions were in scope.</param>
     /// <param name="solutionsTotal">How many exist. Different numbers are a caveat, not a footnote.</param>
-    public RunScore Score(
+    public static RunScore Score(
         IReadOnlyList<DiscoveredComponent> components,
         IReadOnlyList<(Finding Finding, Estimate Estimate)> findings,
         IReadOnlyList<NotAssessed> notAssessed,

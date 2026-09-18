@@ -245,7 +245,9 @@ foreach ($section in $report.sections)
         $errors.Add("Report section '$($section.id)' is hybrid and does not say which half is which.")
     }
 
-    foreach ($visual in $section.visuals)
+    $sectionVisuals = if ($section.PSObject.Properties.Name -contains 'visuals') { $section.visuals } else { @() }
+
+    foreach ($visual in $sectionVisuals)
     {
         if ($visual -notin $visualIds) { $errors.Add("Report section '$($section.id)' shows visual '$visual', which is not declared.") }
     }

@@ -324,7 +324,7 @@ public sealed partial class SecretInDefinitionHandler : IRuleHandler
 
             if (string.IsNullOrWhiteSpace(content)) continue;
 
-            var hits = SecretPattern().Matches(content).Count + ConnectionStringPattern().Matches(content).Count;
+            var hits = SecretPattern().Count(content) + ConnectionStringPattern().Count(content);
             if (hits == 0) continue;
 
             // The value itself is never carried into the evidence. This evidence ends up in a

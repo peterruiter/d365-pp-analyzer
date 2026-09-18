@@ -6,18 +6,28 @@ the work.
 
 **Version:** 1.0.0
 **Last updated:** 2026-09-18
-**Current block:** ten of ten have code in them. Nothing has been compiled and no environment
-has been read, which is now the only thing standing between this and a first real run.
+**Current block:** it compiles. Ten of twelve projects build with no warnings and the whole
+test suite passes. The API and the job host do not build, and no environment has been read.
 
 ---
 
 ## Honest status
 
-**Ten of ten blocks have code and none of it has met a compiler.**
+**It has met a compiler. The engine builds and its tests pass; the API does not build.**
 
 The analysis engine is finished in the sense that every rule in the catalogue now has a
 handler, the reference graph is built, the scorer computes the numbers, the estimator has
-its three layers and the publisher has its gate. What it has never done is run.
+its three layers and the publisher has its gate. All of that now compiles under warnings as
+errors, and 56 tests exercise it. What it has still never done is read an environment.
+
+The two projects that do not build are `Api` and `Jobs`, and they fail for one reason: both
+were written against types that are not in this repository. `SystemHealth.cs` needs
+`ConnectorCatalogue` and `TargetCatalogue`, which are migrator concepts this product has no
+equivalent for, and `DemoSeeder`, `DemoEngagement` and `DatabaseAnalyzer`, which were planned
+and never written. `Program.cs` calls `SystemHealth` as a static class where it is an instance
+one, and both `Program.cs` and `Connections.cs` want a concrete `Secrets` type where
+`Secrets.cs` offers `ISecretStore` and two implementations. These files were written at
+different times against different assumptions about each other.
 
 | Layer | State |
 |---|---|
@@ -34,18 +44,18 @@ its three layers and the publisher has its gate. What it has never done is run.
 | Report model | Contract, plus the PDF and workbook renderers |
 | Estimator | Complete, with guards and provenance |
 | Backlog and DevOps publisher | Complete |
-| Tests | 47, never run |
+| Tests | **56, all passing** |
 | Infrastructure | Ported from the migrator, never deployed |
 | Pipeline orchestrator | Runner, 8 stages, worker loop, credential plumbing |
 | Data layer | Stores written, schema never applied |
 | Command line | `analyse` (with `--xlsx`, `--pdf`), `rules`, `components`. `work` not wired |
-| API | Auth, access checks, 14 endpoints, all implemented |
+| API | 14 endpoints written. **Does not build**: see the honest status above |
 | Web workspace | Shell ported, 6 workspaces, findings screen written |
 | Microsite | **Not started** |
 
-The machine this was written on had neither PowerShell nor the .NET SDK. **Nothing here has
-been executed.** The C# has never seen a compiler, the SQL has never touched a database, the
-PowerShell has never run and the tests have never been collected.
+The machine this was written on had neither PowerShell nor the .NET SDK. That is no longer
+true: the contracts check, the generators run, the engine builds and the tests pass. The SQL
+has still never touched a database and no environment has been read.
 
 ## What is checked, and how
 
@@ -96,16 +106,26 @@ Sixteen of them run against `samples/SampleSolution.zip` today, which is what `d
 is about.
 
 ## What is unproven, in order of how much it would cost to be wrong
-## What is unproven, in order of how much it would cost to be wrong
 
-0. **Nothing compiles yet.** Three bugs have been found by reading so far: a `??` chain that
-   bound tighter than the `?:` after it, a custom `XmlException` shadowing
-   `System.Xml.XmlException` so the read wrapper would never have caught a malformed solution
-   file, and a Dockerfile guard checking for a generated file this product does not produce.
-   All three are fixed. The compiler will find more, and the shadowing kind is the one worth
-   watching for: it does not throw, it silently does nothing.
+0. **The engine compiles and 56 tests pass, so this list is shorter than it was.** What the
+   compiler found is worth recording, because it says what kind of bug is still in here.
 
+   Not one error came from generated code. The generators were right, which means the Python
+   emulation that checked them was a fair substitute for running them. Everything that failed
+   was hand written.
 
+   Three were the quiet kind. The `Severity` enum was shadowed by a `Severity(string)` method
+   on the same class, which is the `XmlException` failure a second time and in the same file
+   that had already worked around it once on its last line. An unnamed fallback tuple erased
+   the element names from a conditional, so `metadata.Category` did not exist. And `{{` is not
+   an escape inside a raw interpolated string, so the estimator's JSON response schema was
+   being read as an interpolation hole.
+
+   Two were in PowerShell and stopped everything before it started: `ConvertTo-PascalCase` had
+   no body at all, so `Common.psm1` never closed and nothing in `build/` could run, and the
+   contract check read an optional `visuals` property under `Set-StrictMode`.
+
+   The rest were the analyser under warnings as errors, and none of them changed behaviour.
 
 1. **The workflow category mapping decides what half the logic domain is, and it now exists in
    two places.** `SolutionZipReader` and `DataverseReader` each map the same category numbers,
@@ -154,60 +174,63 @@ is about.
 
 ## What is not built at all
 
-- **Charts in the PDF.** Everything renders as a table today.
-- **The consultant input screens** for the written report sections.
-- **Delegated sign-in.** The interactive flow belongs to the web application, which now exists.
-- **The microsite.** Not started.
+- **Charts in the PDF.** Every visual in `report-model.json` renders as a table today. The
+  components by customisation chart and the roadmap grid are the two worth drawing, and the
+  Intent Miner's `ManagementReportBuilder.Charts.cs` is the thing to port for it.
+- **The consultant input screens.** The written report sections need somewhere to type: a web
+  screen per section plus a store. Until they exist the report prints the prompt where the
+  text should be, which is correct and not finished.
 - **Delegated sign-in.** Throws a `NotSupportedException` naming what it needs. The interactive
   flow belongs to the web application, so this unblocks itself when that exists.
 - **The connect and selectSolutions stages.** Declared in the contract, not implemented. The
   connection test happens inside the extract stage today, which works and puts a failure one
   stage later than the contract says it should be.
-- **Flow run history.** Still needs the Power Automate management API, a second token and
-  separate consent. Eight rules report as not assessed until then, correctly.
 - **Flow run history.** Needs the Power Automate management API, a second token and separate
   consent. Until then eight rules report as not assessed, correctly.
-- **The API, the web workspace and the microsite.** All three port heavily from the migrator,
-  which is why they are last rather than first.
-- **The consultant input forms.** The written report sections need somewhere to type.
-- **The consultant input forms.** The written sections need somewhere to type. That is a web
-  screen per section plus a store, and it does not exist. Until then the report prints the
-  prompt where the text should be.
-- **Charts in the PDF.** Every visual in `report-model.json` renders as a table today. The
-  components by customisation chart and the roadmap grid are the two worth drawing, and the
-  Intent Miner's `ManagementReportBuilder.Charts.cs` is the thing to port for it.
-- **The API and the web workspace.** Both port heavily from the migrator.
+- **The microsite.** Not started.
 
 ## The thing that most needs doing next
 
-**Read `HANDOVER.md`, then compile it.** Everything else is guesswork until something has.
+**Make `Api` and `Jobs` build.** The engine underneath them is compiled and tested; these two
+are the only things between this repository and a first real run.
 
-`Invoke-CodeGen.ps1` now checks the contracts, then runs the generators into a throwaway folder
-and checks what they emit, then writes and builds. The first two gates should pass; the build
-is where the work is.
+That is not a compile error to chase. Both projects were written against types that are not
+here, so the work is deciding what they should be:
 
-One generator bug is already fixed this way, found by reading rather than running: all four
-escaped backslashes wrong, which would have turned one backslash in a contract into four in the
-C#. The migrator had it right.
+- `ConnectorCatalogue` and `TargetCatalogue` are migrator concepts. A discovery product has no
+  connectors and no targets, so the system health checks that use them have nothing to check
+  and should go rather than be ported.
+- `DemoSeeder`, `DemoEngagement` and `DatabaseAnalyzer` were planned and never written. The
+  demonstration engagement is the one worth keeping: its numbers come from the real assessor,
+  so the demo cannot disagree with the product.
+- `SystemHealth` is an instance class that `Program.cs` calls statically. One of the two is
+  wrong and it is worth deciding which before writing anything.
+- `Secrets.cs` offers `ISecretStore` with a Key Vault implementation and an unconfigured one.
+  `Program.cs` and `Connections.cs` both want a concrete `Secrets(Uri)`. The interface is the
+  better shape; the call sites are what should move.
+- `UserAccess` has no `Allows(engagementId, minimumRole)`, and the access check is the one
+  place in this product where being wrong is a security problem rather than a reporting one.
 
-Then `analyse samples/SampleSolution.zip`, then a real export.
+After that, and in this order:
 
-Summarised:
-
-1. `./build/Test-Contracts.ps1` — reads the contracts, connects to nothing.
-2. `./build/Invoke-CodeGen.ps1` — generates and builds. Expect string escaping and nullable
-   failures in the generated C#.
-3. `dotnet test` — 30 tests.
-4. `./build/New-SampleSolution.ps1` — a synthetic export with sixteen deliberate findings.
-5. Run `SolutionZipReader` at it. A run finding fewer than sixteen tells you which reader is
-   broken, because the script says what it planted.
-6. Export one real solution from `powerpete.crm4.dynamics.com` and run the reader at that.
+1. `./build/New-SampleSolution.ps1` — a synthetic export with sixteen deliberate findings.
+2. `analyse samples/SampleSolution.zip`. A run finding fewer than sixteen tells you which
+   reader is broken, because the script says what it planted. The not-assessed list should be
+   long, and every line should name what the rule needed and a file does not carry.
+3. Export one real solution from `powerpete.crm4.dynamics.com` and run the reader at that.
    This is the step that settles the category codes, the isolation codes, the web resource
    types and the connection reference element names, in an afternoon, with no application
    user and no security review.
+4. Apply the migrations to a real Azure SQL instance and prove the constraints fire,
+   particularly the two on `stg.EntityRead` and the rationale checks.
 
-Then, in order: the pipeline orchestrator, the data layer, the live Dataverse reader, the
-API, the web workspace and the exports.
+The build gates, for reference:
+
+1. `./build/Test-Contracts.ps1` — reads the contracts, connects to nothing. Passes.
+2. `./build/Test-Generators.ps1` — generates into a throwaway folder and checks the output.
+   Passes.
+3. `./build/Invoke-CodeGen.ps1` — generates and builds. Ten of twelve projects, no warnings.
+4. `dotnet test` — 56 tests, all passing.
 
 ## What was ported rather than invented
 

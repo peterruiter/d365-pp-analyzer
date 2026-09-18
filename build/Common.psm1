@@ -144,6 +144,43 @@ function Write-GeneratedFile
 function ConvertTo-PascalCase
 {
     <#
+    .SYNOPSIS
+        Upper cases the first letter of a contract identifier, so it can be a C# member name.
+
+    .DESCRIPTION
+        Contract identifiers are lowerCamelCase: lowCode, proCode, solutionZip. The C# that
+        reads them expects LowCode, ProCode, SolutionZip, so the only transformation needed
+        is the first letter. The rest of the string is left exactly as it is, because the
+        casing after the first character is already what the generated enum member should be.
+
+        It does not split on separators. A contract id containing a hyphen, a space or a dot
+        produces an invalid C# identifier and fails the build, which is the intended outcome:
+        the fix belongs in the contract, not in a silent normalisation here.
+
+    .PARAMETER Value
+        The identifier to convert, for example lowCode.
+
+    .EXAMPLE
+        ConvertTo-PascalCase 'solutionZip'
+
+        Returns SolutionZip.
+    #>
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [Parameter(Mandatory, Position = 0)]
+        [string] $Value
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Value))
+    {
+        throw 'ConvertTo-PascalCase was given an empty identifier. A contract entry is missing a name.'
+    }
+
+    return $Value.Substring(0, 1).ToUpperInvariant() + $Value.Substring(1)
+}
+
+<#
 .SYNOPSIS
     Checks a command line tool is installed, and says where to get it if not.
 

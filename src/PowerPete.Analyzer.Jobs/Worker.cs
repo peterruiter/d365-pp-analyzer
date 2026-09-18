@@ -81,11 +81,11 @@ public sealed record WorkerSettings(
 /// </remarks>
 internal sealed class StoreJournal(WorkspaceStore store) : IRunJournal
 {
-    public Task SetRunStatusAsync(Guid runId, string status, string? error, CancellationToken cancellationToken) =>
-        store.SetRunStatusAsync(runId, status, error, cancellationToken);
+    public Task SetRunStatusAsync(Guid runId, string status, string? failure, CancellationToken cancellationToken) =>
+        store.SetRunStatusAsync(runId, status, failure, cancellationToken);
 
-    public Task SetStageAsync(Guid runId, string stageId, string status, string? error, string? checkpoint, CancellationToken cancellationToken) =>
-        store.SetStageAsync(runId, stageId, status, error, checkpoint, cancellationToken);
+    public Task SetStageAsync(Guid runId, string stageId, string status, string? failure, string? checkpoint, CancellationToken cancellationToken) =>
+        store.SetStageAsync(runId, stageId, status, failure, checkpoint, cancellationToken);
 
     public Task<IReadOnlyDictionary<string, string?>> GetCompletedStagesAsync(Guid runId, CancellationToken cancellationToken) =>
         store.GetCompletedStagesAsync(runId, cancellationToken);

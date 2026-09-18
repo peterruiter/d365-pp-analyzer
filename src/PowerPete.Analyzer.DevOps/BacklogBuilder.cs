@@ -1,5 +1,6 @@
 namespace PowerPete.Analyzer.DevOps;
 
+using System.Globalization;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
@@ -261,8 +262,8 @@ public sealed class BacklogBuilder
         }
 
         builder.Append("<h3>Estimate</h3><p>")
-            .Append($"{entry.Estimate.LowHours:0.#} to {entry.Estimate.HighHours:0.#} hours. ")
-            .Append($"Confidence: {entry.Estimate.Confidence.ToString().ToLowerInvariant()}. ")
+            .Append(CultureInfo.InvariantCulture, $"{entry.Estimate.LowHours:0.#} to {entry.Estimate.HighHours:0.#} hours. ")
+            .Append(CultureInfo.InvariantCulture, $"Confidence: {entry.Estimate.Confidence.ToString().ToLowerInvariant()}. ")
             .Append(entry.Estimate.Layer switch
             {
                 EstimateLayer.EngagementOverride => "Set by a consultant on this engagement.",

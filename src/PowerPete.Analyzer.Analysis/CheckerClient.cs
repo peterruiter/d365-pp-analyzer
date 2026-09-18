@@ -221,7 +221,9 @@ public sealed class CheckerClient
                 foreach (var result in results.EnumerateArray())
                 {
                     var ruleId = result.TryGetProperty("ruleId", out var id) ? id.GetString() ?? "unknown" : "unknown";
-                    var metadata = rules.TryGetValue(ruleId, out var found) ? found : ("unknown", "medium");
+                    var metadata = rules.TryGetValue(ruleId, out var found)
+                        ? found
+                        : (Category: "unknown", Severity: "medium");
 
                     var location = result.TryGetProperty("locations", out var locations)
                         ? locations.EnumerateArray().FirstOrDefault()
@@ -315,14 +317,14 @@ public static class CheckerMapping
 
     private static readonly Dictionary<string, Severity> Severities = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["Critical"] = Severity.Critical,
-        ["error"] = Severity.High,
-        ["High"] = Severity.High,
-        ["warning"] = Severity.Medium,
-        ["Medium"] = Severity.Medium,
-        ["Low"] = Severity.Low,
-        ["note"] = Severity.Low,
-        ["Informational"] = Severity.Info
+        ["Critical"] = Domain.Severity.Critical,
+        ["error"] = Domain.Severity.High,
+        ["High"] = Domain.Severity.High,
+        ["warning"] = Domain.Severity.Medium,
+        ["Medium"] = Domain.Severity.Medium,
+        ["Low"] = Domain.Severity.Low,
+        ["note"] = Domain.Severity.Low,
+        ["Informational"] = Domain.Severity.Info
     };
 
     /// <summary>This product's category for a checker category.</summary>

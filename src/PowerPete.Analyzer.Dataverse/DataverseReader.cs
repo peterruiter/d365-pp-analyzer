@@ -584,7 +584,7 @@ public sealed class DataverseReader(HttpClient client)
     /// Automate management API, not the Dataverse Web API, and it needs its own token and its
     /// own consent. Returning zeros here would make every flow look like it never fails.
     /// </remarks>
-    private Task<int> ReadFlowRunStatisticsAsync(List<DiscoveredComponent> components, CancellationToken cancellationToken)
+    private static Task<int> ReadFlowRunStatisticsAsync(List<DiscoveredComponent> components, CancellationToken cancellationToken)
     {
         _ = components;
         _ = cancellationToken;

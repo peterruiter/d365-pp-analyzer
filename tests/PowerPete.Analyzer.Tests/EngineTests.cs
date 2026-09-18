@@ -2,6 +2,7 @@ namespace PowerPete.Analyzer.Tests;
 
 using FluentAssertions;
 using PowerPete.Analyzer.Analysis;
+using Handlers = PowerPete.Analyzer.Analysis.Handlers;
 using PowerPete.Analyzer.DevOps;
 using PowerPete.Analyzer.Domain;
 using PowerPete.Analyzer.Estimation;
@@ -381,7 +382,7 @@ public sealed class ScorerTests
             .Append(Build.Component("pluginAssembly", "Plugin"))
             .ToList();
 
-        var score = new Scorer().Score(components, [], [], [], 1, 1);
+        var score = Scorer.Score(components, [], [], [], 1, 1);
 
         score.LowCodeShare.Should().Be(0.5m, "one flow and one plugin are counted, a hundred columns are not");
         score.ByCraft["config"].Should().Be(100);
@@ -390,7 +391,7 @@ public sealed class ScorerTests
     [Fact]
     public void The_ratio_definition_travels_with_the_number()
     {
-        var score = new Scorer().Score([Build.Component("cloudFlow")], [], [], [], 1, 1);
+        var score = Scorer.Score([Build.Component("cloudFlow")], [], [], [], 1, 1);
 
         score.RatioDefinition.Should().NotBeNullOrWhiteSpace(
             "the number gets quoted in a room without the sentence that defines it");
@@ -399,7 +400,7 @@ public sealed class ScorerTests
     [Fact]
     public void Unassessed_rules_produce_a_caveat_at_the_top_of_the_report()
     {
-        var score = new Scorer().Score(
+        var score = Scorer.Score(
             [Build.Component("cloudFlow")],
             [],
             [new NotAssessed("quality.flowFailureRate", "No runtime evidence.", "Runtime")],
@@ -413,7 +414,7 @@ public sealed class ScorerTests
     [Fact]
     public void Analysing_a_subset_of_solutions_produces_a_caveat()
     {
-        var score = new Scorer().Score([Build.Component("cloudFlow")], [], [], [], 4, 19);
+        var score = Scorer.Score([Build.Component("cloudFlow")], [], [], [], 4, 19);
 
         score.Caveats.Should().Contain(caveat => caveat.Contains("4 of 19", StringComparison.Ordinal));
     }
@@ -427,7 +428,7 @@ public sealed class ScorerTests
                 new Dictionary<string, object?> { ["actions"] = 60 }), Build.Estimate(4, 8))
         };
 
-        var score = new Scorer().Score([], findings, [], [new FixedCost("access", "Access", 4, 24)], 1, 1);
+        var score = Scorer.Score([], findings, [], [new FixedCost("access", "Access", 4, 24)], 1, 1);
 
         score.TotalLowHours.Should().Be(4);
         score.FixedCostLowHours.Should().Be(4);
@@ -537,13 +538,13 @@ public sealed class PipelineTests
         public List<string> RunStatuses { get; } = [];
         public Dictionary<string, string?> Completed { get; } = new(StringComparer.Ordinal);
 
-        public Task SetRunStatusAsync(Guid runId, string status, string? error, CancellationToken cancellationToken)
+        public Task SetRunStatusAsync(Guid runId, string status, string? failure, CancellationToken cancellationToken)
         {
             RunStatuses.Add(status);
             return Task.CompletedTask;
         }
 
-        public Task SetStageAsync(Guid runId, string stageId, string status, string? error, string? checkpoint, CancellationToken cancellationToken)
+        public Task SetStageAsync(Guid runId, string stageId, string status, string? failure, string? checkpoint, CancellationToken cancellationToken)
         {
             Stages[stageId] = status;
             return Task.CompletedTask;
