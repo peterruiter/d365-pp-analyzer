@@ -1,7 +1,7 @@
 {
   "contract": "locales",
   "version": "1.0.0",
-  "description": "Every language the product is offered in. English is the fallback for any string a translation has not caught up with, so it is the only locale guaranteed complete. Adding a language here is not enough on its own: each resource namespace needs a matching file under src/PowerPete.Analyzer.Domain/Localization/Resources, and the documentation needs a folder under docs. Dutch, German, French, Spanish and Italian were listed here with neither, so the picker offered five languages that would have rendered as English. They come back one at a time, each with its bundles.",
+  "description": "Every language the product is offered in. English is the fallback for any string a translation has not caught up with, so it is the only locale guaranteed complete. Adding a language here is not enough on its own: each resource namespace needs a matching file under src/PowerPete.Analyzer.Domain/Localization/Resources, and the documentation needs a folder under docs.",
   "default": "en",
   "locales": [
     {
@@ -10,6 +10,41 @@
       "nativeName": "English",
       "culture": "en-GB",
       "documentationFolder": "docs"
+    },
+    {
+      "code": "nl",
+      "englishName": "Dutch",
+      "nativeName": "Nederlands",
+      "culture": "nl-NL",
+      "documentationFolder": "docs/nl"
+    },
+    {
+      "code": "de",
+      "englishName": "German",
+      "nativeName": "Deutsch",
+      "culture": "de-DE",
+      "documentationFolder": "docs/de"
+    },
+    {
+      "code": "fr",
+      "englishName": "French",
+      "nativeName": "Français",
+      "culture": "fr-FR",
+      "documentationFolder": "docs/fr"
+    },
+    {
+      "code": "es",
+      "englishName": "Spanish",
+      "nativeName": "Español",
+      "culture": "es-ES",
+      "documentationFolder": "docs/es"
+    },
+    {
+      "code": "it",
+      "englishName": "Italian",
+      "nativeName": "Italiano",
+      "culture": "it-IT",
+      "documentationFolder": "docs/it"
     }
   ],
   "namespaces": [
