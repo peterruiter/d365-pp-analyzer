@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Web;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using PowerPete.Analyzer.Api;
 using PowerPete.Analyzer.Data;
 using PowerPete.Analyzer.Domain;
@@ -421,6 +422,18 @@ app.MapGet("/api/locales/{code}/{ns}", (string code, string ns) =>
 
 // --------------------------------------------------------------------- health --
 app.MapHealthChecks("/healthz");
+
+// The two paths the container app actually probes. They were never mapped, so both returned
+// 404, the liveness probe failed three times at thirty second intervals and the platform
+// killed the container: a clean restart loop roughly every seventy seconds, with the
+// application logging a successful start every time round.
+//
+// Liveness answers whether this process should be restarted and readiness whether it should
+// be sent traffic. Neither consults the database on purpose. A database that is paused, and
+// Azure SQL serverless pauses itself, is not a reason to restart a healthy API, and a probe
+// that restarts the thing it is measuring turns a slow dependency into an outage.
+app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
+app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = _ => false });
 
 app.MapGet("/api/health/detail", async (HttpContext context) =>
 {
