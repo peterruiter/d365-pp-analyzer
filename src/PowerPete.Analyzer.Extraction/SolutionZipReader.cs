@@ -114,11 +114,12 @@ public sealed class SolutionZipReader
         Attempt(reads, "classicWorkflowBackground", () => ReadWorkflows(archive, root, solution, components, links, unresolved));
         Attempt(reads, "jsWebResource", () => ReadWebResources(archive, root, solution, components));
         Attempt(reads, "connectionReference", () => ReadConnectionReferences(root, solution, components));
-        Attempt(reads, "environmentVariable", () => ReadEnvironmentVariables(root, solution, components));
+        Attempt(reads, "environmentVariable", () => ReadEnvironmentVariables(archive, root, solution, components));
         Attempt(reads, "securityRole", () => ReadRoles(root, solution, components));
         Attempt(reads, "pluginAssembly", () => ReadPluginAssemblies(root, solution, components));
         Attempt(reads, "canvasApp", () => ReadCanvasApps(root, solution, components));
         Attempt(reads, "choice", () => ReadGlobalChoices(root, solution, components));
+        Attempt(reads, "customApi", () => ReadCustomApis(archive, solution, components));
 
         // Everything this mode cannot see, said out loud. A section of a report that is empty
         // because nobody could read it has to look different from one that is empty because
@@ -559,24 +560,101 @@ public sealed class SolutionZipReader
         return count;
     }
 
-    private static int ReadEnvironmentVariables(XElement root, SolutionHeader solution, List<DiscoveredComponent> components)
+    /// <summary>
+    /// Environment variable definitions, wherever the export put them.
+    /// </summary>
+    /// <remarks>
+    /// A real export writes one file per variable under environmentvariabledefinitions, and
+    /// customizations.xml carries nothing. Reading only customizations.xml found none of the
+    /// fourteen in the first real solution this was run against, and reported an estate with
+    /// no environment variables rather than a reader looking in the wrong place.
+    ///
+    /// Both places are read because they are both real: the folder is what Dataverse exports
+    /// and the inline element is what a hand assembled file carries.
+    /// </remarks>
+    private static int ReadEnvironmentVariables(
+        ZipArchive archive,
+        XElement root,
+        SolutionHeader solution,
+        List<DiscoveredComponent> components)
     {
         var count = 0;
 
-        foreach (var definition in root.Descendants(None + "environmentvariabledefinition"))
+        var definitions = root.Descendants(None + "environmentvariabledefinition")
+            .Concat(archive.Entries
+                .Where(entry => entry.FullName.StartsWith("environmentvariabledefinitions/", StringComparison.OrdinalIgnoreCase)
+                    && entry.Name.Equals("environmentvariabledefinition.xml", StringComparison.OrdinalIgnoreCase))
+                .Select(Load));
+
+        foreach (var definition in definitions)
         {
             var schemaName = definition.Attribute("schemaname")?.Value ?? Value(definition, "schemaname");
             if (string.IsNullOrWhiteSpace(schemaName)) continue;
 
+            var displayName = definition.Element(None + "displayname")?.Attribute("default")?.Value
+                ?? Value(definition, "displayname");
+
             Add(components, "environmentVariable", Value(definition, "environmentvariabledefinitionid"),
-                Value(definition, "displayname") ?? schemaName, schemaName, solution, new Dictionary<string, object?>
+                string.IsNullOrWhiteSpace(displayName) ? schemaName : displayName, schemaName, solution, new Dictionary<string, object?>
                 {
                     ["type"] = Value(definition, "type"),
                     ["hasDefaultValue"] = !string.IsNullOrWhiteSpace(Value(definition, "defaultvalue")),
                     ["defaultValue"] = Value(definition, "defaultvalue"),
                     ["isSecret"] = Value(definition, "type") == "100000005",
-                    ["description"] = Value(definition, "description")
+                    ["description"] = definition.Element(None + "description")?.Attribute("default")?.Value
+                        ?? Value(definition, "description")
                 });
+
+            count++;
+        }
+
+        return count;
+    }
+
+    /// <summary>
+    /// Custom APIs, one file per API under customapis.
+    /// </summary>
+    /// <remarks>
+    /// A declared component type with no reader until a real export was run at it: nineteen of
+    /// them were in the first solution this read and none appeared, in the findings or in the
+    /// list of things that could not be read. They count toward the ratio and they are pro
+    /// code, so an estate full of them reported as more low code than it is.
+    ///
+    /// The request parameters and response properties beside each one are deliberately not
+    /// components. They are the API's signature rather than things anybody maintains
+    /// separately, and counting two hundred of them would bury the nineteen that matter.
+    /// </remarks>
+    private static int ReadCustomApis(ZipArchive archive, SolutionHeader solution, List<DiscoveredComponent> components)
+    {
+        var count = 0;
+
+        var files = archive.Entries
+            .Where(entry => entry.FullName.StartsWith("customapis/", StringComparison.OrdinalIgnoreCase)
+                && entry.Name.Equals("customapi.xml", StringComparison.OrdinalIgnoreCase));
+
+        foreach (var file in files)
+        {
+            var api = Load(file);
+
+            var uniqueName = api.Attribute("uniquename")?.Value ?? Value(api, "name");
+            if (string.IsNullOrWhiteSpace(uniqueName)) continue;
+
+            var displayName = api.Element(None + "displayname")?.Attribute("default")?.Value ?? uniqueName;
+
+            // A custom API with no plugin behind it is a contract nothing implements. It is
+            // worth telling apart from one that does, so the rules can say which.
+            var pluginType = api.Element(None + "plugintypeid")?
+                .Element(None + "plugintypeexportkey")?.Value;
+
+            Add(components, "customApi", null, displayName, uniqueName, solution, new Dictionary<string, object?>
+            {
+                ["bindingType"] = Value(api, "bindingtype"),
+                ["isPrivate"] = Value(api, "isprivate") == "1",
+                ["isFunction"] = Value(api, "isfunction") == "1",
+                ["allowedCustomProcessingStepType"] = Value(api, "allowedcustomprocessingsteptype"),
+                ["hasPluginImplementation"] = !string.IsNullOrWhiteSpace(pluginType),
+                ["description"] = api.Element(None + "description")?.Attribute("default")?.Value
+            });
 
             count++;
         }

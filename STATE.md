@@ -6,9 +6,9 @@ the work.
 
 **Version:** 1.0.0
 **Last updated:** 2026-09-18
-**Current block:** it runs. The offline path reads the sample solution end to end and finds
-every planted defect a file can carry. No real export has been read and no migration has been
-applied to a database.
+**Current block:** it has read a real export. The offline path runs against a solution from
+`powerpete.crm4.dynamics.com` and the run found two component families the reader could not
+see. Nothing has been deployed to Azure and no migration has been applied to a database.
 
 ---
 
@@ -213,6 +213,57 @@ wrong.
 The first of the two is the more expensive: it was wrong on every estate rather than on some
 of them, and a clean flow is exactly what a client wants to hear.
 
+## The first run against a real export
+
+`PowerPeteIvrToolkitCore`, exported from `powerpete.crm4.dynamics.com` on 2026-09-18. 344
+components. It is the run the handover said to do in an afternoon, and it earned its place.
+
+### What it settled
+
+- **Connection reference element names are right.** `connectionreference` with
+  `connectionreferencelogicalname`, one in the solution, one read.
+- **The workflow category mapping held.** One classic background workflow, read as one.
+- **Web resource types and the plugin assembly read correctly**, though with one of each there
+  is not much to be wrong about. The isolation codes are still unverified: that needs an
+  assembly that is not sandboxed, and this solution's is.
+
+### What it found, and both were invisible rather than wrong
+
+- **Environment variables: fourteen in the solution, none read.** A real export writes one
+  file per variable under `environmentvariabledefinitions/`, and `customizations.xml` carries
+  nothing. The reader looked only at `customizations.xml`. The synthetic sample puts them
+  inline, which is why the rule fired there and on nothing real. Both places are read now.
+- **Custom APIs: nineteen in the solution, no reader at all.** `customApi` is a declared
+  component type with `solutionZip` in its evidence, and nothing had ever read one. They did
+  not appear in the findings and did not appear in the list of things that could not be read,
+  which is the worse half: a declared type that is silently absent rather than reported as
+  unreadable.
+
+**The second one moved the headline number by a factor of seven.** Custom APIs are pro code
+and count toward the ratio. Before the fix this solution reported as 33 percent low code, on
+one low code component and two pro code ones. It is 5 percent: one and twenty-one. A ratio is
+the most quoted figure this product produces and it was wrong by that much because one reader
+did not exist.
+
+### Still not settled
+
+- **Plugin isolation codes.** Needs an assembly outside the sandbox.
+- **Step registrations and dataflows.** Correctly reported as unreadable from a file.
+- **Everything the checker, metadata and runtime carry.** 17 of 37 rules could not run, named,
+  with what each needed.
+
+### The read summary labels a pass, not a type
+
+`Reads:` prints `table 284` and `classicWorkflowBackground 1` because each label names the read
+pass rather than what came out of it. The 284 is ten tables plus their columns, forms and
+views, and the workflow pass covers dialogs, business rules and cloud flows too. The components
+underneath are typed correctly and every rule keys off those, so nothing downstream is wrong.
+A consultant reading that list would still draw the wrong conclusion from it.
+
+The same conflation is in the command line's ratio line, which prints `5 % of 344 components`.
+The denominator of the ratio is 22, not 344: configuration is counted and shown separately and
+`RatioDefinition` says so. The sentence should say what the number is a share of.
+
 ## What the API port left behind
 
 Making `Api` and `Jobs` build meant deleting things rather than writing them, because what
@@ -283,10 +334,8 @@ element names all still come from documentation.
 
 In this order:
 
-1. Export one real solution from `powerpete.crm4.dynamics.com` and run the reader at that.
-   This is the step that settles the category codes, the isolation codes, the web resource
-   types and the connection reference element names, in an afternoon, with no application
-   user and no security review.
+1. Export a solution carrying a plugin assembly outside the sandbox and run the reader at it.
+   That is the last of the codes a file can settle.
 2. Apply the migrations to a real Azure SQL instance and prove the constraints fire,
    particularly the two on `stg.EntityRead` and the rationale checks.
 3. Decide which side moves on the API and web route mismatch below. It fails a screen today.
