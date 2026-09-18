@@ -439,13 +439,13 @@ public sealed class PublisherPrefixSprawlHandler : IRuleHandler
         ArgumentNullException.ThrowIfNull(context);
 
         var bySolution = context.Components
-            .Where(component => !component.IsManaged && component.SchemaName?.Contains('_') == true)
+            .Where(component => !component.IsManaged && Prefix(component.SchemaName) is not null)
             .GroupBy(component => component.SolutionUniqueName ?? "unknown", StringComparer.OrdinalIgnoreCase);
 
         foreach (var solution in bySolution)
         {
             var prefixes = solution
-                .Select(component => component.SchemaName![..component.SchemaName!.IndexOf('_')])
+                .Select(component => Prefix(component.SchemaName)!)
                 .Where(prefix => prefix.Length is > 1 and <= 8)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
@@ -458,6 +458,25 @@ public sealed class PublisherPrefixSprawlHandler : IRuleHandler
                 ("count", prefixes.Count),
                 ("note", "Renaming an existing prefix is not something the platform permits. Agree one for new work."));
         }
+    }
+
+    /// <summary>
+    /// The publisher prefix on a component's schema name, or null when it carries none.
+    /// </summary>
+    /// <remarks>
+    /// A column arrives as table.column and a form as table.form.id, so the prefix belongs to
+    /// the last segment. Taking it from the front of the whole string reports every column
+    /// under its table's prefix, which is how a solution holding two of them reported one and
+    /// this rule matched nothing without ever failing.
+    /// </remarks>
+    private static string? Prefix(string? schemaName)
+    {
+        if (schemaName is null) return null;
+
+        var name = schemaName[(schemaName.LastIndexOf('.') + 1)..];
+        var underscore = name.IndexOf('_');
+
+        return underscore > 0 ? name[..underscore] : null;
     }
 }
 

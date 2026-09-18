@@ -6,8 +6,9 @@ the work.
 
 **Version:** 1.0.0
 **Last updated:** 2026-09-18
-**Current block:** all twelve projects build with no warnings and all 56 tests pass. Nothing
-has read an environment yet, and no migration has been applied to a database.
+**Current block:** it runs. The offline path reads the sample solution end to end and finds
+every planted defect a file can carry. No real export has been read and no migration has been
+applied to a database.
 
 ---
 
@@ -18,7 +19,8 @@ has read an environment yet, and no migration has been applied to a database.
 The analysis engine is finished in the sense that every rule in the catalogue now has a
 handler, the reference graph is built, the scorer computes the numbers, the estimator has
 its three layers and the publisher has its gate. All of that now compiles under warnings as
-errors, and 56 tests exercise it. What it has still never done is read an environment.
+errors, 56 tests exercise it, and it has read a solution file and produced findings, a score
+and a set of estimates. What it has still never read is a real export.
 
 `Api` and `Jobs` build too, now. They had been written against types that are not in this
 repository, because the files were written at different times against different assumptions
@@ -167,6 +169,50 @@ is about.
 | Never write to a Power Platform environment | A discovery usable in a first meeting is worth more than any write | Remediation stays a recommendation. This product will never fix anything itself |
 | Publish to DevOps behind an approval bound to a hash | Ported from the migrator, where the same gate exists for the same reason | An extra step everybody will ask to skip once |
 
+## The first run against the sample solution
+
+`New-SampleSolution.ps1` plants sixteen defects and names them, so the run has an expected
+answer rather than a plausible one. It now produces all sixteen:
+
+- **Twelve fire.** Dialog, both cloud flow rules, the hard coded endpoint, the environment
+  variable default, the form script weight, the show-and-hide script, the API key, the two
+  publisher prefixes, the logic spread, the orphaned columns and the missing descriptions.
+- **Four report as not assessed, correctly.** Both classic workflows, the plugin isolation and
+  the organisation level write need metadata or runtime evidence, and a file carries neither.
+  They are named, with what they needed, and none is reported as passing.
+
+Three more fire that the script does not plant: no failure alerting, view complexity and the
+low code ratio. All three are solution wide and read as fair.
+
+### The workflow category mapping is right, against this file
+
+The unknown at the top of this list for months. All six planted workflows resolve correctly:
+category 0 mode 0 to a background workflow, category 0 mode 1 to a real time one, 1 to a
+dialog, 2 to a business rule and 5 to a cloud flow, twice. That is exactly what the sample
+plants.
+
+**This is not the same as being right against Microsoft.** The sample's category numbers were
+written from the same documentation the reader maps, so this proves the two halves agree with
+each other. A real export is still the only thing that settles it.
+
+### Two rules were matching nothing, silently
+
+Both found by running this file rather than by reading, and both are the failure this product
+exists to avoid: a rule that cannot match anything looks exactly like an estate with nothing
+wrong.
+
+- **`alm.hardCodedEnvironmentValue` and `security.secretInDefinition` never saw a flow.** Both
+  read a `definitionText` attribute and the reader never wrote one; it counted the actions and
+  threw the text away. Both rules were searching web resources only and reporting every cloud
+  flow in every estate as clean. The reader stores the definition now.
+- **`alm.publisherPrefixSprawl` could not fire at all.** A column's schema name arrives as
+  `table.column`, so taking the prefix from the front of the string reported every column
+  under its table's prefix. One prefix, every time, in every solution. It reads the last
+  segment now.
+
+The first of the two is the more expensive: it was wrong on every estate rather than on some
+of them, and a clean flow is exactly what a client wants to hear.
+
 ## What the API port left behind
 
 Making `Api` and `Jobs` build meant deleting things rather than writing them, because what
@@ -230,22 +276,20 @@ None of this fails a build and all of it fails a screen.
 
 ## The thing that most needs doing next
 
-**Run it against the sample solution, then against a real export.** Everything builds and the
-tests pass, which proves the code is consistent with itself and nothing else. No component has
-been read out of a file yet.
+**Run it against a real export.** The sample solution proves the readers and the rules agree
+with a file this repository wrote. It cannot prove they agree with one Dynamics wrote, and the
+category numbers, the isolation codes, the web resource types and the connection reference
+element names all still come from documentation.
 
 In this order:
 
-1. `./build/New-SampleSolution.ps1` — a synthetic export with sixteen deliberate findings.
-2. `analyse samples/SampleSolution.zip`. A run finding fewer than sixteen tells you which
-   reader is broken, because the script says what it planted. The not-assessed list should be
-   long, and every line should name what the rule needed and a file does not carry.
-3. Export one real solution from `powerpete.crm4.dynamics.com` and run the reader at that.
+1. Export one real solution from `powerpete.crm4.dynamics.com` and run the reader at that.
    This is the step that settles the category codes, the isolation codes, the web resource
    types and the connection reference element names, in an afternoon, with no application
    user and no security review.
-4. Apply the migrations to a real Azure SQL instance and prove the constraints fire,
+2. Apply the migrations to a real Azure SQL instance and prove the constraints fire,
    particularly the two on `stg.EntityRead` and the rationale checks.
+3. Decide which side moves on the API and web route mismatch below. It fails a screen today.
 
 The build gates, for reference:
 
@@ -254,6 +298,8 @@ The build gates, for reference:
    Passes.
 3. `./build/Invoke-CodeGen.ps1` — generates and builds. Twelve of twelve, no warnings.
 4. `dotnet test` — 56 tests, all passing.
+5. `./build/New-SampleSolution.ps1` then `analyse samples/SampleSolution.zip` — sixteen
+   planted defects, twelve found and four correctly not assessed.
 
 ## What was ported rather than invented
 

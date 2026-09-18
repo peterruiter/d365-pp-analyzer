@@ -387,6 +387,10 @@ public sealed class SolutionZipReader
                 (actions, depth) = CountActions(actionsElement, 1);
             }
 
+            // The definition itself, because the rules that look for a hard coded endpoint or
+            // a secret read the text. Counting the actions and throwing the text away meant
+            // both rules searched web resources and reported every flow as clean.
+            attributes["definitionText"] = definition.GetRawText();
             attributes["actionCount"] = actions;
             attributes["maxDepth"] = depth;
             attributes["triggerType"] = definition.TryGetProperty("triggers", out var triggers)
