@@ -6,9 +6,9 @@ the work.
 
 **Version:** 1.0.0
 **Last updated:** 2026-09-18
-**Current block:** it is deployed, apart from the container image. Azure holds the
-infrastructure and the schema is applied to a real database. The image does not build, because
-the web workspace references 202 strings that do not exist.
+**Current block:** it is deployed and serving. The image builds, the API answers, the web
+workspace is wired to it in six languages, and the migrator is out of the screens. Nobody has
+signed in yet, so everything past the sign-in page is built and untested against a real session.
 
 ---
 
@@ -213,16 +213,72 @@ wrong.
 The first of the two is the more expensive: it was wrong on every estate rather than on some
 of them, and a clean flow is exactly what a client wants to hear.
 
+## Taking the migrator out of the screens
+
+Six screens were the Contact Center Migrator's. They were not broken analyzer screens: they were
+built on canonical entities, target fidelity and apply plans with creates and conflicts, and no
+amount of wiring would have made them read an estate.
+
+The web called 29 endpoints and the API implemented 13. **All 30 resolve now**, most of them
+thin wrappers over stores that already had the query.
+
+| Screen | What it was built on | What it reads now |
+|---|---|---|
+| Connections | Which of several platforms to read, from a connector contract | The four extraction modes, from `extraction-sources.json`, which the contract always said it generated |
+| Overview | An assessment of entities and a plan of record changes | The analyzer's score, and a checklist worked out from what exists rather than stored |
+| Backlog | Grouped by canonical entity, with a reason and evidence | Work items by type, in priority order, with the acceptance criterion and the test requirement |
+| Runs | A declared level per canonical entity | What each component type gave up, per evidence source |
+| People, access, health | Routes that had never existed | Wired |
+| Reports | A route that had never existed | **Still cannot produce a document.** See below |
+
+`/api/extraction-modes` serves the contract rather than describing the modes a second time, so
+the reach a screen promises is the same reach the report withdraws.
+
+### Reports are the one thing wiring could not fix
+
+There is no export stage in the pipeline, nowhere to keep a document, and no way to read the
+component inventory back out of the database. **This deployment cannot produce a workbook or a
+report however many analyses somebody runs.** Only the command line can, with `--xlsx` and
+`--pdf`.
+
+The endpoint says which of the two reasons applies and the screen says the matching sentence,
+rather than sending somebody to run another analysis for a document that will never arrive.
+Building it needs an export stage, somewhere to put the output, and a component read-back.
+
+### Also removed
+
+- The system health repair button, which existed to reseed the demonstration engagement that was
+  never built. Applying migrations and rotating credentials are things a person does as
+  themselves, with a record of having done it.
+- `MIGRATOR_` environment variables, which the C# had already stopped using, the
+  `contactcenter-analyzer` image repository, the web package name, `levelTag`, `fidelityTag`, and
+  a support link that mailed about the wrong product.
+
 ## The first deployment
 
 `rg-ppanalyzer` in **Sweden Central**, subscription PowerPete MVP. Entra application
 `PowerPete Analyzer`, app id `747be66d-dec8-4e67-a41b-e6f252ba1e0c`, secret expiring
 2027-09-18, redirect URI on the deployed API.
 
-Up: SQL server and database, Key Vault, container registry, container apps environment, the
-API and worker apps, Log Analytics and Application Insights. The API is at
-`https://ppanalyzer-api.calmforest-a31e153d.swedencentral.azurecontainerapps.io`, running the
-registry's placeholder image because ours does not build yet.
+Up and serving: SQL server and database, Key Vault, container registry, container apps
+environment, the API and worker apps, Log Analytics and Application Insights. The API is at
+`https://ppanalyzer-api.calmforest-a31e153d.swedencentral.azurecontainerapps.io`.
+
+`/api/version` reports 37 rules and 50 component types, `/api/auth/status` answers anonymously,
+every language bundle serves, and the protected endpoints redirect to sign in rather than
+answering.
+
+**The container app probes `/health/live` and `/health/ready` and the API mapped only
+`/healthz`.** Both returned 404, the liveness probe failed three times at thirty second intervals
+and the platform killed the container: a restart roughly every seventy seconds, with the
+application logging a successful start every time round. That is why the logs looked healthy
+while nothing answered. Neither probe consults the database, deliberately: Azure SQL serverless
+pauses itself, and a probe that restarts the thing it is measuring turns a slow dependency into
+an outage.
+
+**`az containerapp logs show` does not work from the Capgemini network.** The proxy intercepts
+TLS with a self-signed certificate and the log stream endpoint refuses it. Use
+`az monitor log-analytics query` against the `ppanalyzer-logs` workspace instead.
 
 **West Europe refused to create a SQL server at all** (`RegionDoesNotAllowProvisioning`). That
 is capacity, not the template. Sweden Central took it unchanged.
@@ -258,20 +314,26 @@ Applied: 24 tables in four schemas and 44 check constraints, including both cons
 `Succeeded = 1 AND RecordCount IS NOT NULL OR Succeeded = 0 AND FailureReason IS NOT NULL`,
 which is rule three of the six enforced in the database rather than written down.
 
-### What is blocking the image
+### What blocked the image, and does not any more
 
-`npm run build` runs `check-vocabulary.mjs`, which reports **221 problems**: 202 string keys
-used by the web pages with no entry in `ui.en.json`, across fourteen files, and nineteen CSS
-classes with no rule. `i18n.tsx` resolves a missing key as the key itself, so those screens
-render `people.admit` where the label should be.
+`check-vocabulary.mjs` reported 221 problems: 202 string keys used by the pages with no entry in
+`ui.en.json`, and nineteen CSS classes with no rule. `i18n.tsx` resolves a missing key as the key
+itself, so those screens rendered `people.admit` where a label belongs.
 
-This is the web workspace being unfinished rather than anything about the deployment, and the
-missing strings are client facing copy. **Writing them is authoring, not repair.**
+All six languages now carry **301 keys each**, checked for coverage and for placeholder parity:
+no bundle gains, loses or reorders a `{0}`. The findings screen is styled, including the severity
+pills, which is the one thing on that page a consultant reads at a glance.
 
-`locales.json` declared Dutch, German, French, Spanish and Italian with no bundles and no
-documentation folders, so the picker offered five languages that would all have rendered in
-English. The contract now lists English alone, which is what it has. They come back one at a
-time, each with its bundles.
+**The translations are drafted, not natively reviewed.** They are consistent and the terminology
+is deliberate, and none of them has been read by somebody who speaks the language.
+
+**Only the `ui` namespace has bundles, in any language including English.** `report`, `finding`,
+`backlog` and `inventory` are declared in `locales.json` and empty, and the report a client reads
+comes from `report` and `finding`. The interface is six languages; the deliverables are not.
+
+The web application fetches every language but English from `/api/locales/{code}/{ns}` and that
+endpoint did not exist, so the bundles could never have reached a browser. English is imported at
+build time and the client keeps English on a failed fetch, so the failure was silent.
 
 ### Not built, found while deploying
 
