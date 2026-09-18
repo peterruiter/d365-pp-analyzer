@@ -275,5 +275,5 @@ Write-Host "  $($outputs.sqlConnectionString.value)"
 Write-Host ''
 Write-Host 'Next, create the tables:'
 Write-Host ''
-Write-Host "  `$env:MIGRATOR_SQL_CONNECTION = '$($outputs.sqlConnectionString.value)'"
+Write-Host "  `$env:ANALYZER_SQL_CONNECTION = '$($outputs.sqlConnectionString.value)'"
 Write-Host '  ./build/Initialize-Database.ps1'

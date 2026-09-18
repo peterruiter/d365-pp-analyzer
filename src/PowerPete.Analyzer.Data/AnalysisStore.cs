@@ -656,4 +656,46 @@ public sealed class AnalysisStore(string connectionString)
             new { engagementId, overrideId },
             cancellationToken: cancellationToken));
     }
+
+    /// <summary>One attempt to read one component type, as it was recorded.</summary>
+    /// <param name="ComponentTypeId">What was being read.</param>
+    /// <param name="EvidenceSource">Where it was being read from.</param>
+    /// <param name="Succeeded">Whether it was read at all.</param>
+    /// <param name="RecordCount">How many, on a success. Never set on a failure.</param>
+    /// <param name="FailureReason">Why not, on a failure. Never absent on one.</param>
+    public sealed record EntityReadRow(
+        string ComponentTypeId,
+        string EvidenceSource,
+        bool Succeeded,
+        int? RecordCount,
+        string? FailureReason);
+
+    /// <summary>
+    /// What one run reached, and what it did not.
+    /// </summary>
+    /// <remarks>
+    /// The failures are the reason this table exists. A component type that could not be read
+    /// has to look different on a screen from one that was read and held nothing, and the two
+    /// constraints on this table make the difference impossible to record wrongly: a success
+    /// carries a count and a failure carries a reason.
+    /// </remarks>
+    /// <param name="runId">Which run.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task<IReadOnlyList<EntityReadRow>> GetEntityReadsAsync(
+        Guid runId, CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        var rows = await connection.QueryAsync<EntityReadRow>(new CommandDefinition(
+            """
+            SELECT ComponentTypeId, EvidenceSource, Succeeded, RecordCount, FailureReason
+            FROM stg.EntityRead
+            WHERE RunId = @runId
+            ORDER BY Succeeded DESC, ComponentTypeId;
+            """,
+            new { runId },
+            cancellationToken: cancellationToken));
+
+        return rows.ToList();
+    }
 }

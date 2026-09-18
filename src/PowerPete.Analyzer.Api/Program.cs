@@ -8,6 +8,10 @@ using PowerPete.Analyzer.Api;
 using PowerPete.Analyzer.Data;
 using PowerPete.Analyzer.Domain;
 
+// The four modes ops.Connection is constrained to. Kept beside the endpoint that writes one
+// so a mode the database would refuse is refused here, with a sentence rather than a 500.
+string[] ExtractionModesList() => ["servicePrincipal", "delegated", "offlineZip", "azureDevOps"];
+
 var builder = WebApplication.CreateBuilder(args);
 
 // ------------------------------------------------------------------ settings --
@@ -381,6 +385,366 @@ app.MapGet("/api/engagements/{engagementId:guid}/backlog",
     });
 }).RequireAuthorization();
 
+// ---------------------------------------------------------------- engagements --
+app.MapDelete("/api/engagements/{engagementId:guid}", async (HttpContext context, WorkspaceStore store, Guid engagementId) =>
+{
+    if (await Denied(context, engagementId, EngagementRoles.Admin) is { } denied) return denied;
+
+    var removed = await store.DeleteEngagementAsync(engagementId, context.RequestAborted);
+
+    return removed == 0 ? Results.NotFound() : Results.NoContent();
+}).RequireAuthorization();
+
+// ----------------------------------------------------------------------- runs --
+app.MapGet("/api/engagements/{engagementId:guid}/runs", async (HttpContext context, WorkspaceStore store, Guid engagementId) =>
+{
+    if (await Denied(context, engagementId, EngagementRoles.Viewer) is { } denied) return denied;
+
+    var runs = await store.ListRunsAsync(engagementId, context.RequestAborted);
+
+    return Results.Ok(runs.Select(run => new
+    {
+        run.RunId,
+        run.Mode,
+        run.Status,
+        run.CreatedBy,
+        run.CreatedUtc,
+        run.StartedUtc,
+        run.CompletedUtc,
+        run.Error,
+
+        // Which runs are allowed to write, read from the contract rather than from a list
+        // kept here. One stage in analysis-stages.json declares a target write and a test
+        // asserts it is the publish, so this cannot drift from what the pipeline does.
+        writes = string.Equals(run.Mode, "publish", StringComparison.Ordinal)
+    }));
+}).RequireAuthorization();
+
+app.MapGet("/api/engagements/{engagementId:guid}/runs/{runId:guid}/discovery",
+    async (HttpContext context, AnalysisStore store, Guid engagementId, Guid runId) =>
+{
+    if (await Denied(context, engagementId, EngagementRoles.Viewer) is { } denied) return denied;
+
+    var reads = await store.GetEntityReadsAsync(runId, context.RequestAborted);
+
+    return Results.Ok(new
+    {
+        runId,
+
+        // Every component type the run tried to read, whether it succeeded, and why not when
+        // it did not. The failures are the point: a type that could not be read has to look
+        // different from a type with nothing in it, and this is where that distinction lives.
+        entities = reads.Select(read => new
+        {
+            componentTypeId = read.ComponentTypeId,
+            read.EvidenceSource,
+            read.Succeeded,
+            read.RecordCount,
+            error = read.FailureReason
+        })
+    });
+}).RequireAuthorization();
+
+// ---------------------------------------------------------------- connections --
+app.MapPost("/api/engagements/{engagementId:guid}/connections",
+    async (HttpContext context, WorkspaceStore store, Guid engagementId, CreateConnection request) =>
+{
+    ArgumentNullException.ThrowIfNull(request);
+
+    if (await Denied(context, engagementId, EngagementRoles.Contributor) is { } denied) return denied;
+
+    if (!ExtractionModesList().Contains(request.Mode, StringComparer.Ordinal))
+    {
+        return Results.BadRequest(new
+        {
+            error = $"'{request.Mode}' is not a mode. It is one of {string.Join(", ", ExtractionModesList())}."
+        });
+    }
+
+    if (string.IsNullOrWhiteSpace(request.Name))
+    {
+        return Results.BadRequest(new { error = "A connection needs a name, so the person choosing one on a run can tell them apart." });
+    }
+
+    var secrets = context.RequestServices.GetRequiredService<ISecretStore>();
+    string? secretRef = null;
+
+    if (!string.IsNullOrWhiteSpace(request.Secret))
+    {
+        // Refused rather than stored somewhere else. A development fallback that quietly puts
+        // a client's credential in the database is the kind of convenience that reaches
+        // production, and the database is read by every screen and included in every export.
+        if (!secrets.IsConfigured)
+        {
+            return Results.BadRequest(new
+            {
+                error = "No Key Vault is configured, so there is nowhere to put this credential. Secrets are never written to the database."
+            });
+        }
+
+        var prefix = SecretNames.NewPrefix();
+        await secrets.SetAsync(SecretNames.For(prefix, "secret"), request.Secret, context.RequestAborted);
+        secretRef = prefix;
+    }
+
+    var connection = new Connection(
+        Guid.NewGuid(),
+        engagementId,
+        request.Mode,
+        request.Name.Trim(),
+        string.IsNullOrWhiteSpace(request.EnvironmentRole) ? "unknown" : request.EnvironmentRole,
+        JsonSerializer.Serialize(request.Settings ?? new Dictionary<string, string>()),
+        secretRef,
+        request.SecretExpiresUtc,
+        null, null, null, null);
+
+    await store.CreateConnectionAsync(connection, UserId(context.User), context.RequestAborted);
+
+    return Results.Created(
+        $"/api/engagements/{engagementId}/connections",
+        new { connection.ConnectionId, connection.Mode, connection.Name, connection.EnvironmentRole });
+}).RequireAuthorization();
+
+// ----------------------------------------------------------------------- auth --
+// Anonymous on purpose: it is the first call the web application makes and it is what tells
+// the shell whether to draw a sign-in button or a product. Nothing here is privileged. When
+// nobody is signed in it says so and says nothing else.
+app.MapGet("/api/auth/status", async (HttpContext context) =>
+{
+    var configured = !string.IsNullOrWhiteSpace(builder.Configuration["AzureAd:ClientId"]);
+    var authenticated = context.User.Identity?.IsAuthenticated == true;
+
+    if (!authenticated)
+    {
+        return Results.Ok(new
+        {
+            authConfigured = configured,
+            authenticated = false,
+            registered = false,
+            adminContact = builder.Configuration["AdminContactEmail"] ?? string.Empty
+        });
+    }
+
+    var store = context.RequestServices.GetRequiredService<AccessStore>();
+    var userId = UserId(context.User);
+
+    await store.RecordDisplayNameAsync(userId, DisplayName(context.User), context.RequestAborted);
+
+    var access = await AccessFor(context);
+    var preferences = await store.GetPreferencesAsync(userId, context.RequestAborted);
+
+    return Results.Ok(new
+    {
+        authConfigured = configured,
+        authenticated = true,
+
+        // Admitted to the product, which is not the same as having an engagement. The shell
+        // draws a different screen for each, and reporting one as the other is how somebody
+        // ends up looking at an empty product with no explanation.
+        registered = access.IsKnown,
+        userId,
+        displayName = DisplayName(context.User),
+        access.IsGlobalAdmin,
+        adminContact = builder.Configuration["AdminContactEmail"] ?? string.Empty,
+        language = preferences.Language,
+        theme = preferences.Theme
+    });
+});
+
+// ------------------------------------------------------------------------- me --
+app.MapPut("/api/me/language", async (HttpContext context, SetLanguage request) =>
+{
+    ArgumentNullException.ThrowIfNull(request);
+
+    // A language nobody ships is a language nothing can render, so it is refused here rather
+    // than stored and handed back to a browser that will fall back to English anyway.
+    if (request.Language is not null
+        && !LocaleCatalogue.All.Any(locale => string.Equals(locale.Code, request.Language, StringComparison.OrdinalIgnoreCase)))
+    {
+        return Results.BadRequest(new { error = $"'{request.Language}' is not a language this product ships." });
+    }
+
+    var store = context.RequestServices.GetRequiredService<AccessStore>();
+    await store.SetLanguageAsync(UserId(context.User), request.Language, context.RequestAborted);
+
+    return Results.NoContent();
+}).RequireAuthorization();
+
+app.MapPut("/api/me/theme", async (HttpContext context, SetTheme request) =>
+{
+    ArgumentNullException.ThrowIfNull(request);
+
+    if (request.Theme is not null and not "light" and not "dark")
+    {
+        return Results.BadRequest(new { error = "A theme is 'light', 'dark', or absent to follow the browser." });
+    }
+
+    var store = context.RequestServices.GetRequiredService<AccessStore>();
+    await store.SetThemeAsync(UserId(context.User), request.Theme, context.RequestAborted);
+
+    return Results.NoContent();
+}).RequireAuthorization();
+
+// ---------------------------------------------------------------------- users --
+// Admitting somebody to the product and giving them an engagement are separate decisions,
+// made by different people at different times, so they are separate endpoints.
+app.MapGet("/api/users", async (HttpContext context) =>
+{
+    var access = await AccessFor(context);
+    if (!access.IsGlobalAdmin) return Results.Forbid();
+
+    var store = context.RequestServices.GetRequiredService<AccessStore>();
+
+    var users = await store.ListUsersAsync(context.RequestAborted);
+    var grants = await store.ListAllGrantsAsync(context.RequestAborted);
+
+    // Composed here rather than fetched per row. Forty people would otherwise be forty
+    // requests to draw one screen, and the screen is drawn every time somebody opens it.
+    var byUser = grants
+        .GroupBy(grant => grant.UserId, StringComparer.OrdinalIgnoreCase)
+        .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
+
+    return Results.Ok(users.Select(user => new
+    {
+        user.UserId,
+        user.DisplayName,
+        user.Email,
+        user.IsGlobalAdmin,
+        user.CreatedUtc,
+        user.CreatedBy,
+        engagementAccess = byUser.TryGetValue(user.UserId, out var mine)
+            ? mine.Select(grant => new { grant.EngagementId, grant.EngagementName, grant.Role })
+            : []
+    }));
+}).RequireAuthorization();
+
+app.MapPut("/api/users", async (HttpContext context, AdmitUser request) =>
+{
+    ArgumentNullException.ThrowIfNull(request);
+
+    var access = await AccessFor(context);
+    if (!access.IsGlobalAdmin) return Results.Forbid();
+
+    if (string.IsNullOrWhiteSpace(request.Upn))
+    {
+        return Results.BadRequest(new { error = "A sign-in name is required." });
+    }
+
+    var store = context.RequestServices.GetRequiredService<AccessStore>();
+
+    await store.AdmitAsync(
+        request.Upn,
+        string.IsNullOrWhiteSpace(request.DisplayName) ? request.Upn : request.DisplayName,
+        request.IsGlobalAdmin,
+        UserId(context.User),
+        context.RequestAborted);
+
+    return Results.NoContent();
+}).RequireAuthorization();
+
+app.MapPut("/api/users/{userId}/global-admin", async (HttpContext context, string userId, SetGlobalAdmin request) =>
+{
+    ArgumentNullException.ThrowIfNull(request);
+
+    var access = await AccessFor(context);
+    if (!access.IsGlobalAdmin) return Results.Forbid();
+
+    var store = context.RequestServices.GetRequiredService<AccessStore>();
+    var users = await store.ListUsersAsync(context.RequestAborted);
+
+    var user = users.FirstOrDefault(candidate =>
+        string.Equals(candidate.UserId, AccessStore.Normalise(userId), StringComparison.OrdinalIgnoreCase));
+
+    if (user is null) return Results.NotFound();
+
+    // The last administrator cannot demote themselves. There would be nobody left who could
+    // admit anyone, including the person who has just locked the door.
+    if (!request.IsGlobalAdmin && user.IsGlobalAdmin && await store.CountGlobalAdminsAsync(context.RequestAborted) <= 1)
+    {
+        return Results.BadRequest(new
+        {
+            error = "This is the only global administrator. Make somebody else one first, or nobody will be able to admit anyone."
+        });
+    }
+
+    await store.AdmitAsync(user.UserId, user.DisplayName, request.IsGlobalAdmin, UserId(context.User), context.RequestAborted);
+
+    return Results.NoContent();
+}).RequireAuthorization();
+
+app.MapDelete("/api/users/{userId}", async (HttpContext context, string userId) =>
+{
+    var access = await AccessFor(context);
+    if (!access.IsGlobalAdmin) return Results.Forbid();
+
+    var store = context.RequestServices.GetRequiredService<AccessStore>();
+    var normalised = AccessStore.Normalise(userId);
+
+    var users = await store.ListUsersAsync(context.RequestAborted);
+    var user = users.FirstOrDefault(candidate =>
+        string.Equals(candidate.UserId, normalised, StringComparison.OrdinalIgnoreCase));
+
+    if (user is null) return Results.NotFound();
+
+    if (user.IsGlobalAdmin && await store.CountGlobalAdminsAsync(context.RequestAborted) <= 1)
+    {
+        return Results.BadRequest(new
+        {
+            error = "This is the only global administrator. Removing them would leave nobody who can admit anyone."
+        });
+    }
+
+    var removed = await store.RemoveAsync(normalised, context.RequestAborted);
+
+    return removed == 0 ? Results.NotFound() : Results.NoContent();
+}).RequireAuthorization();
+
+// ------------------------------------------------------------ engagement access --
+app.MapGet("/api/engagements/{engagementId:guid}/access", async (HttpContext context, Guid engagementId) =>
+{
+    if (await Denied(context, engagementId, EngagementRoles.Admin) is { } denied) return denied;
+
+    var store = context.RequestServices.GetRequiredService<AccessStore>();
+    var members = await store.GetEngagementMembersAsync(engagementId, context.RequestAborted);
+
+    return Results.Ok(members);
+}).RequireAuthorization();
+
+app.MapGet("/api/engagements/{engagementId:guid}/available-users", async (HttpContext context, Guid engagementId) =>
+{
+    if (await Denied(context, engagementId, EngagementRoles.Admin) is { } denied) return denied;
+
+    var store = context.RequestServices.GetRequiredService<AccessStore>();
+    var candidates = await store.GetAvailableUsersAsync(engagementId, context.RequestAborted);
+
+    return Results.Ok(candidates);
+}).RequireAuthorization();
+
+app.MapPut("/api/engagements/{engagementId:guid}/access", async (HttpContext context, Guid engagementId, GrantAccess request) =>
+{
+    ArgumentNullException.ThrowIfNull(request);
+
+    if (await Denied(context, engagementId, EngagementRoles.Admin) is { } denied) return denied;
+
+    var role = EngagementRoles.Canonical(request.Role);
+    if (role is null) return Results.BadRequest(new { error = $"'{request.Role}' is not a role. It is Admin, Contributor or Viewer." });
+
+    var store = context.RequestServices.GetRequiredService<AccessStore>();
+    await store.GrantAsync(engagementId, request.Upn, role, UserId(context.User), context.RequestAborted);
+
+    return Results.NoContent();
+}).RequireAuthorization();
+
+app.MapDelete("/api/engagements/{engagementId:guid}/access/{userId}", async (HttpContext context, Guid engagementId, string userId) =>
+{
+    if (await Denied(context, engagementId, EngagementRoles.Admin) is { } denied) return denied;
+
+    var store = context.RequestServices.GetRequiredService<AccessStore>();
+    var removed = await store.RevokeAsync(engagementId, userId, context.RequestAborted);
+
+    return removed == 0 ? Results.NotFound() : Results.NoContent();
+}).RequireAuthorization();
+
 // -------------------------------------------------------------------- locales --
 // The web application imports English at build time and fetches every other language from
 // here. Without this endpoint the picker offers six languages and quietly renders five of
@@ -435,7 +799,7 @@ app.MapHealthChecks("/healthz");
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
 app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = _ => false });
 
-app.MapGet("/api/health/detail", async (HttpContext context) =>
+app.MapGet("/api/system/health", async (HttpContext context) =>
 {
     var access = await AccessFor(context);
     if (!access.IsGlobalAdmin) return Results.Forbid();
@@ -445,10 +809,70 @@ app.MapGet("/api/health/detail", async (HttpContext context) =>
     return Results.Ok(await health.RunAsync(context.RequestAborted));
 }).RequireAuthorization();
 
+app.MapPut("/api/system/settings/syncfusion", async (HttpContext context, SetSyncfusionKey request) =>
+{
+    ArgumentNullException.ThrowIfNull(request);
+
+    var access = await AccessFor(context);
+    if (!access.IsGlobalAdmin) return Results.Forbid();
+
+    if (string.IsNullOrWhiteSpace(request.Key)) return Results.BadRequest(new { error = "A key is required." });
+
+    var health = context.RequestServices.GetRequiredService<SystemHealth>();
+    var result = await health.SaveSyncfusionKeyAsync(request.Key, context.RequestAborted);
+
+    // Whether the key covers document processing travels with the answer. Syncfusion does not
+    // refuse a key that does not, it watermarks every page, and finding that out from a
+    // document a client was asked to sign is the outcome this reports its way out of.
+    return Results.Ok(new { stored = result.Stored, coversPdf = result.CoversPdf, note = result.Note });
+}).RequireAuthorization();
+
 // The single page application owns every route the API does not.
 app.MapFallbackToFile("index.html");
 
 app.Run();
+
+/// <summary>A connection being added to an engagement.</summary>
+/// <param name="Mode">servicePrincipal, delegated, offlineZip or azureDevOps.</param>
+/// <param name="Name">What it is called here, so a run can tell two apart.</param>
+/// <param name="EnvironmentRole">production, test or unknown. It widens nothing and warns.</param>
+/// <param name="Settings">Everything that is not a credential.</param>
+/// <param name="Secret">The credential, which goes to the vault and never to the database.</param>
+/// <param name="SecretExpiresUtc">When it lapses, for the health page to count down to.</param>
+internal sealed record CreateConnection(
+    string Mode,
+    string Name,
+    string? EnvironmentRole,
+    Dictionary<string, string>? Settings,
+    string? Secret,
+    DateTime? SecretExpiresUtc);
+
+/// <summary>A replacement Syncfusion licence key.</summary>
+/// <param name="Key">The key, from the Syncfusion account.</param>
+internal sealed record SetSyncfusionKey(string Key);
+
+/// <summary>The language somebody reads the product in.</summary>
+/// <param name="Language">A locale code, or null to follow the default.</param>
+internal sealed record SetLanguage(string? Language);
+
+/// <summary>Light or dark.</summary>
+/// <param name="Theme">light, dark, or null to follow the browser.</param>
+internal sealed record SetTheme(string? Theme);
+
+/// <summary>Somebody being admitted to the product.</summary>
+/// <param name="Upn">Their sign-in name.</param>
+/// <param name="DisplayName">Their name, so lists read as people rather than addresses.</param>
+/// <param name="IsGlobalAdmin">Whether they may admit others.</param>
+internal sealed record AdmitUser(string Upn, string? DisplayName, bool IsGlobalAdmin);
+
+/// <summary>A change to somebody's standing in the product.</summary>
+/// <param name="IsGlobalAdmin">What they should become.</param>
+internal sealed record SetGlobalAdmin(bool IsGlobalAdmin);
+
+/// <summary>Somebody being given a role on one engagement.</summary>
+/// <param name="Upn">Their sign-in name.</param>
+/// <param name="Role">Admin, Contributor or Viewer.</param>
+internal sealed record GrantAccess(string Upn, string Role);
 
 /// <summary>A new engagement.</summary>
 /// <param name="Name">What it is called.</param>

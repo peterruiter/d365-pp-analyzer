@@ -20,10 +20,10 @@
 
 .PARAMETER SqlServer
     Fully qualified server name, for example ppadev-sql.database.windows.net. Defaults to
-    the MIGRATOR_SQL_SERVER environment variable.
+    the ANALYZER_SQL_SERVER environment variable.
 
 .PARAMETER Database
-    Database name. Defaults to MIGRATOR_SQL_DATABASE, then to the server name with -db.
+    Database name. Defaults to ANALYZER_SQL_DATABASE, then to the server name with -db.
 
 .PARAMETER IdentityName
     Name of the managed identity, which is what Deploy-Infrastructure.ps1 prints as
@@ -41,8 +41,8 @@
 #>
 [CmdletBinding(SupportsShouldProcess)]
 param(
-    [string] $SqlServer = $env:MIGRATOR_SQL_SERVER,
-    [string] $Database = $env:MIGRATOR_SQL_DATABASE,
+    [string] $SqlServer = $env:ANALYZER_SQL_SERVER,
+    [string] $Database = $env:ANALYZER_SQL_DATABASE,
     [Parameter(Mandatory)][string] $IdentityName
 )
 
@@ -53,7 +53,7 @@ Import-Module (Join-Path $PSScriptRoot 'Common.psm1') -Force
 
 if (-not $SqlServer)
 {
-    throw 'No server. Pass -SqlServer, or set MIGRATOR_SQL_SERVER. Deploy-Infrastructure.ps1 prints it.'
+    throw 'No server. Pass -SqlServer, or set ANALYZER_SQL_SERVER. Deploy-Infrastructure.ps1 prints it.'
 }
 
 if (-not $Database)

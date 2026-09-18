@@ -56,7 +56,7 @@ export function SupportPage({ deployed, isGlobalAdmin }: { deployed: boolean; is
               <strong>{t('support.capgemini-make-it-real')}</strong>
               <span>{t('support.created-by')}</span>
               <div>
-                <a href="mailto:peter.ruiter@capgemini.com?subject=Contact%20Center%20Migrator%20support">
+                <a href="mailto:peter.ruiter@capgemini.com?subject=Solution%20Analyzer%20support">
                   {t('support.mail')}
                 </a>
                 <a

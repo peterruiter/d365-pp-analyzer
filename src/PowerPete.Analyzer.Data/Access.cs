@@ -484,4 +484,57 @@ public sealed class AccessStore(string connectionString)
             new { engagementId, userId = Normalise(upn) },
             cancellationToken: cancellationToken));
     }
+
+    /// <summary>What somebody has chosen for themselves, if anything.</summary>
+    /// <remarks>
+    /// Both are nullable and both stay nullable. A person who has never chosen a language is
+    /// not a person who chose English: the difference matters the day the default changes.
+    /// </remarks>
+    /// <param name="userId">Their normalised sign-in name.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task<(string? Language, string? Theme)> GetPreferencesAsync(
+        string userId, CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        var row = await connection.QuerySingleOrDefaultAsync<(string? Language, string? Theme)>(
+            new CommandDefinition(
+                "SELECT Language, Theme FROM ops.SystemUser WHERE UserId = @userId;",
+                new { userId = Normalise(userId) },
+                cancellationToken: cancellationToken));
+
+        return row;
+    }
+
+    /// <summary>Records the language somebody reads the product in.</summary>
+    /// <param name="userId">Their normalised sign-in name.</param>
+    /// <param name="language">A locale code, or null to go back to the default.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task SetLanguageAsync(string userId, string? language, CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            "UPDATE ops.SystemUser SET Language = @language, UpdatedUtc = SYSUTCDATETIME() WHERE UserId = @userId;",
+            new { userId = Normalise(userId), language },
+            cancellationToken: cancellationToken));
+    }
+
+    /// <summary>Records light or dark.</summary>
+    /// <remarks>
+    /// The database constrains this to light, dark or nothing, so an unexpected value fails
+    /// here rather than being stored and returned to every browser afterwards.
+    /// </remarks>
+    /// <param name="userId">Their normalised sign-in name.</param>
+    /// <param name="theme">light, dark, or null to follow the browser.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task SetThemeAsync(string userId, string? theme, CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            "UPDATE ops.SystemUser SET Theme = @theme, UpdatedUtc = SYSUTCDATETIME() WHERE UserId = @userId;",
+            new { userId = Normalise(userId), theme },
+            cancellationToken: cancellationToken));
+    }
 }

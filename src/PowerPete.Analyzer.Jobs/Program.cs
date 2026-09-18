@@ -64,12 +64,12 @@ public static class Program
     /// </remarks>
     private static async Task<int> MigrateDatabaseAsync()
     {
-        var connectionString = Environment.GetEnvironmentVariable("MIGRATOR_SQL_CONNECTION");
+        var connectionString = Environment.GetEnvironmentVariable("ANALYZER_SQL_CONNECTION");
 
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             Console.Error.WriteLine(
-                "No connection string. Set MIGRATOR_SQL_CONNECTION, which Deploy-Infrastructure.ps1 prints when it finishes.");
+                "No connection string. Set ANALYZER_SQL_CONNECTION, which Deploy-Infrastructure.ps1 prints when it finishes.");
             return 1;
         }
 
@@ -103,7 +103,7 @@ public static class Program
               work                              Polls the command queue and runs the pipeline.
                                                 This is what the deployed container does.
               migrate-database                  Applies the migrations in db/migrations to the
-                                                database in MIGRATOR_SQL_CONNECTION, as you.
+                                                database in ANALYZER_SQL_CONNECTION, as you.
                                                 Run by ./build/Initialize-Database.ps1.
 
             Start with: analyse samples/SampleSolution.zip

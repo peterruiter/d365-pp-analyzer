@@ -13,10 +13,10 @@
     the Bicep template, and using this script for that would need the full parameter set.
 
 .PARAMETER ResourceGroup
-    The resource group the deployment is in. Defaults to MIGRATOR_RESOURCE_GROUP.
+    The resource group the deployment is in. Defaults to ANALYZER_RESOURCE_GROUP.
 
 .PARAMETER Registry
-    Container registry name. Defaults to MIGRATOR_REGISTRY, then to the only registry in the
+    Container registry name. Defaults to ANALYZER_REGISTRY, then to the only registry in the
     resource group.
 
 .PARAMETER ImageTag
@@ -42,8 +42,8 @@
 #>
 [CmdletBinding(SupportsShouldProcess)]
 param(
-    [string] $ResourceGroup = $env:MIGRATOR_RESOURCE_GROUP,
-    [string] $Registry = $env:MIGRATOR_REGISTRY,
+    [string] $ResourceGroup = $env:ANALYZER_RESOURCE_GROUP,
+    [string] $Registry = $env:ANALYZER_REGISTRY,
     [ValidatePattern('^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$')][string] $ImageTag,
     [switch] $SkipBuild,
     [switch] $SkipDeploy
@@ -58,7 +58,7 @@ Assert-Command -Name az -InstallHint 'Install from https://aka.ms/installazurecl
 
 if (-not $ResourceGroup)
 {
-    throw 'No resource group. Pass -ResourceGroup, or set MIGRATOR_RESOURCE_GROUP.'
+    throw 'No resource group. Pass -ResourceGroup, or set ANALYZER_RESOURCE_GROUP.'
 }
 
 # The build log the registry streams back contains a tick character. On a console that is
@@ -80,7 +80,7 @@ if (-not $ImageTag)
     $ImageTag = "$(Get-RepositoryVersion)-$(Get-Date -Format 'yyyyMMddHHmmss')"
 }
 
-$repository = 'contactcenter-analyzer'
+$repository = 'powerplatform-analyzer'
 
 Write-Host "Resource group : $ResourceGroup"
 Write-Host "Registry       : $Registry"

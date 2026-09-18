@@ -16,7 +16,7 @@
     down: two databases that both claim to be up to date have to be the same shape.
 
 .PARAMETER ConnectionString
-    The database to build. Defaults to the MIGRATOR_SQL_CONNECTION environment variable,
+    The database to build. Defaults to the ANALYZER_SQL_CONNECTION environment variable,
     which Deploy-Infrastructure.ps1 prints when it finishes.
 
 .EXAMPLE
@@ -31,7 +31,7 @@
 #>
 [CmdletBinding(SupportsShouldProcess)]
 param(
-    [string] $ConnectionString = $env:MIGRATOR_SQL_CONNECTION
+    [string] $ConnectionString = $env:ANALYZER_SQL_CONNECTION
 )
 
 Set-StrictMode -Version Latest
@@ -51,7 +51,7 @@ Write-Host ''
 
 if (-not $ConnectionString)
 {
-    throw 'No connection string. Pass -ConnectionString, or set MIGRATOR_SQL_CONNECTION. Deploy-Infrastructure.ps1 prints it when it finishes.'
+    throw 'No connection string. Pass -ConnectionString, or set ANALYZER_SQL_CONNECTION. Deploy-Infrastructure.ps1 prints it when it finishes.'
 }
 
 # The catalog is named rather than the whole string, because the string is about to be
@@ -70,7 +70,7 @@ if (-not $PSCmdlet.ShouldProcess("$catalog on $server", 'Apply migrations'))
     return
 }
 
-$env:MIGRATOR_SQL_CONNECTION = $ConnectionString
+$env:ANALYZER_SQL_CONNECTION = $ConnectionString
 
 try
 {
@@ -87,7 +87,7 @@ try
 }
 finally
 {
-    $env:MIGRATOR_SQL_CONNECTION = $null
+    $env:ANALYZER_SQL_CONNECTION = $null
 }
 
 Write-Host ''

@@ -446,4 +446,86 @@ public sealed class WorkspaceStore(string connectionString)
             new { runId },
             cancellationToken: cancellationToken));
     }
+
+    /// <summary>Every run on one engagement, newest first.</summary>
+    /// <param name="engagementId">Which engagement.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task<IReadOnlyList<AnalysisRun>> ListRunsAsync(
+        Guid engagementId, CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        var rows = await connection.QueryAsync<AnalysisRun>(new CommandDefinition(
+            """
+            SELECT RunId, EngagementId, Mode, Status, SourceConnectionId, TargetConnectionId,
+                   BasedOnRunId, CreatedBy, CreatedUtc, StartedUtc, CompletedUtc, Error
+            FROM ops.AnalysisRun
+            WHERE EngagementId = @engagementId
+            ORDER BY CreatedUtc DESC;
+            """,
+            new { engagementId },
+            cancellationToken: cancellationToken));
+
+        return rows.ToList();
+    }
+
+    /// <summary>Records a connection, and the reference to its credentials.</summary>
+    /// <remarks>
+    /// The secret itself never arrives here. The caller has already put it in the vault and
+    /// what lands in this row is the reference, because a connection row is read by every
+    /// screen and included in every export.
+    /// </remarks>
+    /// <param name="connection">The connection to store.</param>
+    /// <param name="createdBy">Who added it.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task CreateConnectionAsync(
+        Connection connection, string createdBy, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+
+        await using var sql = Connect();
+
+        await sql.ExecuteAsync(new CommandDefinition(
+            """
+            INSERT INTO ops.[Connection]
+                (ConnectionId, EngagementId, Mode, Name, EnvironmentRole, SettingsJson,
+                 SecretRef, SecretExpiresUtc, CreatedBy)
+            VALUES
+                (@ConnectionId, @EngagementId, @Mode, @Name, @EnvironmentRole, @SettingsJson,
+                 @SecretRef, @SecretExpiresUtc, @createdBy);
+            """,
+            new
+            {
+                connection.ConnectionId,
+                connection.EngagementId,
+                connection.Mode,
+                connection.Name,
+                connection.EnvironmentRole,
+                connection.SettingsJson,
+                connection.SecretRef,
+                connection.SecretExpiresUtc,
+                createdBy
+            },
+            cancellationToken: cancellationToken));
+    }
+
+    /// <summary>Removes an engagement and everything hanging off it.</summary>
+    /// <remarks>
+    /// The cascades in the schema do the work: connections, runs and everything a run found
+    /// go with it. Deliberately not a soft delete. An engagement is a client's estate, and a
+    /// row that is invisible but still present is the kind of thing that turns up in a
+    /// backup two years later.
+    /// </remarks>
+    /// <param name="engagementId">Which engagement.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    /// <returns>How many engagements were removed, which is zero or one.</returns>
+    public async Task<int> DeleteEngagementAsync(Guid engagementId, CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        return await connection.ExecuteAsync(new CommandDefinition(
+            "DELETE FROM ops.Engagement WHERE EngagementId = @engagementId;",
+            new { engagementId },
+            cancellationToken: cancellationToken));
+    }
 }
