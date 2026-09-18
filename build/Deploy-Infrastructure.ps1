@@ -100,6 +100,8 @@ param(
 
     [string] $SubscriptionId,
 
+    [string] $AzureAdClientId,
+
     [string] $AzureAdClientSecret,
 
     [string] $AzureAdClientSecretExpiresUtc,
@@ -189,7 +191,18 @@ $parameters = @(
     "administratorName=$($signedIn.userPrincipalName)"
     'administratorType=User'
     "clientIpAddress=$clientIp"
+    "azureAdTenantId=$($account.tenantId)"
 )
+
+if ($AzureAdClientId)
+{
+    $parameters += "azureAdClientId=$AzureAdClientId"
+}
+else
+{
+    Write-Warning 'No Entra client id passed. Sign in cannot work without one, whatever secret is set.'
+    Write-Host ''
+}
 
 # Only when supplied, and the branch below warns about what that means. The template's
 # default is an empty string, so omitting this does not leave an existing key alone, it

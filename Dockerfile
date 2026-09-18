@@ -53,11 +53,9 @@ COPY docs ./docs
 RUN mkdir -p ./src/PowerPete.Analyzer.Api/wwwroot/documentation \
  && cp -R docs/. ./src/PowerPete.Analyzer.Api/wwwroot/documentation/
 
-# The public site, built here, and its assets. The connector picker in the product reads
-# its vendor logos from the same folder, so the two cannot show different marks.
-COPY src/microsite ./src/microsite
-COPY build/contracts ./build/contracts
-RUN node src/microsite/build.mjs src/microsite src/PowerPete.Analyzer.Api/wwwroot
+# The microsite stage came across with the port and is not here: src/microsite does not
+# exist in this product and STATE.md lists it as not started. A COPY of a path that is not
+# in the context fails the build, so the stage goes until there is a microsite to build.
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS publish
 WORKDIR /src
