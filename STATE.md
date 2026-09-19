@@ -6,9 +6,9 @@ the work.
 
 **Version:** 1.0.0
 **Last updated:** 2026-09-18
-**Current block:** it is deployed and serving. The image builds, the API answers, the web
-workspace is wired to it in six languages, and the migrator is out of the screens. Nobody has
-signed in yet, so everything past the sign-in page is built and untested against a real session.
+**Current block:** it is deployed and serving, and it produces its documents. Both renderers
+have run for the first time. Nobody has signed in yet, so everything past the sign-in page,
+including the database half of the export path, is built and untested against a real session.
 
 ---
 
@@ -213,6 +213,67 @@ wrong.
 The first of the two is the more expensive: it was wrong on every estate rather than on some
 of them, and a clean flow is exactly what a client wants to hear.
 
+## The exports
+
+Both documents are produced from any run that reached scoring:
+`GET /api/engagements/{id}/reports` lists them and
+`GET /api/engagements/{id}/reports/{file}` renders one.
+
+**Composed on demand rather than produced by a run and kept.** A client's estate in a document
+is the most sensitive thing this product makes, and a blob container quietly accumulating them
+is a retention question nobody asked for. The run is stored, the document is rendered when
+somebody asks, and it is identical every time because the score it quotes is the score the run
+recorded rather than one recomputed.
+
+`ReportComposer` lives in the API rather than in Export, because a renderer that needs a
+connection string is a renderer nobody can test. It reads rows and returns the two models the
+renderers already took.
+
+### Three gaps closed to make the documents true
+
+- **Nothing ever wrote `inv.Solution`**, though `GetFindingsAsync` had always joined it, so
+  every finding and every component reported a null solution. For a product that analyses
+  solutions that is the column that matters. The pipeline kept solution counts and threw the
+  headers away; it keeps them now and writes them before the components, which resolve their
+  solution by unique name.
+- **The stored breakdown carried six fields of the score.** It carries the whole `RunScore` now.
+  Runs written before this fall back to the totals on the score row and whatever breakdown they
+  kept, because a report missing a chart is worth more than no report.
+- **The command line leaves the component null on every finding**, which gives the workbook a
+  column of blanks beside the column a consultant filters on first. Rebuilt from the database it
+  is looked up by stable key, so the service's workbook is better than the command line's.
+
+### Both renderers have run
+
+Against the real IVR Toolkit export, for the first time in this repository's life:
+
+| Sheet | Rows |
+|---|---|
+| Read this first | 18 |
+| Findings | 14 |
+| Backlog | 1, header only |
+| Inventory | 345 |
+| Customisation | 15 |
+| Not assessed | 20 |
+
+The PDF renders at 35 KB with no trial watermark. Without a licence key it still refuses to
+start rather than producing a watermarked document somebody would be asked to sign. No API
+drift in either ClosedXML or Syncfusion, which the handover had listed as likely.
+
+### What is still unproven
+
+**The database half.** Everything above was rendered by the command line, which composes its
+models in memory. `ReportComposer` reading stored rows has never run against real data, because
+that needs an engagement, a queued run and the worker, and nobody has signed in yet. The
+reconstruction is the part to watch: rebuilding a component from its stored attributes,
+deserialising the score, and re-rating complexity.
+
+**The solution fix only helps new runs.** Anything analysed before it has no solutions recorded
+and will render with the column empty.
+
+**The written sections are still empty.** The report prints its prompt where the text should be,
+which is correct and not finished, and there is still nowhere to type them.
+
 ## Taking the migrator out of the screens
 
 Six screens were the Contact Center Migrator's. They were not broken analyzer screens: they were
@@ -229,21 +290,10 @@ thin wrappers over stores that already had the query.
 | Backlog | Grouped by canonical entity, with a reason and evidence | Work items by type, in priority order, with the acceptance criterion and the test requirement |
 | Runs | A declared level per canonical entity | What each component type gave up, per evidence source |
 | People, access, health | Routes that had never existed | Wired |
-| Reports | A route that had never existed | **Still cannot produce a document.** See below |
+| Reports | A route that had never existed | Lists and downloads the workbook and the report |
 
 `/api/extraction-modes` serves the contract rather than describing the modes a second time, so
 the reach a screen promises is the same reach the report withdraws.
-
-### Reports are the one thing wiring could not fix
-
-There is no export stage in the pipeline, nowhere to keep a document, and no way to read the
-component inventory back out of the database. **This deployment cannot produce a workbook or a
-report however many analyses somebody runs.** Only the command line can, with `--xlsx` and
-`--pdf`.
-
-The endpoint says which of the two reasons applies and the screen says the matching sentence,
-rather than sending somebody to run another analysis for a document that will never arrive.
-Building it needs an export stage, somewhere to put the output, and a component read-back.
 
 ### Also removed
 
