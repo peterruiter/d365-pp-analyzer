@@ -218,6 +218,11 @@ public sealed class Worker(WorkerSettings settings)
 
         var stages = new IStage[]
         {
+            // In the order analysis-stages.json declares. Connect writes nothing and proves
+            // the credential before anything reads; selectSolutions says what exists before
+            // extract says what it looked at.
+            new ConnectStage(services),
+            new SelectSolutionsStage(services),
             new ExtractStage(services),
             new CheckerStage(services),
             new ResolveStage(services),

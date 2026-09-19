@@ -541,9 +541,6 @@ None of this fails a build and all of it fails a screen.
 
 ## What is not built at all
 
-- **The connect and selectSolutions stages.** Declared in the contract, not implemented. The
-  connection test happens inside the extract stage today, which works and puts a failure one
-  stage later than the contract says it should be.
 - **Flow run history.** Needs the Power Automate management API, a second token and separate
   consent. Until then eight rules report as not assessed, correctly.
 
@@ -561,6 +558,10 @@ None of this fails a build and all of it fails a screen.
   worker stores back what it is given.
 - **The demonstration engagement.** Seeds on startup against a stamped version, 369
   components and 99 findings, produced by running the real engine over a synthetic estate.
+- **The connect and selectSolutions stages.** Both implemented and in the pipeline in the
+  order the contract declares. Connect authenticates every source without reading anything
+  and records the identity; selectSolutions asks the environment what it has, which is what
+  finally makes the analysed count and the total two different numbers.
 - **The consultant input screens.** A Narrative workspace, generated from the report model
   so the prompt somebody answers on the screen is the prompt the document prints where they
   have not. Stored per engagement rather than per run, because a workshop is about the

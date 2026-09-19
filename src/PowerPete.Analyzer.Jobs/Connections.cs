@@ -327,6 +327,82 @@ public sealed class StageServicesFactory(
         return new StageServices(
             OpenSolutionFile: token => ConnectionFactory.OpenUploadAsync(uploads, blobName, token),
 
+            // Authenticates without reading anything. The contract puts this first and says
+            // it writes nothing, which is what makes it safe to run against a client who has
+            // bought nothing yet.
+            CheckConnections: async token =>
+            {
+                var checks = new List<ConnectionCheck>();
+
+                if (blobName is not null)
+                {
+                    await using var file = await ConnectionFactory
+                        .OpenUploadAsync(uploads, blobName, token).ConfigureAwait(false);
+
+                    checks.Add(file is null
+                        ? new ConnectionCheck(source?.Name ?? "Solution file", "offlineZip", false, null,
+                            "The uploaded solution file is not in the container any more. Upload it again.", [])
+                        : new ConnectionCheck(source?.Name ?? "Solution file", "offlineZip", true, "the uploaded file",
+                            "Read from the uploaded export. Nothing was reached over the network.",
+                            [EvidenceSource.SolutionZip, EvidenceSource.Checker]));
+                }
+
+                if (source is not null && source.Mode != "offlineZip")
+                {
+                    try
+                    {
+                        var client = await connections.ForDataverseAsync(source, token).ConfigureAwait(false);
+                        var probe = await new DataverseReader(client).TestAsync(token).ConfigureAwait(false);
+
+                        // Runtime is claimed only where the connection actually reaches it.
+                        // A service principal without the trace privilege authenticates
+                        // perfectly and cannot read a flow run, and the eight rules that need
+                        // one have to report as not assessed rather than as clean.
+                        var reaches = probe.Succeeded
+                            ? new List<EvidenceSource> { EvidenceSource.Metadata, EvidenceSource.Checker }
+                            : [];
+
+                        if (probe.Succeeded && source.Mode == "delegated") reaches.Add(EvidenceSource.Runtime);
+
+                        checks.Add(new ConnectionCheck(
+                            source.Name, source.Mode, probe.Succeeded, probe.Identity, probe.Message, reaches));
+                    }
+                    catch (Exception failure) when (failure is HttpRequestException or InvalidOperationException
+                        or Azure.RequestFailedException or Azure.Identity.AuthenticationFailedException)
+                    {
+                        // Reported rather than thrown. One unreachable connection out of two
+                        // is a partial stage, and the stage decides that rather than this.
+                        checks.Add(new ConnectionCheck(
+                            source.Name, source.Mode, false, null, failure.Message, []));
+                    }
+                }
+
+                return checks;
+            },
+
+            // What the environment has, as opposed to what the run read. Without this the
+            // total and the analysed count are the same number and the report can never say
+            // it covered four solutions of nineteen.
+            ListSolutions: async token =>
+            {
+                if (source is null || source.Mode == "offlineZip") return [];
+
+                try
+                {
+                    var client = await connections.ForDataverseAsync(source, token).ConfigureAwait(false);
+
+                    return await new DataverseReader(client).ListSolutionsAsync(token).ConfigureAwait(false);
+                }
+                catch (Exception failure) when (failure is HttpRequestException or InvalidOperationException
+                    or Azure.RequestFailedException or Azure.Identity.AuthenticationFailedException)
+                {
+                    // Not fatal on its own. The connect stage has already decided whether the
+                    // source is usable; failing here as well would report one fault twice.
+                    Console.WriteLine($"Could not list solutions: {failure.Message}");
+                    return [];
+                }
+            },
+
             ReadEnvironment: async (includeRuntime, token) =>
             {
                 if (source is null || source.Mode == "offlineZip") return null;

@@ -108,6 +108,46 @@ public sealed class DataverseReader(HttpClient client)
     }
 
     /// <summary>Reads everything this connection can reach.</summary>
+    /// <summary>
+    /// Every solution in the environment, in or out of scope.
+    /// </summary>
+    /// <remarks>
+    /// Separate from the read, because the question it answers is different. The read says
+    /// what was analysed; this says what exists. A report covering four of nineteen
+    /// solutions and one covering all nineteen look identical on the cover page unless
+    /// somebody has counted both.
+    /// </remarks>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task<IReadOnlyList<SolutionSummary>> ListSolutionsAsync(CancellationToken cancellationToken = default)
+    {
+        var solutions = new List<SolutionSummary>();
+
+        await foreach (var solution in PageAsync(
+            "solutions?$select=uniquename,friendlyname,version,ismanaged&$expand=publisherid($select=customizationprefix,friendlyname)",
+            cancellationToken).ConfigureAwait(false))
+        {
+            var uniqueName = Str(solution, "uniquename");
+            if (uniqueName is null) continue;
+
+            // The default solution and the system ones are in this list and are not somebody
+            // customising anything. Counted, because they exist, and the caller decides.
+            solutions.Add(new SolutionSummary(
+                uniqueName,
+                Str(solution, "friendlyname"),
+                Str(solution, "version"),
+                Bool(solution, "ismanaged"),
+                solution.TryGetProperty("publisherid", out var publisher)
+                    ? Str(publisher, "customizationprefix")
+                    : null,
+                solution.TryGetProperty("publisherid", out var owner)
+                    ? Str(owner, "friendlyname")
+                    : null,
+                null));
+        }
+
+        return solutions;
+    }
+
     /// <param name="solutionUniqueNames">Which solutions are in scope. Empty reads every unmanaged solution.</param>
     /// <param name="includeRuntime">Whether to read run history and trace logs, which need more than a reader.</param>
     /// <param name="cancellationToken">Cancellation.</param>

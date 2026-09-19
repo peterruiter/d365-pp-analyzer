@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using PowerPete.Analyzer.Domain;
 using PowerPete.Analyzer.Extraction;
+using PowerPete.Analyzer.Pipeline.Stages;
 
 /// <summary>What a stage is allowed to do and what it leaves behind.</summary>
 /// <remarks>
@@ -39,6 +40,27 @@ public sealed class RunState
 
     /// <summary>Which evidence sources were actually reached.</summary>
     public HashSet<EvidenceSource> Reached { get; } = [];
+
+    /// <summary>
+    /// Which evidence sources the connections say they can reach.
+    /// </summary>
+    /// <remarks>
+    /// What the connect stage proved, as opposed to what the extract stage got back. The two
+    /// differ when a source is reachable and returns nothing, and the difference is the
+    /// distinction between an estate with no plug-ins and a privilege nobody granted.
+    /// </remarks>
+    public HashSet<EvidenceSource> Reachable { get; } = [];
+
+    /// <summary>Who each connection authenticated as, by connection name.</summary>
+    /// <remarks>
+    /// Carried into the report. A run made as a system administrator is not evidence that a
+    /// least privileged integration could have made it, and the only way a reader can tell
+    /// is if the document says who it ran as.
+    /// </remarks>
+    public Dictionary<string, string> Identities { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>Every solution the environment has, whether or not it was analysed.</summary>
+    public Dictionary<string, SolutionSummary> Available { get; } = new(StringComparer.Ordinal);
 
     /// <summary>Findings with their estimates.</summary>
     public List<(Finding Finding, Estimate Estimate)> Findings { get; } = [];

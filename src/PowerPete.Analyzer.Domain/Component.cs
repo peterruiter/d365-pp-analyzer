@@ -170,3 +170,28 @@ public sealed record ComponentLink(string FromKey, string ToKey, string Kind);
 /// <param name="Kind">What kind of reference.</param>
 /// <param name="TargetDescription">Whatever the definition said, so a person can go and look.</param>
 public sealed record UnresolvedLink(string FromKey, string Kind, string TargetDescription);
+
+/// <summary>
+/// One solution in the environment, in or out of scope.
+/// </summary>
+/// <remarks>
+/// Produced by whatever read the environment and consumed by the pipeline, so it lives here
+/// rather than in either. It is deliberately not a <see cref="DiscoveredComponent"/>: a
+/// solution that was never analysed is not part of the inventory, and putting it there would
+/// make it count toward the totals.
+/// </remarks>
+/// <param name="UniqueName">Its unique name.</param>
+/// <param name="FriendlyName">What a person calls it.</param>
+/// <param name="Version">Which version is installed.</param>
+/// <param name="IsManaged">Whether it arrived managed.</param>
+/// <param name="PublisherPrefix">The publisher prefix on its components.</param>
+/// <param name="PublisherName">Who publishes it.</param>
+/// <param name="ComponentCount">How many components it holds, where the source says.</param>
+public sealed record SolutionSummary(
+    string UniqueName,
+    string? FriendlyName,
+    string? Version,
+    bool IsManaged,
+    string? PublisherPrefix,
+    string? PublisherName,
+    int? ComponentCount);

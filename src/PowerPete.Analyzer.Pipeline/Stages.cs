@@ -14,6 +14,8 @@ using PowerPete.Analyzer.Extraction;
 /// stage that can only be exercised by starting the product.
 /// </remarks>
 /// <param name="OpenSolutionFile">Opens the uploaded export, for the offline mode.</param>
+/// <param name="CheckConnections">Authenticates every configured source and says what each reaches.</param>
+/// <param name="ListSolutions">Every solution the environment has, whether or not it is in scope.</param>
 /// <param name="ReadEnvironment">Reads a live environment, for the other two.</param>
 /// <param name="RunChecker">Calls the Power Apps checker.</param>
 /// <param name="Estimator">The three layer estimator.</param>
@@ -26,6 +28,8 @@ using PowerPete.Analyzer.Extraction;
 /// <param name="RoadmapPositions">Where each rule sits on the grid, from the contract.</param>
 public sealed record StageServices(
     Func<CancellationToken, Task<Stream?>> OpenSolutionFile,
+    Func<CancellationToken, Task<IReadOnlyList<ConnectionCheck>>> CheckConnections,
+    Func<CancellationToken, Task<IReadOnlyList<SolutionSummary>>> ListSolutions,
     Func<bool, CancellationToken, Task<EnvironmentRead?>> ReadEnvironment,
     Func<Stream, CancellationToken, Task<CheckerOutcome>> RunChecker,
     Estimator Estimator,
@@ -36,6 +40,23 @@ public sealed record StageServices(
     IReadOnlyDictionary<string, EstimateBand> Bands,
     IReadOnlyList<ComplexityRule> ComplexityRules,
     IReadOnlyDictionary<string, RoadmapPosition> RoadmapPositions);
+
+/// <summary>
+/// One configured source, authenticated.
+/// </summary>
+/// <param name="Name">What the connection is called on the engagement.</param>
+/// <param name="Mode">servicePrincipal, delegated or offlineZip.</param>
+/// <param name="Succeeded">Whether it authenticated at all.</param>
+/// <param name="Identity">Who it authenticated as. The report carries this.</param>
+/// <param name="Message">What to tell somebody, on either outcome.</param>
+/// <param name="Reaches">The evidence sources this connection can actually read.</param>
+public sealed record ConnectionCheck(
+    string Name,
+    string Mode,
+    bool Succeeded,
+    string? Identity,
+    string Message,
+    IReadOnlyList<EvidenceSource> Reaches);
 
 /// <summary>What a live read returned.</summary>
 /// <param name="Components">Everything found.</param>
@@ -148,6 +169,123 @@ public abstract class StageBase(StageServices services) : IStage
 /// live read, what the live read cannot see in a definition comes from the zip, and a
 /// component seen by both is merged on its stable key rather than duplicated.
 /// </remarks>
+/// <summary>
+/// Proves every configured source before anything reads one.
+/// </summary>
+/// <remarks>
+/// The contract puts this first and it was not implemented: the connection test happened
+/// inside the extract stage, which works and reports the failure one stage later than it
+/// happened. That matters because the two failures look different to somebody watching. A
+/// run that dies in extract reads as "the estate could not be read"; a run that dies in
+/// connect reads as "the credential is wrong", which is what it was.
+///
+/// It also records the identity. A connection that authenticates with too few privileges
+/// fails later in a way that looks exactly like an estate with nothing in it, and the only
+/// thing that tells those apart is knowing who the run was made as.
+///
+/// Writes nothing, per the contract. It is safe to run against a client who has bought
+/// nothing yet, which is the point of having it separate.
+/// </remarks>
+public sealed class ConnectStage(StageServices services) : StageBase(services)
+{
+    /// <inheritdoc />
+    public override string Id => "connect";
+
+    /// <inheritdoc />
+    public override async Task<StageOutcome> RunAsync(RunState state, string? checkpoint, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+
+        var checks = await Services.CheckConnections(cancellationToken).ConfigureAwait(false);
+
+        if (checks.Count == 0)
+        {
+            return StageOutcome.Failed(
+                "No source is configured on this engagement. There is nothing to authenticate and nothing to read.");
+        }
+
+        foreach (var check in checks)
+        {
+            state.Identities[check.Name] = check.Identity ?? "unknown";
+        }
+
+        var failed = checks.Where(check => !check.Succeeded).ToList();
+
+        if (failed.Count == checks.Count)
+        {
+            // Every one of them. Naming each rather than saying "the connection failed",
+            // because an engagement can have several and the message has to say which.
+            return StageOutcome.Failed(
+                "No configured source could be reached. " +
+                string.Join(" ", failed.Select(check => $"{check.Name}: {check.Message}")));
+        }
+
+        // What the reachable connections between them can see. The analysis reads this to
+        // decide which rules can run at all, and a rule whose evidence nobody reached is
+        // reported as not assessed rather than as passing.
+        foreach (var source in checks.Where(check => check.Succeeded).SelectMany(check => check.Reaches))
+        {
+            state.Reachable.Add(source);
+        }
+
+        return failed.Count > 0
+            ? StageOutcome.Partial(
+                $"{failed.Count} of {checks.Count} sources could not be reached. " +
+                string.Join(" ", failed.Select(check => $"{check.Name}: {check.Message}")))
+            : StageOutcome.Succeeded();
+    }
+}
+
+/// <summary>
+/// Says what exists before saying what was looked at.
+/// </summary>
+/// <remarks>
+/// A report covering four of nineteen solutions and a report covering all nineteen look
+/// identical on the cover page. This is the stage that makes them different.
+///
+/// Until this existed the total was set to the number of solutions the extraction happened
+/// to read, so the two numbers were always equal and the caveat about partial coverage could
+/// never fire. The environment is asked what it has, separately from what was read.
+///
+/// Nothing here narrows the scope yet: every unmanaged solution is analysed, as before. What
+/// it adds is the denominator, which is the half that was missing.
+/// </remarks>
+public sealed class SelectSolutionsStage(StageServices services) : StageBase(services)
+{
+    /// <inheritdoc />
+    public override string Id => "selectSolutions";
+
+    /// <inheritdoc />
+    public override async Task<StageOutcome> RunAsync(RunState state, string? checkpoint, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+
+        var solutions = await Services.ListSolutions(cancellationToken).ConfigureAwait(false);
+
+        if (solutions.Count == 0)
+        {
+            // Not a failure. An offline run has no environment to enumerate, and the extract
+            // stage will take the solutions out of the file it was given.
+            return StageOutcome.Succeeded();
+        }
+
+        state.SolutionsTotal = solutions.Count;
+
+        foreach (var solution in solutions)
+        {
+            state.Available[solution.UniqueName] = solution;
+        }
+
+        var unmanaged = solutions.Count(solution => !solution.IsManaged);
+
+        return unmanaged == 0
+            ? StageOutcome.Partial(
+                $"All {solutions.Count} solutions in this environment are managed. There is no unmanaged " +
+                "customisation to analyse, which is either a very disciplined estate or the wrong environment.")
+            : StageOutcome.Succeeded();
+    }
+}
+
 public sealed class ExtractStage(StageServices services) : StageBase(services)
 {
     /// <inheritdoc />
@@ -176,6 +314,11 @@ public sealed class ExtractStage(StageServices services) : StageBase(services)
                 }
 
                 state.SolutionsAnalysed = Math.Max(state.SolutionsAnalysed, result.Solutions.Count);
+
+                // Never lower than what was analysed, and never overwriting what the select
+                // stage found. An offline run has no environment to enumerate, so the file is
+                // the only answer there is; a live run already knows the real denominator and
+                // taking the file's count would quietly claim full coverage.
                 state.SolutionsTotal = Math.Max(state.SolutionsTotal, result.Solutions.Count);
                 state.Reached.Add(EvidenceSource.SolutionZip);
 
@@ -363,8 +506,29 @@ public sealed class AnalyseStage(StageServices services, RuleEngine engine) : St
 
         var outcome = engine.Run(context);
 
-        state.NotAssessed.AddRange(outcome.NotAssessed);
-        await Services.Persist.SaveNotAssessedAsync(state.RunId, outcome.NotAssessed, cancellationToken).ConfigureAwait(false);
+        // Two different reasons wear the same words otherwise.
+        //
+        // "This connection could not reach runtime" is true whether the mode has no runtime
+        // access at all or the mode has it and the read failed today. The first is a fact
+        // about how the client chose to connect and nothing can be done about it in this
+        // run; the second is a fault somebody can go and fix. The connect stage proved which
+        // sources were reachable, so where a source was reachable and no data arrived, the
+        // reason says so.
+        var notAssessed = outcome.NotAssessed
+            .Select(entry => Enum.TryParse<EvidenceSource>(entry.MissingEvidence, ignoreCase: true, out var source)
+                && state.Reachable.Contains(source)
+                && !state.Reached.Contains(source)
+                    ? entry with
+                    {
+                        Reason = $"This connection reaches {entry.MissingEvidence} and the read of it did not "
+                            + "return anything on this run, so the rule has not been checked. That is a fault to "
+                            + "look into rather than a limit of the connection."
+                    }
+                    : entry)
+            .ToList();
+
+        state.NotAssessed.AddRange(notAssessed);
+        await Services.Persist.SaveNotAssessedAsync(state.RunId, notAssessed, cancellationToken).ConfigureAwait(false);
 
         // Findings are carried without estimates until the estimate stage fills them in. A
         // band default stands in so a quick scan, which skips estimation, still has numbers.
@@ -377,8 +541,8 @@ public sealed class AnalyseStage(StageServices services, RuleEngine engine) : St
             state.Findings.Add((finding, band.AsEstimate()));
         }
 
-        return outcome.NotAssessed.Count > 0
-            ? StageOutcome.Partial($"{outcome.NotAssessed.Count} checks could not run and are named in the report.")
+        return notAssessed.Count > 0
+            ? StageOutcome.Partial($"{notAssessed.Count} checks could not run and are named in the report.")
             : StageOutcome.Succeeded();
     }
 }
