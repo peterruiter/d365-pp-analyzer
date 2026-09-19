@@ -139,16 +139,23 @@ export function FindingsPage({ engagementId }: { engagementId: string }) {
                 className={`severity-${finding.severity} ${open === finding.findingId ? 'open' : ''}`}
                 onClick={() => setOpen(open === finding.findingId ? null : finding.findingId)}
               >
-                <td><span className={`severity-pill severity-${finding.severity}`}>{t(`severity.${finding.severity}`)}</span></td>
-                <td>
+                {/*
+                  Each cell carries its own column heading. On a phone the table reflows into
+                  a stack of rows and the header disappears with it, so without this a reader
+                  gets four unlabelled values under a finding name.
+                */}
+                <td data-label={t('findings.severity')}>
+                  <span className={`severity-pill severity-${finding.severity}`}>{t(`severity.${finding.severity}`)}</span>
+                </td>
+                <td data-label={t('findings.finding')}>
                   {finding.ruleName}
                   {/* A finding on a managed component is somebody else's to fix, and saying so
                       in the row saves a conversation that otherwise happens in the workshop. */}
                   {finding.isManaged && <span className="tag">{t('findings.managed')}</span>}
                 </td>
-                <td>{finding.componentName ?? t('findings.solution-wide')}</td>
-                <td className="numeric">{finding.lowHours}–{finding.highHours}</td>
-                <td>
+                <td data-label={t('findings.component')}>{finding.componentName ?? t('findings.solution-wide')}</td>
+                <td className="numeric" data-label={t('findings.hours')}>{finding.lowHours}–{finding.highHours}</td>
+                <td data-label={t('findings.estimate-from')}>
                   {t(`estimate.source.${finding.estimateLayer}`)}
                   {finding.confidence === 'low' && <span className="tag tag-warning">{t('findings.low-confidence')}</span>}
                   {finding.flaggedReason && <span className="tag tag-warning">{t('findings.flagged')}</span>}

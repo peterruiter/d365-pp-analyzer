@@ -1135,3 +1135,77 @@
   .backlog-body { padding-left: 16px; }
   .criteria-list > div { grid-template-columns: 1fr; gap: 2px; }
 }
+
+/* ------------------------------------------------- findings on a phone --
+   Five columns with generous padding is right at a desk and impossible at
+   390 pixels: the table set its own width and pushed the page sideways.
+
+   Reflowed rather than scrolled. A findings row is one finding, so it makes
+   sense as a block of labelled values; the horizontal scroll a wide table
+   needs would hide the hours and the estimate source, which are the two
+   columns somebody is looking for. Each cell carries its heading in a
+   data-label, because the header row is gone. */
+
+@media (max-width: 680px) {
+  .findings-page { gap: 16px; }
+
+  .findings-table thead { display: none; }
+
+  .findings-table,
+  .findings-table tbody,
+  .findings-table tr,
+  .findings-table td,
+  .findings-table th { display: block; width: auto; }
+
+  .findings-table tr {
+    margin-bottom: 10px;
+    padding: 4px 0;
+    background: var(--cp-surface);
+    border: 1px solid var(--cp-border);
+  }
+
+  /* The severity stripe survives the reflow: it is the first thing somebody
+     scans for and the pill alone is easy to miss in a stack. */
+  .findings-table tr[class*="severity-"] { border-left: 4px solid var(--cp-border-strong); }
+  .findings-table tr.severity-critical { border-left-color: var(--cp-danger); }
+  .findings-table tr.severity-high { border-left-color: var(--brand-orange); }
+
+  .findings-table td,
+  .findings-table th {
+    display: flex;
+    gap: 14px;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 7px 14px;
+    border-bottom: 0;
+    text-align: left;
+  }
+
+  .findings-table td::before {
+    content: attr(data-label);
+    flex: none;
+    color: var(--cp-text-soft);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  /* A cell with no label is a layout cell, not a value: the expanded detail
+     spans the whole row and must not grow a heading of its own. */
+  .findings-table td:not([data-label]) { display: block; padding: 0; }
+  .findings-table .numeric { text-align: right; }
+
+  .findings-table td[data-label] { flex-wrap: wrap; }
+
+  .finding-detail { padding: 12px 14px 16px; }
+  .finding-detail dl > div { grid-template-columns: 1fr; gap: 2px; }
+
+  .filters { padding: 14px; }
+  .filters select { min-width: 0; width: 100%; }
+  .filters label { width: 100%; }
+  .filter-count { margin-left: 0; }
+
+  .not-assessed { padding: 16px 14px; }
+  .override-form .field-row > label { flex: 1 1 100%; }
+}

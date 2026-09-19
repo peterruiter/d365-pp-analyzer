@@ -120,6 +120,38 @@ for (const ns of namespaces) {
   }
 }
 
+// ------------------------------------------------- keys the screens ask for --
+//
+// A key the interface looks up and the bundle does not carry renders as itself: the reader
+// gets "health.group-platform" where a heading should be. Nothing failed, nothing was
+// logged, and it shipped that way on five separate screens.
+//
+// Only literals matching this product's own prefixes are checked, and only those written in
+// full. A key built by concatenation is checked by its prefix below instead.
+const keyPrefixes = [
+  'app.', 'shell.', 'view.', 'page.', 'common.', 'nav.', 'role.', 'severity.', 'source.',
+  'step.', 'runs.', 'findings.', 'finding.', 'evidence.', 'estimate.', 'backlog.', 'reports.',
+  'connections.', 'field.', 'admin.', 'health.', 'docs.', 'support.', 'overview.', 'theme.',
+  'lang.', 'access.', 'users.', 'inventory.', 'error.', 'auth.', 'wizard.'
+];
+
+const uiKeys = new Set(Object.keys(english));
+
+for (const page of pages) {
+  const text = readFileSync(join(source, page), 'utf8');
+  const name = page;
+
+  for (const match of text.matchAll(/['"]([A-Za-z][A-Za-z0-9]*\.[A-Za-z0-9._-]+)['"]/g)) {
+    const key = match[1];
+
+    if (!keyPrefixes.some((prefix) => key.startsWith(prefix))) continue;
+    if (key.endsWith('.') || key.endsWith('-')) continue;
+    if (uiKeys.has(key)) continue;
+
+    problems.push(`${name}: asks for '${key}', which ui.en.json does not have`);
+  }
+}
+
 if (problems.length > 0) {
   console.error(`\n${problems.length} problem${problems.length === 1 ? '' : 's'}:\n`);
   for (const problem of problems) console.error(`  ${problem}`);
