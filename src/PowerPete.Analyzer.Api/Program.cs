@@ -1087,8 +1087,15 @@ app.MapPut("/api/system/settings/syncfusion", async (HttpContext context, SetSyn
     return Results.Ok(new { stored = result.Stored, coversPdf = result.CoversPdf, note = result.Note });
 }).RequireAuthorization();
 
-// The single page application owns every route the API does not.
-app.MapFallbackToFile("index.html");
+// The single page application owns every route the API does not, including the root.
+//
+// It is built to wwwroot/app with a base of /app/, because the root was meant to hold the
+// public microsite. There is no microsite, so the root held nothing: / and /app/ both
+// returned 404 and only /app/index.html answered, which is a product nobody can find.
+//
+// Pointed at the application itself rather than moving it. When a microsite exists it takes
+// the root back and this goes back to serving it.
+app.MapFallbackToFile("app/index.html");
 
 app.Run();
 
