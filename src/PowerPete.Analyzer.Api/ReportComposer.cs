@@ -182,7 +182,7 @@ public sealed class ReportComposer(AnalysisStore analysis, WorkspaceStore worksp
     /// </remarks>
     private static IReadOnlyList<string> MaturityAxes()
     {
-        var path = Path.Combine(AppContext.BaseDirectory, "build", "contracts", "report-model.json");
+        var path = ContractFiles.Path("report-model.json");
 
         if (!File.Exists(path)) return [];
 

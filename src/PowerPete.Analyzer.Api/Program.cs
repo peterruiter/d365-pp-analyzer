@@ -245,6 +245,37 @@ static string DisplayName(ClaimsPrincipal user) =>
 static string CallbackUri(HttpContext context) =>
     $"{context.Request.Scheme}://{context.Request.Host}/api/connections/callback";
 
+// A connection's settings, as strings a form can put in a text box.
+//
+// Not a straight deserialise into Dictionary<string, string>. The values are not all
+// strings: the demonstration seeder writes isDemonstration as a boolean, and a strict
+// deserialise threw on it and took the whole connections list with it, so the screen
+// showed 500 where a list of connections should be. Whatever is in there is rendered as
+// text, because the only thing reading this is a form.
+static Dictionary<string, string> ConnectionSettings(string? json)
+{
+    if (string.IsNullOrWhiteSpace(json)) return [];
+
+    try
+    {
+        using var document = JsonDocument.Parse(json);
+
+        if (document.RootElement.ValueKind != JsonValueKind.Object) return [];
+
+        return document.RootElement.EnumerateObject().ToDictionary(
+            property => property.Name,
+            property => property.Value.ValueKind == JsonValueKind.String
+                ? property.Value.GetString() ?? string.Empty
+                : property.Value.ToString(),
+            StringComparer.Ordinal);
+    }
+    catch (JsonException)
+    {
+        // A row somebody hand edited. An empty form beats a broken screen.
+        return [];
+    }
+}
+
 // Reads what somebody may do, once per request rather than per endpoint.
 async Task<UserAccess> AccessFor(HttpContext context)
 {
@@ -407,6 +438,13 @@ app.MapGet("/api/engagements/{engagementId:guid}/connections",
         // sets is a column that eventually says a Dataverse connection writes somewhere.
         direction = string.Equals(connection.Mode, "azureDevOps", StringComparison.Ordinal) ? "target" : "source",
         connection.LastTestMessage,
+
+        // The settings, so the screen can show what a connection points at and offer to
+        // change it. Safe to send and deliberately so: every mode's settings are a tenant,
+        // a client id, an environment URL or a file name, and the credential itself lives
+        // in Key Vault behind a reference that is not in this response.
+        settings = ConnectionSettings(connection.SettingsJson),
+
         expiringSoon = connection.SecretExpiresUtc is { } expiry && expiry < DateTime.UtcNow.AddDays(30),
         reach = connection.ReachJson is null ? null : (JsonElement?)JsonDocument.Parse(connection.ReachJson).RootElement
     }));
@@ -727,7 +765,7 @@ app.MapGet("/api/engagements/{engagementId:guid}/reports/{file}",
 // its own copy the screen and the report would start disagreeing about what a mode reaches.
 app.MapGet("/api/extraction-modes", () =>
 {
-    var path = Path.Combine(AppContext.BaseDirectory, "build", "contracts", "extraction-sources.json");
+    var path = ContractFiles.Path("extraction-sources.json");
 
     if (!File.Exists(path))
     {
@@ -997,6 +1035,109 @@ app.MapPost("/api/engagements/{engagementId:guid}/connections",
         new { connection.ConnectionId, connection.Mode, connection.Name, connection.EnvironmentRole });
 }).RequireAuthorization();
 
+// Changing one, which was not possible at all.
+//
+// A connection could be created and never touched again, so a mistyped environment URL or
+// a rotated credential meant adding a second connection and leaving the wrong one in the
+// picker. That is how somebody eventually runs a discovery against the wrong environment.
+app.MapPut("/api/engagements/{engagementId:guid}/connections/{connectionId:guid}",
+    async (HttpContext context, WorkspaceStore store, Guid engagementId, Guid connectionId, UpdateConnection request) =>
+{
+    ArgumentNullException.ThrowIfNull(request);
+
+    if (await Denied(context, engagementId, EngagementRoles.Contributor) is { } denied) return denied;
+
+    var existing = await store.GetConnectionAsync(connectionId, context.RequestAborted);
+
+    // Checked against the engagement in the route rather than trusted from the body. A
+    // contributor on one engagement must not be able to rename a connection on another by
+    // knowing its identifier.
+    if (existing is null || existing.EngagementId != engagementId) return Results.NotFound();
+
+    if (string.IsNullOrWhiteSpace(request.Name))
+    {
+        return Results.BadRequest(new { error = "A connection needs a name, so the person choosing one on a run can tell them apart." });
+    }
+
+    var updated = await store.UpdateConnectionAsync(
+        connectionId,
+        request.Name.Trim(),
+        string.IsNullOrWhiteSpace(request.EnvironmentRole) ? "unknown" : request.EnvironmentRole,
+        JsonSerializer.Serialize(request.Settings ?? new Dictionary<string, string>()),
+        request.SecretExpiresUtc,
+        context.RequestAborted);
+
+    if (!updated) return Results.NotFound();
+
+    // The credential, only where a new one was typed. An empty secret means leave the one
+    // in the vault alone, which is what a rename has to do: the alternative is that every
+    // edit of a name asks somebody to paste a client's credential again.
+    if (!string.IsNullOrWhiteSpace(request.Secret))
+    {
+        var secrets = context.RequestServices.GetRequiredService<ISecretStore>();
+
+        if (!secrets.IsConfigured)
+        {
+            return Results.BadRequest(new
+            {
+                error = "No Key Vault is configured, so there is nowhere to put this credential. Secrets are never written to the database."
+            });
+        }
+
+        // A new prefix rather than overwriting the old secret in place. A run that is in
+        // flight is holding the reference it started with, and replacing the value under
+        // it changes what that run is using halfway through.
+        var prefix = SecretNames.NewPrefix();
+        await secrets.SetAsync(SecretNames.For(prefix, "secret"), request.Secret, context.RequestAborted);
+        await store.SetConnectionSecretAsync(connectionId, prefix, request.SecretExpiresUtc, context.RequestAborted);
+    }
+
+    return Results.Ok(new { connectionId, request.Name, request.EnvironmentRole });
+}).RequireAuthorization();
+
+// Removing one, which was also not possible.
+//
+// Only where nothing has been read through it. A run records the connection that produced
+// it, and a report that cannot say what it was read through is a report nobody can defend,
+// so a connection with history stays and the caller is told how much history.
+app.MapDelete("/api/engagements/{engagementId:guid}/connections/{connectionId:guid}",
+    async (HttpContext context, WorkspaceStore store, Guid engagementId, Guid connectionId) =>
+{
+    if (await Denied(context, engagementId, EngagementRoles.Contributor) is { } denied) return denied;
+
+    var existing = await store.GetConnectionAsync(connectionId, context.RequestAborted);
+
+    if (existing is null || existing.EngagementId != engagementId) return Results.NotFound();
+
+    var runs = await store.CountRunsUsingAsync(connectionId, context.RequestAborted);
+
+    if (runs > 0)
+    {
+        return Results.Conflict(new
+        {
+            error = $"{runs} run(s) were read through this connection, so it stays. A report has to be able to say what produced it.",
+            runs
+        });
+    }
+
+    // The credential goes with it. A connection row holds a reference rather than a
+    // secret, so deleting the row on its own leaves a client's credential in the vault
+    // with nothing pointing at it and nobody able to tell what it was for.
+    if (existing.SecretRef is { Length: > 0 } reference)
+    {
+        var secrets = context.RequestServices.GetRequiredService<ISecretStore>();
+
+        if (secrets.IsConfigured)
+        {
+            await secrets.DeleteAsync(SecretNames.For(reference, "secret"), context.RequestAborted);
+        }
+    }
+
+    await store.DeleteConnectionAsync(connectionId, context.RequestAborted);
+
+    return Results.NoContent();
+}).RequireAuthorization();
+
 // ----------------------------------------------------------------- narrative --
 // The half of an assessment that comes from talking to people.
 //
@@ -1005,7 +1146,7 @@ app.MapPost("/api/engagements/{engagementId:guid}/connections",
 // report and a second copy here would drift the first time somebody added a section.
 app.MapGet("/api/report-sections", () =>
 {
-    var path = Path.Combine(AppContext.BaseDirectory, "build", "contracts", "report-model.json");
+    var path = ContractFiles.Path("report-model.json");
 
     if (!File.Exists(path))
     {
@@ -1070,7 +1211,7 @@ app.MapPut("/api/engagements/{engagementId:guid}/narrative/{sectionId}",
 // anything this product infers.
 app.MapGet("/api/maturity-axes", () =>
 {
-    var path = Path.Combine(AppContext.BaseDirectory, "build", "contracts", "report-model.json");
+    var path = ContractFiles.Path("report-model.json");
 
     if (!File.Exists(path))
     {
@@ -1237,7 +1378,11 @@ app.MapPost("/api/engagements/{engagementId:guid}/uploads",
 // nobody is signed in it says so and says nothing else.
 app.MapGet("/api/auth/status", async (HttpContext context) =>
 {
-    var configured = !string.IsNullOrWhiteSpace(builder.Configuration["AzureAd:ClientId"]);
+    // The same answer the pipeline was built from, not a second opinion about it. This
+    // asked only whether a client id was present, so a deployment with a client id and no
+    // tenant would run with local sign-in while telling the shell that Entra was
+    // configured, and the shell would draw a sign-out link to a scheme that is not there.
+    var configured = entraConfigured;
     var authenticated = context.User.Identity?.IsAuthenticated == true;
 
     if (!authenticated)
@@ -1640,6 +1785,27 @@ internal sealed record SetGlobalAdmin(bool IsGlobalAdmin);
 /// <param name="Upn">Their sign-in name.</param>
 /// <param name="Role">Admin, Contributor or Viewer.</param>
 internal sealed record GrantAccess(string Upn, string Role);
+
+/// <summary>
+/// A change to a connection.
+/// </summary>
+/// <remarks>
+/// No mode. Each mode carries a different shape of settings and a different kind of
+/// credential, and a connection that changed from an offline file to a service principal in
+/// place would keep a secret reference that means nothing. Changing how an estate is reached
+/// is a new connection, and the run history keeps pointing at the one it used.
+/// </remarks>
+/// <param name="Name">What to call it.</param>
+/// <param name="EnvironmentRole">Production, test, development or unknown.</param>
+/// <param name="Settings">The mode's settings, replacing what was there.</param>
+/// <param name="Secret">A new credential, or absent to keep the one in the vault.</param>
+/// <param name="SecretExpiresUtc">When it expires, where anybody knows.</param>
+internal sealed record UpdateConnection(
+    string Name,
+    string? EnvironmentRole,
+    Dictionary<string, string>? Settings,
+    string? Secret,
+    DateTime? SecretExpiresUtc);
 
 /// <summary>A new engagement.</summary>
 /// <param name="Name">What it is called.</param>

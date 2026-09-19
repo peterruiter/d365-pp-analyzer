@@ -21,6 +21,10 @@ export type Connection = {
   lastTestSucceeded: boolean | null;
   lastTestMessage: string | null;
   direction: 'source' | 'target';
+
+  /** What it points at. Never the credential, which stays in Key Vault. */
+  settings: Record<string, string>;
+  secretExpiresUtc: string | null;
 };
 
 /**

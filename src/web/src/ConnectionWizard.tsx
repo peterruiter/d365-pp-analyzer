@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useT } from './i18n';
-import { sendJson, type ExtractionMode } from './workspace';
+import { sendJson, type Connection, type ExtractionMode } from './workspace';
 
 type Step = 'mode' | 'settings' | 'done';
 
@@ -36,20 +36,32 @@ const fields: Record<string, { type: string; placeholder?: string }> = {
  * The contract says it generates this wizard; this is that.
  */
 export function ConnectionWizard({
-  engagementId, direction, modes, onClose, onSaved
+  engagementId, direction, modes, editing, onClose, onSaved
 }: {
   engagementId: string;
   direction: 'source' | 'target';
   modes: ExtractionMode[];
+
+  /**
+   * The connection being changed, or absent to add one.
+   *
+   * The same form either way rather than a second one beside it. An edit form that drifts
+   * from the add form is how a field ends up settable once and never again, which is the
+   * defect this whole thing exists to fix.
+   */
+  editing?: Connection;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const t = useT();
 
-  const [step, setStep] = useState<Step>(modes.length === 1 ? 'settings' : 'mode');
-  const [modeId, setModeId] = useState(modes[0]?.id ?? '');
-  const [name, setName] = useState('');
-  const [values, setValues] = useState<Record<string, string>>({});
+  // Editing never shows the mode step. Each mode carries a different shape of settings and
+  // a different kind of credential, so changing how an estate is reached is a new
+  // connection rather than an edit of this one, and the API refuses it either way.
+  const [step, setStep] = useState<Step>(editing || modes.length === 1 ? 'settings' : 'mode');
+  const [modeId, setModeId] = useState(editing?.mode ?? modes[0]?.id ?? '');
+  const [name, setName] = useState(editing?.name ?? '');
+  const [values, setValues] = useState<Record<string, string>>(editing?.settings ?? {});
   const [secret, setSecret] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploaded, setUploaded] = useState<string | null>(null);
@@ -106,24 +118,35 @@ export function ConnectionWizard({
     setBusy(true);
     setError(null);
 
-    const result = await sendJson<{ connectionId: string }>(
-      `/api/engagements/${engagementId}/connections`, 'POST', {
-        mode: chosen.id,
-        name: name.trim() || chosen.name,
-        environmentRole: direction === 'target' ? 'production' : 'unknown',
-        settings: values,
-        secret: secret.trim() || null
-      });
+    const result = editing
+      ? await sendJson<{ connectionId: string }>(
+        `/api/engagements/${engagementId}/connections/${editing.connectionId}`, 'PUT', {
+          name: name.trim() || chosen.name,
+          environmentRole: editing.environmentRole,
+          settings: values,
+
+          // Blank means keep the credential that is already in the vault. Asking for it
+          // again to change a name would mean pasting a client's secret to fix a typo.
+          secret: secret.trim() || null
+        })
+      : await sendJson<{ connectionId: string }>(
+        `/api/engagements/${engagementId}/connections`, 'POST', {
+          mode: chosen.id,
+          name: name.trim() || chosen.name,
+          environmentRole: direction === 'target' ? 'production' : 'unknown',
+          settings: values,
+          secret: secret.trim() || null
+        });
 
     if (result.error) {
       setError(result.error);
-    } else if (chosen.id === 'delegated' && result.data !== null) {
+    } else if (chosen.id === 'delegated' && (editing || result.data !== null)) {
       // Straight to Microsoft. The connection exists now and carries the environment
       // address; what it does not have is anybody's permission to read it, and the only
       // place that can be granted is the sign-in page. A full page navigation rather than a
       // popup, because a popup is the thing every browser blocks and every consultant has
       // already switched off.
-      window.location.href = `/api/connections/${result.data.connectionId}/authorize`;
+      window.location.href = `/api/connections/${editing?.connectionId ?? result.data!.connectionId}/authorize`;
       return;
     } else {
       // The credential leaves the browser the moment it has been accepted. It is in the vault
@@ -264,9 +287,13 @@ export function ConnectionWizard({
           </div>
 
           <div className="wizard-foot">
-            <button type="button" className="secondary-button" onClick={() => setStep('mode')}>
-              {t('connections.change-system')}
-            </button>
+            {/* Not when editing. The mode of an existing connection cannot change, so an
+                offer to change it leads to a chooser with one option in it. */}
+            {editing ? <span /> : (
+              <button type="button" className="secondary-button" onClick={() => setStep('mode')}>
+                {t('connections.change-system')}
+              </button>
+            )}
 
             <span>
               {missing.length > 0

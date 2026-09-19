@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useT, useLanguage } from './i18n';
 import { ConnectionWizard } from './ConnectionWizard';
 import { ConnectorMark } from './ConnectorMark';
-import { getJson, when, type Connection, type ExtractionMode } from './workspace';
+import { getJson, sendJson, when, type Connection, type ExtractionMode } from './workspace';
 
 /**
  * The connections in one direction, and the way to add another.
@@ -24,12 +24,45 @@ export function ConnectionPanel({
   const t = useT();
   const { culture } = useLanguage();
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<Connection | null>(null);
+  const [removing, setRemoving] = useState<string | null>(null);
+
+  // Which one has been asked about. Removing a connection is not undoable and the button
+  // sits in a row of quiet controls next to Edit, so the first click asks and the second
+  // one does it. Nothing here is destructive until somebody has read the word twice.
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const mine = connections.filter((connection) => connection.direction === direction);
 
   async function reload() {
     const result = await getJson<Connection[]>(`/api/engagements/${engagementId}/connections`);
     if (result.data) onChanged(result.data);
+  }
+
+  /**
+   * Removes a connection nothing has read through.
+   *
+   * The refusal is the interesting half. A connection a run used stays, because a report
+   * has to be able to say what produced it, and the API answers with how many runs rather
+   * than a flat no so the message on screen can say why.
+   */
+  async function remove(connection: Connection) {
+    setError(null);
+    setConfirming(null);
+    setRemoving(connection.connectionId);
+
+    const result = await sendJson<null>(
+      `/api/engagements/${engagementId}/connections/${connection.connectionId}`, 'DELETE');
+
+    setRemoving(null);
+
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+
+    await reload();
   }
 
   return (
@@ -43,6 +76,8 @@ export function ConnectionPanel({
           {t('connections.add')}
         </button>
       </div>
+
+      {error && <p className="error">{error}</p>}
 
       {mine.length === 0 ? (
         <p className="dashboard-empty">{t('common.nothing-here-yet')}</p>
@@ -79,6 +114,38 @@ export function ConnectionPanel({
                     ? t('runs.status.failed')
                     : t('connections.not-tested')}
               </span>
+
+              {/*
+                A connection could be created and never changed, so a mistyped environment
+                address meant adding a second one and leaving the wrong one in the picker.
+              */}
+              <div className="connection-item-actions">
+                <button type="button" className="ghost-button" onClick={() => setEditing(connection)}>
+                  {t('common.edit')}
+                </button>
+
+                {confirming === connection.connectionId ? (
+                  <>
+                    <button
+                      type="button"
+                      className="ghost-button ghost-button--danger"
+                      disabled={removing === connection.connectionId}
+                      onClick={() => void remove(connection)}>
+                      {t('common.confirm-remove')}
+                    </button>
+                    <button type="button" className="ghost-button" onClick={() => setConfirming(null)}>
+                      {t('common.cancel')}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className="ghost-button"
+                    onClick={() => setConfirming(connection.connectionId)}>
+                    {t('common.remove')}
+                  </button>
+                )}
+              </div>
             </li>
           ))}
         </ul>
@@ -91,6 +158,20 @@ export function ConnectionPanel({
           modes={modes}
           onClose={() => setAdding(false)}
           onSaved={() => { setAdding(false); void reload(); }}
+        />
+      )}
+
+      {editing && (
+        <ConnectionWizard
+          engagementId={engagementId}
+          direction={direction}
+
+          // Only the mode it already is. The wizard hides the chooser when it is editing,
+          // and handing it one mode means nothing can offer a choice that the API refuses.
+          modes={modes.filter((mode) => mode.id === editing.mode)}
+          editing={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => { setEditing(null); void reload(); }}
         />
       )}
     </section>

@@ -574,6 +574,92 @@ public sealed class WorkspaceStore(string connectionString)
         return rows.ToList();
     }
 
+    /// <summary>
+    /// Changes what a connection points at.
+    /// </summary>
+    /// <remarks>
+    /// A connection could be created and never changed. A mistyped environment URL, a
+    /// renamed tenant or a rotated credential meant making a second connection and living
+    /// with the first one in the picker forever, which is how somebody eventually runs a
+    /// discovery against the wrong environment.
+    ///
+    /// The mode is not changeable here. Each mode carries different settings and a
+    /// different shape of credential, and a connection that changed from an offline file
+    /// to a service principal in place would keep a secret reference that means nothing
+    /// and a settings blob nothing reads. Changing how an estate is reached is a new
+    /// connection, and the run history keeps pointing at the one it actually used.
+    ///
+    /// The secret is not touched. It lives in Key Vault under a reference this row holds,
+    /// and an update that carried it would mean the credential travelled through a request
+    /// body on every rename.
+    /// </remarks>
+    /// <param name="connectionId">Which connection.</param>
+    /// <param name="name">What to call it.</param>
+    /// <param name="environmentRole">Production, test, development or unknown.</param>
+    /// <param name="settingsJson">The mode's settings.</param>
+    /// <param name="secretExpiresUtc">When the credential expires, where anybody said.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task<bool> UpdateConnectionAsync(
+        Guid connectionId,
+        string name,
+        string environmentRole,
+        string settingsJson,
+        DateTime? secretExpiresUtc,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        var changed = await connection.ExecuteAsync(new CommandDefinition(
+            """
+            UPDATE ops.[Connection]
+            SET Name = @name,
+                EnvironmentRole = @environmentRole,
+                SettingsJson = @settingsJson,
+                SecretExpiresUtc = @secretExpiresUtc
+            WHERE ConnectionId = @connectionId;
+            """,
+            new { connectionId, name, environmentRole, settingsJson, secretExpiresUtc },
+            cancellationToken: cancellationToken));
+
+        return changed > 0;
+    }
+
+    /// <summary>How many runs were made through a connection.</summary>
+    /// <remarks>
+    /// Asked before deleting one. A run records which connection produced it, and a report
+    /// that cannot say what it was read through is a report nobody can defend, so a
+    /// connection with history is kept and the caller is told why.
+    /// </remarks>
+    /// <param name="connectionId">Which connection.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task<int> CountRunsUsingAsync(Guid connectionId, CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        return await connection.ExecuteScalarAsync<int>(new CommandDefinition(
+            """
+            SELECT COUNT(*) FROM ops.AnalysisRun
+            WHERE SourceConnectionId = @connectionId OR TargetConnectionId = @connectionId;
+            """,
+            new { connectionId },
+            cancellationToken: cancellationToken));
+    }
+
+    /// <summary>Removes a connection nothing has used.</summary>
+    /// <param name="connectionId">Which connection.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task<bool> DeleteConnectionAsync(Guid connectionId, CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        var removed = await connection.ExecuteAsync(new CommandDefinition(
+            "DELETE FROM ops.[Connection] WHERE ConnectionId = @connectionId;",
+            new { connectionId },
+            cancellationToken: cancellationToken));
+
+        return removed > 0;
+    }
+
     /// <summary>Records a connection, and the reference to its credentials.</summary>
     /// <remarks>
     /// The secret itself never arrives here. The caller has already put it in the vault and

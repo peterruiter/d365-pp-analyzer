@@ -1075,6 +1075,35 @@
 .connection-item-body .hint { color: var(--cp-text-soft); font-size: 11px; line-height: 1.5; }
 .connection-item .tag { margin: 0; flex: 0 0 auto; }
 
+/* Edit and remove, quiet until wanted. They sit after the status tag because the first
+   question about a connection is whether it works and the second is how to change it. */
+.connection-item-actions { display: flex; flex: 0 0 auto; gap: 6px; }
+
+.ghost-button {
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid var(--cp-border-strong);
+  border-radius: 999px;
+  color: var(--cp-text-muted);
+  font-size: 11px;
+  line-height: 1.6;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.ghost-button:hover:not(:disabled) { background: var(--cp-surface-soft); border-color: var(--cp-text-soft); color: var(--brand-ink); }
+.ghost-button:disabled { opacity: .5; cursor: default; }
+
+/* Only the second click is red. The first one asks. */
+.ghost-button--danger { border-color: var(--cp-danger); color: var(--cp-danger); }
+.ghost-button--danger:hover:not(:disabled) { background: var(--cp-danger); border-color: var(--cp-danger); color: #fff; }
+
+/* The row has four things in it and a phone has room for two. */
+@media (max-width: 680px) {
+  .connection-item { flex-wrap: wrap; }
+  .connection-item-actions { width: 100%; justify-content: flex-end; }
+}
+
 /* ---------------------------------------------------------------- backlog --
    The tree the builder produced: an epic per category, a feature per rule that
    needs one, a story per finding worth naming, and the trivia batched.
