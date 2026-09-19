@@ -103,10 +103,22 @@ forwarded.KnownProxies.Clear();
 
 app.UseForwardedHeaders(forwarded);
 
-app.UseAuthentication();
-app.UseAuthorization();
+// Static files before routing, and routing called explicitly so it is not inserted at the top
+// of the pipeline on our behalf.
+//
+// This order is load bearing. MapFallbackToFile registers an endpoint that matches "/", and
+// once routing has selected an endpoint the static file middleware declines to serve
+// anything. The microsite was therefore in the image, reachable at /index.html and /de/
+// index.html, and invisible at / and /de/ where anybody would actually look: the default
+// files rewrite happened after the fallback had already won. The fallback's route pattern
+// excludes paths that look like files, which is why the explicit ones worked and hid it.
 app.UseDefaultFiles();
 app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 // ------------------------------------------------------------------- helpers --
 static string UserId(ClaimsPrincipal user) =>
