@@ -2,6 +2,7 @@ namespace PowerPete.Analyzer.Api;
 
 using System.Buffers.Binary;
 using System.Globalization;
+using Azure;
 using Azure.Identity;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
@@ -92,22 +93,52 @@ public sealed class SolutionUploads(Uri? containerUri)
         var container = new BlobContainerClient(containerUri, new DefaultAzureCredential());
         var blob = container.GetBlobClient(blobName);
 
-        await blob.UploadAsync(
-            buffer,
-            new BlobUploadOptions
-            {
-                HttpHeaders = new BlobHttpHeaders { ContentType = "application/zip" },
-
-                // The name the browser sent, as metadata rather than as the path. It is
-                // useful when somebody is working out which of three uploads was which, and
-                // it is not something to build a path out of.
-                Metadata = new Dictionary<string, string>(StringComparer.Ordinal)
+        try
+        {
+            await blob.UploadAsync(
+                buffer,
+                new BlobUploadOptions
                 {
-                    ["engagementId"] = engagementId.ToString(),
-                    ["originalName"] = Sanitise(originalName)
-                }
-            },
-            cancellationToken).ConfigureAwait(false);
+                    HttpHeaders = new BlobHttpHeaders { ContentType = "application/zip" },
+
+                    // The name the browser sent, as metadata rather than as the path. It is
+                    // useful when somebody is working out which of three uploads was which, and
+                    // it is not something to build a path out of.
+                    Metadata = new Dictionary<string, string>(StringComparer.Ordinal)
+                    {
+                        ["engagementId"] = engagementId.ToString(),
+                        ["originalName"] = Sanitise(originalName)
+                    }
+                },
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        // Answered rather than thrown.
+        //
+        // Everything above this line returns a sentence a consultant can act on, and the
+        // one call that actually touches Azure did not: a container the identity cannot
+        // write to threw straight out of the endpoint, so the screen showed 500 with
+        // nothing on it. The three that happen in practice are a missing role assignment,
+        // a container that does not exist and a storage account firewall, and they need
+        // three different people to fix, so they are told apart here.
+        catch (RequestFailedException failure)
+        {
+            return new Result(null, buffer.Length, failure.ErrorCode switch
+            {
+                "AuthorizationPermissionMismatch" or "AuthenticationFailed" =>
+                    "This deployment cannot write to its upload container. The identity it runs as needs Storage "
+                    + "Blob Data Contributor on it, which is an Azure role assignment rather than anything in "
+                    + "this product.",
+                "ContainerNotFound" =>
+                    $"The upload container at {containerUri} does not exist. It is created by the infrastructure "
+                    + "deployment, so this usually means the setting points somewhere the deployment did not make.",
+                _ => $"The file could not be stored: {failure.ErrorCode ?? failure.Status.ToString(CultureInfo.InvariantCulture)}."
+            });
+        }
+        catch (Exception failure) when (failure is IOException or TaskCanceledException)
+        {
+            return new Result(null, buffer.Length, $"The file could not be stored: {failure.Message}");
+        }
 
         return new Result(blobName, buffer.Length, null);
     }

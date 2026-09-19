@@ -649,8 +649,8 @@ None of this fails a build and all of it fails a screen.
 
 ## The thing that most needs doing next
 
-**Run it against a real client export, and sign in to a real environment.** Everything below
-the sign-in page has now been exercised except that. The sample solution proves the readers
+**Sign in to a real environment interactively.** Everything else below the sign-in page has
+now been exercised. The sample solution proves the readers
 and the rules agree with a file this repository wrote; it cannot prove they agree with one
 Dynamics wrote, and the category numbers, the isolation codes, the web resource types and
 the connection reference element names all still come from documentation rather than from a
@@ -670,7 +670,7 @@ The build gates, for reference:
 2. `./build/Test-Generators.ps1` — generates into a throwaway folder and checks the output.
    Passes.
 3. `./build/Invoke-CodeGen.ps1` — generates and builds. Twelve of twelve, no warnings.
-4. `dotnet test` — 101 tests, all passing.
+4. `dotnet test` — 107 tests, all passing.
 5. `./build/New-SampleSolution.ps1` then `analyse samples/SampleSolution.zip` — sixteen
    planted defects, twelve found and four correctly not assessed.
 
@@ -839,6 +839,39 @@ is written, which previously left a heading, a rule and an empty page.
 
 An engagement with no consultant input is twelve pages rather than fifteen, with no empty
 ones in any language.
+
+## The offline upload works, end to end
+
+Driven through the browser against the real storage account: a 24KB export picked in the
+wizard, uploaded to blob, the connection saved with the blob name on it, and the connection
+removed again afterwards through the two step Remove. The form has a real file picker, a
+name, the environment it came from and the date it was exported, and the last two are there
+because a file cannot say either and the report prints both.
+
+Finding that out needed a role assignment, and the failure it produced first was worth
+fixing. Everything in the upload path returns a sentence somebody can act on except the one
+call that touches Azure, which threw straight out of the endpoint: a container the identity
+cannot write to arrived on screen as a bare 500. The three that happen in practice are a
+missing role assignment, a container that does not exist and a storage firewall, they need
+three different people to fix, and they are told apart now.
+
+## Interactive sign-in, as far as it can be taken without a tenant
+
+The round trip still cannot be completed here. It needs an account in the client's tenant
+and a browser, and the only account on this machine is in the wrong one. What could be
+taken further is the half that decides whether to believe what comes back, and that is the
+half worth testing: a callback that accepts a state it did not issue is a connection
+somebody else can point at an environment of their choosing.
+
+The state carries the connection's identity out through the browser and back. It is signed
+and it expires, and neither had a test. There are five now, and the test project references
+the API so that this logic is reachable from a test at all, which it was not.
+
+Four of them are refusals, and refusals are easy to pass by accident: all three would have
+passed against a `CompleteAsync` that returned null unconditionally. The fifth is the
+control. A state the deployment signed gets past the check and the next thing it does is
+read the connection, so with a store pointed at a server that is not there, a refusal
+returns null and an acceptance fails reaching the database. That difference is the proof.
 
 ## What was ported rather than invented
 

@@ -7,6 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Referencing a web project brings its framework with it. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
@@ -16,6 +18,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The API, so the sign-in logic can be tested at all. It decides whether to believe
+         a callback, and nothing outside the web project could reach it. -->
+    <ProjectReference Include="..\..\src\PowerPete.Analyzer.Api\PowerPete.Analyzer.Api.csproj" />
     <ProjectReference Include="..\..\src\PowerPete.Analyzer.Analysis\PowerPete.Analyzer.Analysis.csproj" />
     <ProjectReference Include="..\..\src\PowerPete.Analyzer.Data\PowerPete.Analyzer.Data.csproj" />
     <ProjectReference Include="..\..\src\PowerPete.Analyzer.Dataverse\PowerPete.Analyzer.Dataverse.csproj" />
