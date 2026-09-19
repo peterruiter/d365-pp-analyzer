@@ -537,4 +537,26 @@ public sealed class WorkspaceStore(string connectionString)
             new { engagementId },
             cancellationToken: cancellationToken));
     }
+
+    /// <summary>One engagement, by its identifier.</summary>
+    /// <remarks>
+    /// Without an access check, because the worker is not a person: it runs a command that a
+    /// person already had the right to queue. Every entry point a person reaches goes through
+    /// ListEngagementsAsync, which filters by what they hold.
+    /// </remarks>
+    /// <param name="engagementId">Which engagement.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task<Engagement?> GetEngagementAsync(Guid engagementId, CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        return await connection.QuerySingleOrDefaultAsync<Engagement>(new CommandDefinition(
+            """
+            SELECT EngagementId, Name, ClientName, Status, IsRegulated, ReportLanguage, BacklogLanguage,
+                   CreatedUtc, CreatedBy
+            FROM ops.Engagement WHERE EngagementId = @engagementId;
+            """,
+            new { engagementId },
+            cancellationToken: cancellationToken));
+    }
 }

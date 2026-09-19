@@ -337,6 +337,41 @@ public sealed class BacklogTests
     }
 
     [Fact]
+    public void A_backlog_is_written_in_the_language_the_team_reads()
+    {
+        var builder = new BacklogBuilder(Guid.NewGuid(), "Client", OneCriterion, "nl");
+
+        var items = builder.Build([Entry()], "Run 1");
+
+        // The criterion, the rule name in the title and the headings in the description all
+        // come from different namespaces. A test that only checked one of them passed while
+        // the rule text was being looked up in the wrong bundle.
+        items.Should().Contain(item =>
+            item.AcceptanceCriteria.Contains("opgesplitst", StringComparison.Ordinal));
+
+        items.Should().Contain(item =>
+            item.Title.Contains("Cloud flow te groot", StringComparison.Ordinal));
+
+        items.Should().Contain(item =>
+            item.DescriptionHtml.Contains("Waarom dit uitmaakt", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A_language_nothing_has_translated_falls_back_to_English_rather_than_to_a_key()
+    {
+        // Klingon is not a locale this product ships, so every lookup misses. The work item
+        // has to read as English rather than as a list of identifiers: a gap in a translation
+        // is a document somebody can still hand over, and a key is not.
+        var builder = new BacklogBuilder(Guid.NewGuid(), "Client", OneCriterion, "tlh");
+
+        var items = builder.Build([Entry()], "Run 1");
+
+        items.Should().Contain(item => item.Title.Contains("Cloud flow too large", StringComparison.Ordinal));
+        items.Should().NotContain(item => item.Title.Contains("finding.", StringComparison.Ordinal));
+        items.Should().NotContain(item => item.DescriptionHtml.Contains("backlog.", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void The_component_name_is_substituted_into_the_criterion()
     {
         var builder = new BacklogBuilder(Guid.NewGuid(), "Client", OneCriterion);

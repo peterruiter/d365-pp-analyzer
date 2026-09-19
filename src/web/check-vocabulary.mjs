@@ -104,12 +104,14 @@ for (const ns of namespaces) {
         ` (first: ${extra.slice(0, 3).join(', ')})`);
     }
 
-    // A placeholder that gained, lost or changed number between languages formats wrongly at
-    // run time, and the reader sees {0} in the middle of a sentence.
+    // A placeholder that gained, lost or changed between languages formats wrongly at run
+    // time, and the reader sees {0} or {componentName} in the middle of a sentence. Both
+    // shapes are checked: the interface numbers its arguments and the backlog names them.
     for (const key of Object.keys(reference)) {
       if (!(key in bundle)) continue;
 
-      const shape = (text) => [...String(text).matchAll(/\{\d\}/g)].map((match) => match[0]).sort().join('');
+      const shape = (text) =>
+        [...String(text).matchAll(/\{[A-Za-z0-9]+\}/g)].map((match) => match[0]).sort().join('');
 
       if (shape(reference[key]) !== shape(bundle[key])) {
         problems.push(`${ns}.${locale.code}.json: '${key}' does not carry the same placeholders as English`);

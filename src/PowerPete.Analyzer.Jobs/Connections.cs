@@ -227,6 +227,10 @@ public sealed class StageServicesFactory(
     /// <param name="source">What to read. Null for an engagement with no live connection.</param>
     /// <param name="target">Where to publish. Null on everything but a publish run.</param>
     /// <param name="criteria">The acceptance criteria contract.</param>
+    /// <param name="backlogLanguage">
+    /// The language the work items are written in, which is the language of the team who will
+    /// pick them up and is not always the language of the report.
+    /// </param>
     /// <param name="cancellationToken">Cancellation.</param>
     public async Task<StageServices> BuildAsync(
         Guid engagementId,
@@ -234,6 +238,7 @@ public sealed class StageServicesFactory(
         Connection? source,
         Connection? target,
         IReadOnlyDictionary<string, Criterion> criteria,
+        string? backlogLanguage,
         CancellationToken cancellationToken)
     {
         var uploads = settings.UploadContainerUri is null ? null : new Uri(settings.UploadContainerUri);
@@ -318,7 +323,7 @@ public sealed class StageServicesFactory(
             },
 
             Estimator: estimator,
-            BacklogBuilder: new BacklogBuilder(engagementId, engagementName, criteria),
+            BacklogBuilder: new BacklogBuilder(engagementId, engagementName, criteria, backlogLanguage),
 
             Publish: async (items, approvedHash, token) =>
             {

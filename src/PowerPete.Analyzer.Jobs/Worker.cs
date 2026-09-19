@@ -311,12 +311,19 @@ public sealed class Worker(WorkerSettings settings)
         var secrets = SecretStore.For(settings.KeyVaultUri);
         var factory = new StageServicesFactory(new ConnectionFactory(secrets), analysis, workspace, settings);
 
+        // The engagement, for its name and the language its backlog is written in. The name
+        // was the identifier before this, so every work item this product had ever raised was
+        // tagged with a GUID.
+        var engagement = await workspace.GetEngagementAsync(run.EngagementId, cancellationToken)
+            .ConfigureAwait(false);
+
         var services = await factory.BuildAsync(
             run.EngagementId,
-            run.EngagementId.ToString(),
+            engagement?.Name ?? run.EngagementId.ToString(),
             source,
             target,
             AcceptanceCriteria.Load(),
+            engagement?.BacklogLanguage,
             cancellationToken).ConfigureAwait(false);
 
         var state = new RunState

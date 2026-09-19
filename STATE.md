@@ -215,8 +215,8 @@ of them, and a clean flow is exactly what a client wants to hear.
 
 ## Languages, and the public site
 
-Four namespaces are complete in all six languages: **ui at 306 keys, finding at 111, inventory
-at 59 and report at 41.** Every rule's name, why it matters and recommended approach is
+All five namespaces are complete in all six languages: **ui at 306 keys, backlog at 170,
+finding at 111, inventory at 59 and report at 41.** That is 687 keys, 4,122 strings. Every rule's name, why it matters and recommended approach is
 translated, keyed on the rule id rather than on its English text, so correcting a sentence in
 the catalogue does not silently orphan five translations of it.
 
@@ -230,9 +230,10 @@ checked before anybody sends it to a client.
 **The translations are drafted, not natively reviewed.** They are consistent and the
 terminology is deliberate, and none has been read by somebody who speaks the language.
 
-**`backlog` is the one namespace still empty.** It is declared in `locales.json` and the
-backlog builder writes its work item titles and acceptance criteria in English from
-`acceptance-criteria.json`. A team picking up the backlog in Rotterdam still reads English.
+The backlog is written in the engagement's `BacklogLanguage`, which is deliberately separate
+from `ReportLanguage`: the team who picks the work up is not always the audience for the
+report. Its work item titles use the same `finding` namespace the report does, so a finding
+and the work item raised from it say the same thing.
 
 ### What the microsite is
 
@@ -249,7 +250,9 @@ promises a client something the product does not do.
   every document in English locally while working in production, which is the worst way round
   for a defect about languages.
 - **Rule text was looked up in the `inventory` namespace rather than `finding`**, so the
-  chrome translated and the content did not.
+  chrome translated and the content did not. The same slip happened again in the backlog
+  builder, where the criteria were read from `finding` rather than `backlog`, and a test
+  written for exactly that caught it.
 - **Static files must run before routing.** `MapFallbackToFile` registers an endpoint matching
   the root, and once routing has selected an endpoint the static file middleware declines to
   serve. The microsite was in the image, reachable at `/index.html`, and invisible at `/`. The
@@ -257,7 +260,13 @@ promises a client something the product does not do.
   it. `app.UseRouting()` is now called explicitly, after the static files.
 
 `check-vocabulary` checks every namespace against its own English, in both directions, and
-refuses a translation whose placeholders do not match.
+refuses a translation whose placeholders do not match. Both shapes are checked: the interface
+numbers its arguments and the backlog names them, and a criterion that loses `{componentName}`
+in translation takes a component name out of a work item.
+
+Two tests cover it: a backlog built in Dutch reads Dutch in its criterion, its title and its
+headings, all three from different namespaces; and a language nothing has translated falls
+back to English rather than rendering a key.
 
 ## The exports
 

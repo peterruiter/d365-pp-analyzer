@@ -5,6 +5,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using PowerPete.Analyzer.Domain;
+using PowerPete.Analyzer.Domain.Localization;
 
 /// <summary>One work item as it would be created.</summary>
 /// <param name="Key">The deterministic identifier. What makes a second publish update rather than duplicate.</param>
@@ -62,12 +63,36 @@ public sealed class BacklogBuilder
     /// <param name="engagementId">Which engagement, for the deterministic keys.</param>
     /// <param name="engagementName">Which engagement, for the tags.</param>
     /// <param name="criteria">The acceptance criteria contract, keyed by rule id.</param>
-    public BacklogBuilder(Guid engagementId, string engagementName, IReadOnlyDictionary<string, Criterion> criteria)
+    /// <param name="language">
+    /// The language the work items are written in, which is the language of the team who will
+    /// pick them up and is not always the language of the report.
+    /// </param>
+    public BacklogBuilder(
+        Guid engagementId,
+        string engagementName,
+        IReadOnlyDictionary<string, Criterion> criteria,
+        string? language = null)
     {
         this.engagementId = engagementId;
         this.engagementName = engagementName;
         this.criteria = criteria;
+
+        text = new Localiser("backlog", language);
+        rules = new Localiser("finding", language);
     }
+
+    /// <summary>The work item's own words: its headings, its criteria and its caveats.</summary>
+    private readonly Localiser text;
+
+    /// <summary>
+    /// The rule catalogue, in the same language.
+    /// </summary>
+    /// <remarks>
+    /// The same namespace the report reads, so a finding and the work item raised from it say
+    /// the same thing. A team reading "Dialoog nog aanwezig" in Azure DevOps and a client
+    /// reading something else in the report is a conversation nobody wants to have.
+    /// </remarks>
+    private readonly Localiser rules;
 
     /// <summary>
     /// Builds the backlog.
@@ -180,7 +205,7 @@ public sealed class BacklogBuilder
         return new BacklogItem(
             StableKeys.ForWorkItem(engagementId, entry.Finding.StableKey),
             type,
-            Truncate($"{rule.Name}: {entry.Finding.ComponentName ?? "solution"}"),
+            Truncate($"{RuleName(rule)}: {entry.Finding.ComponentName ?? text["backlog.solution", "solution"]}"),
             Describe(rule, entry, runContext, type == "feature" && rule.WorkItemType != "feature"),
             criterion.Rendered,
             criterion.Test,
@@ -206,7 +231,7 @@ public sealed class BacklogBuilder
         return new BacklogItem(
             StableKeys.ForWorkItem(engagementId, $"batch:{rule.Id}:{batch[0].Finding.StableKey}"),
             "task",
-            Truncate($"{rule.Name} ({batch.Length} components)"),
+            Truncate($"{RuleName(rule)} ({batch.Length} {text["backlog.components", "components"]})"),
             $"<h3>What was found</h3><p>{Escape(rule.Why)}</p>" +
             $"<h3>Components</h3><ul><li>{names}</li></ul>" +
             $"<h3>Recommended approach</h3><p>{Escape(rule.Recommendation)}</p>" +
@@ -232,7 +257,7 @@ public sealed class BacklogBuilder
     /// at the bottom is the one people skip and the one that matters in six months, when
     /// somebody has to decide how much to trust a work item a tool created.
     /// </remarks>
-    private static string Describe(
+    private string Describe(
         AnalysisRule rule,
         (Finding Finding, Estimate Estimate, DiscoveredComponent? Component) entry,
         string runContext,
@@ -240,12 +265,12 @@ public sealed class BacklogBuilder
     {
         var builder = new StringBuilder();
 
-        builder.Append("<h3>What was found</h3><p>")
-            .Append(Escape(entry.Finding.ComponentName ?? "A solution wide finding"))
-            .Append(entry.Component?.SolutionUniqueName is { } solution ? $", in solution {Escape(solution)}" : string.Empty)
+        builder.Append(CultureInfo.InvariantCulture, $"<h3>{Escape(text["backlog.whatWasFound", "What was found"])}</h3><p>")
+            .Append(Escape(entry.Finding.ComponentName ?? text["backlog.solutionWideFinding", "A solution wide finding"]))
+            .Append(entry.Component?.SolutionUniqueName is { } solution ? $", {text["backlog.inSolution", "in solution"]} {Escape(solution)}" : string.Empty)
             .Append(".</p>");
 
-        builder.Append("<h3>Evidence</h3><ul>");
+        builder.Append(CultureInfo.InvariantCulture, $"<h3>{Escape(text["backlog.evidence", "Evidence"])}</h3><ul>");
         foreach (var (key, value) in entry.Finding.Evidence.Where(pair => pair.Value is not null))
         {
             builder.Append("<li><b>").Append(Escape(key)).Append("</b>: ").Append(Escape(value!.ToString() ?? string.Empty)).Append("</li>");
@@ -253,28 +278,31 @@ public sealed class BacklogBuilder
 
         builder.Append("</ul>");
 
-        builder.Append("<h3>Why it matters</h3><p>").Append(Escape(rule.Why)).Append("</p>");
-        builder.Append("<h3>Recommended approach</h3><p>").Append(Escape(rule.Recommendation)).Append("</p>");
+        builder.Append(CultureInfo.InvariantCulture, $"<h3>{Escape(text["backlog.whyItMatters", "Why it matters"])}</h3><p>")
+            .Append(Escape(rules[$"finding.{rule.Id}.why", rule.Why])).Append("</p>");
+        builder.Append(CultureInfo.InvariantCulture, $"<h3>{Escape(text["backlog.recommendedApproach", "Recommended approach"])}</h3><p>")
+            .Append(Escape(rules[$"finding.{rule.Id}.recommendation", rule.Recommendation])).Append("</p>");
 
         if (rule.FalsePositive is not null)
         {
-            builder.Append("<h3>Before you act on this</h3><p>").Append(Escape(rule.FalsePositive)).Append("</p>");
+            builder.Append(CultureInfo.InvariantCulture, $"<h3>{Escape(text["backlog.beforeYouAct", "Before you act on this"])}</h3><p>")
+                .Append(Escape(rules[$"finding.{rule.Id}.falsePositive", rule.FalsePositive])).Append("</p>");
         }
 
-        builder.Append("<h3>Estimate</h3><p>")
-            .Append(CultureInfo.InvariantCulture, $"{entry.Estimate.LowHours:0.#} to {entry.Estimate.HighHours:0.#} hours. ")
-            .Append(CultureInfo.InvariantCulture, $"Confidence: {entry.Estimate.Confidence.ToString().ToLowerInvariant()}. ")
+        builder.Append(CultureInfo.InvariantCulture, $"<h3>{Escape(text["backlog.estimate", "Estimate"])}</h3><p>")
+            .Append(CultureInfo.InvariantCulture, $"{entry.Estimate.LowHours:0.#} {text["backlog.to", "to"]} {entry.Estimate.HighHours:0.#} {text["backlog.hours", "hours"]}. ")
+            .Append(CultureInfo.InvariantCulture, $"{text["backlog.confidence", "Confidence"]}: {text["backlog.confidence." + entry.Estimate.Confidence.ToString().ToLowerInvariant(), entry.Estimate.Confidence.ToString().ToLowerInvariant()]}. ")
             .Append(entry.Estimate.Layer switch
             {
-                EstimateLayer.EngagementOverride => "Set by a consultant on this engagement.",
-                EstimateLayer.Model => "Produced by a model, one finding at a time.",
-                _ => "The band default for this rule. This finding was not estimated individually."
+                EstimateLayer.EngagementOverride => text["backlog.layer.override", "Set by a consultant on this engagement."],
+                EstimateLayer.Model => text["backlog.layer.model", "Produced by a model, one finding at a time."],
+                _ => text["backlog.layer.band", "The band default for this rule. This finding was not estimated individually."]
             })
             .Append("</p><p>").Append(Escape(entry.Estimate.Rationale)).Append("</p>");
 
         if (entry.Estimate.Assumptions.Count > 0)
         {
-            builder.Append("<p><b>Assumes:</b></p><ul>");
+            builder.Append(CultureInfo.InvariantCulture, $"<p><b>{Escape(text["backlog.assumes", "Assumes"])}:</b></p><ul>");
             foreach (var assumption in entry.Estimate.Assumptions)
             {
                 builder.Append("<li>").Append(Escape(assumption)).Append("</li>");
@@ -285,21 +313,24 @@ public sealed class BacklogBuilder
 
         if (entry.Estimate.FlaggedReason is not null)
         {
-            builder.Append("<p><b>Flagged:</b> ").Append(Escape(entry.Estimate.FlaggedReason)).Append("</p>");
+            builder.Append(CultureInfo.InvariantCulture, $"<p><b>{Escape(text["backlog.flagged", "Flagged"])}:</b> ").Append(Escape(entry.Estimate.FlaggedReason)).Append("</p>");
         }
 
         if (entry.Estimate.Confidence == Confidence.Low)
         {
-            builder.Append("<p><b>Low confidence.</b> Look at the component before planning with this number.</p>");
+            builder.Append(
+                CultureInfo.InvariantCulture,
+                $"<p><b>{Escape(text["backlog.lowConfidence", "Low confidence."])}</b> {Escape(text["backlog.lowConfidenceDetail", "Look at the component before planning with this number."])}</p>");
         }
 
         if (needsSplitting)
         {
-            builder.Append("<p><b>Created as a feature rather than a story.</b> It was sized at 21 points, ")
-                .Append("which means it needs splitting before it goes in a sprint.</p>");
+            builder.Append(CultureInfo.InvariantCulture, $"<p><b>{Escape(text["backlog.featureNotStory", "Created as a feature rather than a story."])}</b> ")
+                .Append(Escape(text["backlog.featureNotStoryDetail", "It was sized at 21 points, which means it needs splitting before it goes in a sprint."]))
+                .Append("</p>");
         }
 
-        builder.Append("<h3>Provenance</h3><p>").Append(Escape(runContext)).Append("</p>");
+        builder.Append(CultureInfo.InvariantCulture, $"<h3>{Escape(text["backlog.provenance", "Provenance"])}</h3><p>").Append(Escape(runContext)).Append("</p>");
 
         return builder.ToString();
     }
@@ -316,12 +347,21 @@ public sealed class BacklogBuilder
                 "Add one to acceptance-criteria.json. There is deliberately no generic fallback.");
         }
 
-        var rendered = $"<p><b>Given</b> {Escape(Substitute(criterion.Given, component, finding))}<br/>" +
-            $"<b>When</b> {Escape(Substitute(criterion.When, component, finding))}<br/>" +
-            $"<b>Then</b> {Escape(Substitute(criterion.Then, component, finding))}</p>" +
-            $"<p><b>Test:</b> {Escape(Substitute(criterion.TestRequirement, component, finding))}</p>";
+        // Translated before substitution, because the placeholders are part of the sentence
+        // and a translation that drops one takes a component name with it. The contract's
+        // English is the fallback, so an untranslated rule still produces a usable criterion.
+        var given = Substitute(text[$"backlog.{rule.Id}.given", criterion.Given], component, finding);
+        var when = Substitute(text[$"backlog.{rule.Id}.when", criterion.When], component, finding);
+        var then = Substitute(text[$"backlog.{rule.Id}.then", criterion.Then], component, finding);
+        var test = Substitute(
+            text[$"backlog.{rule.Id}.testRequirement", criterion.TestRequirement], component, finding);
 
-        return (rendered, Substitute(criterion.TestRequirement, component, finding));
+        var rendered = $"<p><b>{Escape(text["backlog.given", "Given"])}</b> {Escape(given)}<br/>" +
+            $"<b>{Escape(text["backlog.when", "When"])}</b> {Escape(when)}<br/>" +
+            $"<b>{Escape(text["backlog.then", "Then"])}</b> {Escape(then)}</p>" +
+            $"<p><b>{Escape(text["backlog.test", "Test"])}:</b> {Escape(test)}</p>";
+
+        return (rendered, test);
     }
 
     /// <summary>
@@ -408,6 +448,10 @@ public sealed class BacklogBuilder
         Severity.Medium => 3,
         _ => 4
     };
+
+
+    /// <summary>A rule's name in the language the team reads.</summary>
+    private string RuleName(AnalysisRule rule) => rules[$"finding.{rule.Id}.name", rule.Name];
 
     private static string Title(string value) =>
         value.Length == 0 ? value : char.ToUpperInvariant(value[0]) + value[1..];
