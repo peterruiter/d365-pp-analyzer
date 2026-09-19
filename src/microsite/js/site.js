@@ -166,32 +166,33 @@
 
   var revealables = document.querySelectorAll('.reveal');
 
-  if (reduced || !('IntersectionObserver' in window)) {
+  // A phone gets the page, not the animation.
+  //
+  // This was tuned twice before it was understood. The reveal is driven by an
+  // IntersectionObserver, and an observer does not promise to tell you the moment
+  // something crosses the edge: it coalesces, and under a fast scroll it reports late.
+  // On iOS it is worse than late, because Safari holds observer callbacks until momentum
+  // scrolling stops. Flick down the page and the sections underneath the hero stay blank
+  // for as long as the flick lasts, then all arrive together. That is the two seconds.
+  //
+  // No margin or threshold fixes it, because the problem is when the callback runs rather
+  // than what it is asked about. The first attempt pulled the trigger earlier, which helps
+  // a slow scroll and does nothing for a flick.
+  //
+  // So on a narrow screen the animation is simply not run. Everything is one column there,
+  // where a stagger was never doing much besides making the reader wait, and content that
+  // is definitely on the page beats content that elegantly is not. The wide path keeps the
+  // effect: a mouse wheel does not produce momentum scrolling, and the rows of three are
+  // what it was for.
+  var narrow = window.matchMedia('(max-width: 900px)').matches;
+
+  if (reduced || narrow || !('IntersectionObserver' in window)) {
     revealables.forEach(function (node) { node.classList.add('is-in'); });
     document.querySelectorAll('[data-count-to]').forEach(countUp);
   } else {
-    // Where the reveal fires, and it is not the same answer on a phone.
-    //
-    // The desktop numbers hold an element back until a tenth of it sits an eighth of a
-    // screen above the bottom edge. On a wide screen that is right: content arrives in
-    // rows of three with plenty of viewport underneath, and holding it back a moment is
-    // what makes it read as arriving rather than as already there.
-    //
-    // On a phone the same numbers are a bug. The bottom margin alone is about a hundred
-    // and twenty pixels of scrolling during which the text is on screen and blank, then
-    // the animation starts. Everything is one column, so that happens on every element
-    // down the page rather than once per row, and it reads as the page being slow to
-    // load rather than as an animation.
-    //
-    // So on a narrow screen the root is extended past the bottom of the viewport instead
-    // of pulled up from it, and any sliver counts. An element starts fading while it is
-    // still below the fold and is done by the time a thumb has finished the flick.
-    //
-    // Read once rather than watched. Crossing this breakpoint means rotating a tablet,
-    // and an element already revealed stays revealed, so the worst a rotation costs is
-    // the wrong trigger for whatever has not been reached yet.
-    var narrow = window.matchMedia('(max-width: 900px)').matches;
-
+    // A tenth of the element, an eighth of a screen above the bottom edge. On a wide screen
+    // content arrives in rows of three with plenty of viewport underneath, and holding it
+    // back a moment is what makes it read as arriving rather than as already there.
     var observer = new IntersectionObserver(function (entries) {
       // Count only the entries that are actually arriving.
       //
@@ -199,9 +200,7 @@
       // thing: a callback carries an entry for every element whose intersection changed,
       // and the very first one carries an entry for every element being observed, whether
       // it is on screen or not. So an element that was genuinely arriving could sit at
-      // index ten and wait nine hundred milliseconds to appear, and a flick down a phone,
-      // which crosses many elements at once, made it worse. It read as the page being slow
-      // to load rather than as an animation.
+      // index ten and wait nine hundred milliseconds to appear.
       //
       // Capped as well as counted. A stagger is a nicety across three cards in a row; over
       // a dozen elements it is just a queue, and the last of them should not be waiting on
@@ -211,10 +210,7 @@
       entries.forEach(function (entry) {
         if (!entry.isIntersecting) return;
 
-        // No stagger in one column. A stagger is a nicety across three cards in a row,
-        // where it reads as the row landing; stacked one above another it is a queue, and
-        // the reader is waiting at the front of it.
-        var delay = narrow ? 0 : Math.min(arriving, 3) * 80;
+        var delay = Math.min(arriving, 3) * 80;
         arriving += 1;
 
         if (delay === 0) {
@@ -229,9 +225,7 @@
 
         observer.unobserve(entry.target);
       });
-    }, narrow
-      ? { rootMargin: '0px 0px 15% 0px', threshold: 0 }
-      : { rootMargin: '0px 0px -12% 0px', threshold: 0.1 });
+    }, { rootMargin: '0px 0px -12% 0px', threshold: 0.1 });
 
     revealables.forEach(function (node) { observer.observe(node); });
   }

@@ -47,7 +47,11 @@ export function ConnectionsPage({ engagementId }: { engagementId: string }) {
     return () => { cancelled = true; };
   }, [engagementId]);
 
-  if (error && connections === null) {
+  // Two requests, and either can fail on its own. Reporting only the connections failure
+  // meant a broken extraction-modes endpoint produced a wizard with no systems in it and no
+  // explanation anywhere on the page: it looked like a layout fault, and the actual cause
+  // was a 500 nobody was shown.
+  if (error) {
     return <p className="error">{error}</p>;
   }
 

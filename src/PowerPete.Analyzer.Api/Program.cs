@@ -637,7 +637,13 @@ app.MapGet("/api/extraction-modes", () =>
 
     using var document = JsonDocument.Parse(File.ReadAllText(path));
 
-    return Results.Ok(document.RootElement.GetProperty("modes").EnumerateArray().Select(mode => new
+    // Materialised here, inside the using, rather than handed to the serialiser as a lazy
+    // sequence. Select does not read anything until somebody enumerates it, and the only
+    // thing that ever enumerates this is the JSON serialiser, which runs after the method has
+    // returned and therefore after the document has been disposed. Every request threw
+    // ObjectDisposedException, the wizard received no modes and rendered an empty grid with
+    // no error on it, so it looked like a layout fault rather than a failed request.
+    var modes = document.RootElement.GetProperty("modes").EnumerateArray().Select(mode => new
     {
         id = mode.GetProperty("id").GetString(),
         name = mode.GetProperty("name").GetString(),
@@ -648,7 +654,9 @@ app.MapGet("/api/extraction-modes", () =>
         needsSecret = mode.GetProperty("auth").GetProperty("secretRef").ValueKind != JsonValueKind.Null,
         reaches = mode.GetProperty("reaches").EnumerateObject()
             .ToDictionary(entry => entry.Name, entry => entry.Value.GetString())
-    }));
+    }).ToList();
+
+    return Results.Ok(modes);
 }).RequireAuthorization();
 
 // ------------------------------------------------------------------ overview --

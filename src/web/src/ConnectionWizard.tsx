@@ -73,6 +73,10 @@ export function ConnectionWizard({
   }
 
   return (
+    // The backdrop is what makes this a dialog rather than a block in the page. Without it
+    // the wizard renders inline between the panels that launched it, which on a narrow
+    // screen reads as the layout having broken rather than as something having opened.
+    <div className="modal-backdrop" role="presentation">
     <section className="forecast-modal wizard-modal" role="dialog" aria-modal="true" aria-labelledby="wizard-title">
       <div className="modal-header">
         <div>
@@ -197,5 +201,6 @@ export function ConnectionWizard({
         </>
       )}
     </section>
+    </div>
   );
 }
