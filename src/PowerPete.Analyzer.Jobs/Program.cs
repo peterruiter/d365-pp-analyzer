@@ -98,6 +98,7 @@ public static class Program
                        [--xlsx <file>]          Also writes the findings workbook.
                        [--pdf <file>]           Also writes the assessment report. Needs a
                                                 Syncfusion licence key in SYNCFUSION_LICENCE_KEY.
+                       [--language <code>]      Writes the documents in that language.
               rules [category]                  Lists the rule catalogue.
               components                        Lists the component types, with craft and lifecycle.
               work                              Polls the command queue and runs the pipeline.
@@ -214,6 +215,10 @@ public static class Program
         var xlsx = Argument(args, "--xlsx");
         var pdf = Argument(args, "--pdf");
 
+        // The language the documents are written in. The command line is where a translation
+        // gets checked before anybody sends a client a report in it.
+        var language = Argument(args, "--language") ?? "en";
+
         if (xlsx is null && pdf is null) return;
 
         var solution = read.Solutions.Count > 0 ? read.Solutions[0] : null;
@@ -235,7 +240,8 @@ public static class Program
                     withComponents,
                     components,
                     customisation,
-                    []));
+                    [],
+                    language));
 
                 await File.WriteAllBytesAsync(xlsx, bytes).ConfigureAwait(false);
                 Console.WriteLine($"Wrote {xlsx}");
@@ -262,7 +268,8 @@ public static class Program
                     withComponents,
                     customisation,
                     roadmap,
-                    new Dictionary<string, string>(StringComparer.Ordinal)));
+                    new Dictionary<string, string>(StringComparer.Ordinal),
+                    language));
 
                 await File.WriteAllBytesAsync(pdf, bytes).ConfigureAwait(false);
                 Console.WriteLine($"Wrote {pdf}");

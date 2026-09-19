@@ -3,6 +3,7 @@ namespace PowerPete.Analyzer.Export;
 using System.Globalization;
 using PowerPete.Analyzer.Analysis;
 using PowerPete.Analyzer.Domain;
+using PowerPete.Analyzer.Domain.Localization;
 using PowerPete.Analyzer.Export.Pdf;
 using Syncfusion.Drawing;
 using Syncfusion.Pdf.Graphics;
@@ -34,6 +35,7 @@ public sealed class AssessmentReportPdf
     /// <param name="Customisation">The components by customisation chart data.</param>
     /// <param name="Roadmap">The roadmap items.</param>
     /// <param name="Written">Consultant text, keyed by report section id.</param>
+    /// <param name="Language">The locale the document is written in. English when absent.</param>
     public sealed record Model(
         string EngagementName,
         string? ClientName,
@@ -46,7 +48,27 @@ public sealed class AssessmentReportPdf
         IReadOnlyList<(Finding Finding, Estimate Estimate, DiscoveredComponent? Component)> Findings,
         IReadOnlyList<CustomisationRow> Customisation,
         IReadOnlyList<RoadmapItem> Roadmap,
-        IReadOnlyDictionary<string, string> Written);
+        IReadOnlyDictionary<string, string> Written,
+        string Language = "en")
+    {
+        /// <summary>
+        /// The words this document is written in.
+        /// </summary>
+        /// <remarks>
+        /// Built once with the model rather than passed through every method that
+        /// writes a label. Every lookup carries its English, so a key nobody has
+        /// translated renders in English rather than leaving a hole on page four.
+        /// </remarks>
+        internal Localiser Text { get; } = new Localiser("report", Language);
+
+        /// <summary>The rule catalogue, in the same language.</summary>
+        /// <remarks>
+        /// A second namespace because a rule name is content and a column heading is
+        /// chrome. They are corrected by different people at different times, and the
+        /// finding text is the half a client actually reads.
+        /// </remarks>
+        internal Localiser Rules { get; } = new Localiser("finding", Language);
+    }
 
     private static readonly CultureInfo Culture = CultureInfo.InvariantCulture;
 
@@ -78,7 +100,7 @@ public sealed class AssessmentReportPdf
         Roadmap(flow, model);
         Backlog(flow, model);
         NotAssessed(flow, model);
-        WrittenSection(flow, model, "scenarios", "Scenarios",
+        WrittenSection(flow, model, "scenarios", model.Text["report.scenarios", "Scenarios"],
             "Name the scenarios the client is actually choosing between, in their words. For each: what it gives them, what it needs from them, and what worries you.");
         Method(flow, model);
 
@@ -112,11 +134,11 @@ public sealed class AssessmentReportPdf
 
         graphics.DrawRectangle(PdfTheme.Brush(CapgeminiBrand.DarkBlue), new RectangleF(0, 0, width, 300f));
 
-        graphics.DrawString("Power Platform",
+        graphics.DrawString(model.Text["report.platform", "Power Platform"],
             surface.Theme.Font(new TextStyle { Size = 30, Bold = true, Colour = "#FFFFFF" }),
             PdfTheme.Brush("#FFFFFF"), new PointF(48f, 120f));
 
-        graphics.DrawString("Solution assessment",
+        graphics.DrawString(model.Text["report.title", "Solution assessment"],
             surface.Theme.Font(new TextStyle { Size = 30, Bold = true, Colour = CapgeminiBrand.LightBlue }),
             PdfTheme.Brush(CapgeminiBrand.LightBlue), new PointF(48f, 160f));
 
@@ -154,7 +176,7 @@ public sealed class AssessmentReportPdf
     /// </remarks>
     private static void ReadThisFirst(Flow flow, Model model)
     {
-        Heading(flow, "How to read this");
+        Heading(flow, model.Text["report.howToRead", "How to read this"]);
 
         if (model.Score.Caveats.Count == 0)
         {
@@ -188,7 +210,7 @@ public sealed class AssessmentReportPdf
 
     private static void ManagementSummary(Flow flow, Model model)
     {
-        Heading(flow, "Management summary");
+        Heading(flow, model.Text["report.managementSummary", "Management summary"]);
 
         var worst = model.Findings
             .Where(entry => entry.Finding.Severity <= Severity.High)
@@ -208,9 +230,9 @@ public sealed class AssessmentReportPdf
 
             foreach (var entry in worst)
             {
-                flow.Text($"·  {entry.Finding.Rule?.Name}: {entry.Finding.ComponentName ?? "solution wide"}",
+                flow.Text($"·  {RuleName(model, entry.Finding)}: {entry.Finding.ComponentName ?? model.Text["report.solutionWide", "solution wide"]}",
                     new TextStyle { Size = 10, Bold = true }, paddingTop: 6f);
-                flow.Text(entry.Finding.Rule?.Why ?? "", new TextStyle { Size = 9.5f, Colour = CapgeminiBrand.Muted });
+                flow.Text(RuleText(model, entry.Finding, "why", entry.Finding.Rule?.Why), new TextStyle { Size = 9.5f, Colour = CapgeminiBrand.Muted });
             }
         }
 
@@ -220,12 +242,12 @@ public sealed class AssessmentReportPdf
 
     private static void Estate(Flow flow, Model model)
     {
-        Heading(flow, "What is in the estate");
+        Heading(flow, model.Text["report.whatIsInTheEstate", "What is in the estate"]);
 
         flow.Table(table =>
         {
             table.Columns(3, 1);
-            table.Header(["Domain", "Components"], [false, true]);
+            table.Header([model.Text["report.domain", "Domain"], model.Text["report.components", "Components"]], [false, true]);
 
             foreach (var entry in model.Score.ByDomain.OrderByDescending(pair => pair.Value))
             {
@@ -237,7 +259,7 @@ public sealed class AssessmentReportPdf
 
     private static void CraftAndComplexity(Flow flow, Model model)
     {
-        Heading(flow, "Customisation and complexity");
+        Heading(flow, model.Text["report.customisationAndComplexity", "Customisation and complexity"]);
 
         Body(flow, model.Score.LowCodeShare is null
             ? "No components counted toward the low code ratio, so there is no ratio to report."
@@ -249,7 +271,7 @@ public sealed class AssessmentReportPdf
         flow.Table(table =>
         {
             table.Columns(3, 1, 1, 1, 1, 1);
-            table.Header(["Component", "Simple", "Medium", "Complex", "Unrated", "Total"],
+            table.Header([model.Text["report.component", "Component"], model.Text["report.simple", "Simple"], model.Text["report.medium", "Medium"], model.Text["report.complex", "Complex"], model.Text["report.unrated", "Unrated"], model.Text["report.total", "Total"]],
                 [false, true, true, true, true, true]);
 
             foreach (var row in model.Customisation.Take(20))
@@ -277,12 +299,12 @@ public sealed class AssessmentReportPdf
 
     private static void Lifecycle(Flow flow, Model model)
     {
-        Heading(flow, "Lifecycle position");
+        Heading(flow, model.Text["report.lifecyclePosition", "Lifecycle position"]);
 
         flow.Table(table =>
         {
             table.Columns(3, 1);
-            table.Header(["Position", "Components"], [false, true]);
+            table.Header([model.Text["report.position", "Position"], model.Text["report.components", "Components"]], [false, true]);
 
             foreach (var entry in model.Score.ByLifecycle.OrderBy(pair => pair.Key, StringComparer.Ordinal))
             {
@@ -300,7 +322,7 @@ public sealed class AssessmentReportPdf
 
     private static void Findings(Flow flow, Model model)
     {
-        Heading(flow, "Findings");
+        Heading(flow, model.Text["report.findings", "Findings"]);
 
         foreach (var category in model.Findings
             .GroupBy(entry => entry.Finding.Rule?.Category ?? "other", StringComparer.Ordinal)
@@ -313,12 +335,12 @@ public sealed class AssessmentReportPdf
                 inner.Table(table =>
                 {
                     table.Columns(1, 4, 2, 2);
-                    table.Header(["Severity", "Finding", "Component", "Hours"], [false, false, false, true]);
+                    table.Header([model.Text["report.severity", "Severity"], model.Text["report.finding", "Finding"], model.Text["report.component", "Component"], model.Text["report.hours", "Hours"]], [false, false, false, true]);
 
                     foreach (var entry in category.OrderBy(entry => entry.Finding.Severity).Take(25))
                     {
                         table.Cell(entry.Finding.Severity.ToString(), colour: SeverityColour(entry.Finding.Severity));
-                        table.Cell(entry.Finding.Rule?.Name ?? entry.Finding.RuleId);
+                        table.Cell(RuleName(model, entry.Finding));
                         table.Cell(entry.Finding.ComponentName ?? "solution wide");
                         table.Cell($"{entry.Estimate.LowHours:0.#}–{entry.Estimate.HighHours:0.#}", right: true);
                     }
@@ -335,7 +357,7 @@ public sealed class AssessmentReportPdf
 
     private static void Roadmap(Flow flow, Model model)
     {
-        Heading(flow, "Roadmap");
+        Heading(flow, model.Text["report.roadmap", "Roadmap"]);
 
         var bands = RoadmapBuilder.BandProfile(model.Roadmap);
 
@@ -357,7 +379,7 @@ public sealed class AssessmentReportPdf
                 inner.Table(table =>
                 {
                     table.Columns(4, 2, 2, 2);
-                    table.Header(["Item", "Row", "Column", "Hours"], [false, false, false, true]);
+                    table.Header([model.Text["report.item", "Item"], model.Text["report.row", "Row"], model.Text["report.column", "Column"], model.Text["report.hours", "Hours"]], [false, false, false, true]);
 
                     foreach (var item in items.OrderByDescending(item => item.HighHours))
                     {
@@ -373,12 +395,12 @@ public sealed class AssessmentReportPdf
 
     private static void Backlog(Flow flow, Model model)
     {
-        Heading(flow, "Estimate");
+        Heading(flow, model.Text["report.estimate", "Estimate"]);
 
         flow.Table(table =>
         {
             table.Columns(3, 1, 2);
-            table.Header(["Category", "Findings", "Hours"], [false, true, true]);
+            table.Header([model.Text["report.category", "Category"], model.Text["report.findings", "Findings"], model.Text["report.hours", "Hours"]], [false, true, true]);
 
             foreach (var category in model.Findings
                 .GroupBy(entry => entry.Finding.Rule?.Category ?? "other", StringComparer.Ordinal)
@@ -390,11 +412,11 @@ public sealed class AssessmentReportPdf
                     right: true);
             }
 
-            table.Cell("Per engagement costs", bold: true, top: true);
+            table.Cell(model.Text["report.perEngagementCosts", "Per engagement costs"], bold: true, top: true);
             table.Cell("", right: true, top: true);
             table.Cell($"{model.Score.FixedCostLowHours:0.#}–{model.Score.FixedCostHighHours:0.#}", right: true, bold: true, top: true);
 
-            table.Cell("Total", bold: true);
+            table.Cell(model.Text["report.total", "Total"], bold: true);
             table.Cell("", right: true);
             table.Cell($"{model.Score.TotalLowHours + model.Score.FixedCostLowHours:0.#}–" +
                        $"{model.Score.TotalHighHours + model.Score.FixedCostHighHours:0.#}", right: true, bold: true);
@@ -413,11 +435,11 @@ public sealed class AssessmentReportPdf
 
     private static void NotAssessed(Flow flow, Model model)
     {
-        Heading(flow, "What was not assessed");
+        Heading(flow, model.Text["report.whatWasNotAssessed", "What was not assessed"]);
 
         if (model.Score.NotAssessed.Count == 0)
         {
-            Body(flow, "Every check in the catalogue ran.");
+            Body(flow, model.Text["report.everyCheckRan", "Every check in the catalogue ran."]);
             return;
         }
 
@@ -428,7 +450,7 @@ public sealed class AssessmentReportPdf
         flow.Table(table =>
         {
             table.Columns(3, 5);
-            table.Header(["Check", "Why not"], [false, false]);
+            table.Header([model.Text["report.check", "Check"], model.Text["report.whyNot", "Why not"]], [false, false]);
 
             foreach (var entry in model.Score.NotAssessed.OrderBy(entry => entry.RuleId, StringComparer.Ordinal))
             {
@@ -440,23 +462,23 @@ public sealed class AssessmentReportPdf
 
     private static void Method(Flow flow, Model model)
     {
-        Heading(flow, "How this was produced");
+        Heading(flow, model.Text["report.howThisWasProduced", "How this was produced"]);
 
         flow.Table(table =>
         {
             table.Columns(2, 4);
 
-            table.Cell("Run", bold: true);
+            table.Cell(model.Text["report.run", "Run"], bold: true);
             table.Cell(model.RunId.ToString());
-            table.Cell("Produced", bold: true);
+            table.Cell(model.Text["report.produced", "Produced"], bold: true);
             table.Cell(model.ProducedUtc.ToString("u", Culture));
-            table.Cell("Read via", bold: true);
+            table.Cell(model.Text["report.readVia", "Read via"], bold: true);
             table.Cell(model.ExtractionMode);
-            table.Cell("Authenticated as", bold: true);
+            table.Cell(model.Text["report.authenticatedAs", "Authenticated as"], bold: true);
             table.Cell(model.Identity ?? "not recorded");
-            table.Cell("Solutions", bold: true);
+            table.Cell(model.Text["report.solutions", "Solutions"], bold: true);
             table.Cell(string.Join(", ", model.SolutionNames));
-            table.Cell("Rules", bold: true);
+            table.Cell(model.Text["report.rules", "Rules"], bold: true);
             table.Cell($"{RuleCatalogue.All.Count} in the catalogue, {model.Score.NotAssessed.Count} not assessed");
         });
 
@@ -493,7 +515,7 @@ public sealed class AssessmentReportPdf
             border: CapgeminiBrand.Line,
             content: inner =>
             {
-                inner.Text("Nobody has written this section.",
+                inner.Text(model.Text["report.nobodyHasWritten", "Nobody has written this section."],
                     new TextStyle { Size = 9.5f, Bold = true, Colour = CapgeminiBrand.Terracotta });
                 inner.Text(prompt, new TextStyle { Size = 9.5f, Colour = CapgeminiBrand.Muted }, paddingTop: 4f);
                 inner.Text("Nothing generated it, and nothing will. This is the half of an assessment that " +
@@ -510,4 +532,23 @@ public sealed class AssessmentReportPdf
         Severity.Medium => CapgeminiBrand.Ink,
         _ => CapgeminiBrand.Muted
     };
+
+    /// <summary>
+    /// A rule's name in the document's language, or the catalogue's English.
+    /// </summary>
+    /// <remarks>
+    /// Keyed on the rule id rather than on its English text, so correcting a sentence in the
+    /// catalogue does not silently orphan five translations of it. A rule nobody has
+    /// translated reads in English, which is a report a consultant can still hand over.
+    /// </remarks>
+    private static string RuleName(Model model, Finding finding) =>
+        model.Rules[$"finding.{finding.RuleId}.name", finding.Rule?.Name ?? finding.RuleId];
+
+    /// <summary>One of a rule's paragraphs, in the document's language.</summary>
+    /// <param name="model">The document.</param>
+    /// <param name="finding">Whose rule.</param>
+    /// <param name="part">why or recommendation.</param>
+    /// <param name="english">The catalogue's text, used when nothing has translated it.</param>
+    private static string RuleText(Model model, Finding finding, string part, string? english) =>
+        model.Rules[$"finding.{finding.RuleId}.{part}", english ?? string.Empty];
 }

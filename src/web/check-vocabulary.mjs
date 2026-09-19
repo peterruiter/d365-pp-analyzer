@@ -54,41 +54,67 @@ for (const page of pages) {
   }
 }
 
-// Every other language is composed over English, so a key English lacks is a key
-// nothing can fall back to.
-for (const name of readdirSync(bundles).filter((file) => file.endsWith('.json') && !file.endsWith('.en.json'))) {
-  const other = JSON.parse(readFileSync(join(bundles, name), 'utf8'));
-
-  for (const key of Object.keys(other)) {
-    if (!(key in english)) problems.push(`${name}: '${key}' is not in the English bundle`);
-  }
-}
-
-// Every language the product offers has a complete bundle.
+// Every namespace, in every language the product offers.
+//
+// Each bundle is checked against the English of its own namespace rather than against the
+// interface strings, because the product now writes documents as well as screens: the report
+// and the finding text are what a client reads, and they are translated separately from the
+// buttons.
 //
 // The picker is built from the locale contract, so a language declared there and never
 // translated is one a reader can choose and be shown English in. That is exactly what
-// happened: six languages were on offer and two existed. The fallback made it invisible,
+// happened once: six languages were on offer and one existed. The fallback made it invisible,
 // which is the whole problem with a good fallback.
 const locales = JSON.parse(readFileSync('../../build/contracts/locales.json', 'utf8'));
 
-for (const locale of locales.locales) {
-  const path = join(bundles, `ui.${locale.code}.json`);
+const namespaces = [...new Set(
+  readdirSync(bundles)
+    .filter((file) => file.endsWith('.en.json'))
+    .map((file) => file.slice(0, -'.en.json'.length)))].sort();
 
-  let bundle;
-  try {
-    bundle = JSON.parse(readFileSync(path, 'utf8'));
-  } catch {
-    problems.push(`ui.${locale.code}.json is missing, and ${locale.englishName} is offered in the language picker`);
-    continue;
-  }
+for (const ns of namespaces) {
+  const reference = JSON.parse(readFileSync(join(bundles, `${ns}.en.json`), 'utf8'));
 
-  const missing = Object.keys(english).filter((key) => !(key in bundle));
+  for (const locale of locales.locales) {
+    if (locale.code === 'en') continue;
 
-  if (missing.length > 0) {
-    problems.push(
-      `ui.${locale.code}.json is missing ${missing.length} strings, so ${locale.englishName} readers see English for them` +
-      ` (first: ${missing.slice(0, 3).join(', ')})`);
+    const path = join(bundles, `${ns}.${locale.code}.json`);
+
+    let bundle;
+    try {
+      bundle = JSON.parse(readFileSync(path, 'utf8'));
+    } catch {
+      problems.push(`${ns}.${locale.code}.json is missing, and ${locale.englishName} is offered in the language picker`);
+      continue;
+    }
+
+    const missing = Object.keys(reference).filter((key) => !(key in bundle));
+    const extra = Object.keys(bundle).filter((key) => !(key in reference));
+
+    if (missing.length > 0) {
+      problems.push(
+        `${ns}.${locale.code}.json is missing ${missing.length} strings, so ${locale.englishName} readers see English for them` +
+        ` (first: ${missing.slice(0, 3).join(', ')})`);
+    }
+
+    // A key nothing can fall back to. Usually a rename that reached one language.
+    if (extra.length > 0) {
+      problems.push(
+        `${ns}.${locale.code}.json has ${extra.length} keys that are not in ${ns}.en.json` +
+        ` (first: ${extra.slice(0, 3).join(', ')})`);
+    }
+
+    // A placeholder that gained, lost or changed number between languages formats wrongly at
+    // run time, and the reader sees {0} in the middle of a sentence.
+    for (const key of Object.keys(reference)) {
+      if (!(key in bundle)) continue;
+
+      const shape = (text) => [...String(text).matchAll(/\{\d\}/g)].map((match) => match[0]).sort().join('');
+
+      if (shape(reference[key]) !== shape(bundle[key])) {
+        problems.push(`${ns}.${locale.code}.json: '${key}' does not carry the same placeholders as English`);
+      }
+    }
   }
 }
 
@@ -99,4 +125,6 @@ if (problems.length > 0) {
   process.exit(1);
 }
 
-console.log(`vocabulary: ${pages.length} pages, ${defined.size} classes, ${Object.keys(english).length} strings, no problems`);
+console.log(
+  `vocabulary: ${pages.length} pages, ${defined.size} classes, ` +
+  `${namespaces.length} namespaces, ${locales.locales.length} languages, no problems`);
