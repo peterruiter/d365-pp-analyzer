@@ -6,10 +6,16 @@ the work.
 
 **Version:** 1.0.0
 **Last updated:** 2026-09-19
-**Current block:** it is deployed, serving and signed in to. A demonstration engagement
-seeds itself on every start, interactive sign-in works, the reports render with charts, and
-the offline upload has somewhere to put a file. What has still never happened is a run
-against a real client environment.
+**Current block:** it is deployed and serving. A demonstration engagement seeds itself on
+every start, the reports render with charts in six languages, the offline upload works end
+to end, and a run queued through the API is picked up by the worker and produces findings
+from a real export.
+
+**What has never happened is a read of a live client environment.** Interactive sign-in has
+never completed a round trip: it needs an account in a client tenant and a browser, and it
+is the last unproven path of consequence. An earlier version of this line said interactive
+sign-in works. It does not, and a state file that overstates the product is the one kind of
+inaccuracy this repository cannot afford.
 
 ---
 
@@ -19,9 +25,13 @@ against a real client environment.
 
 The analysis engine is finished in the sense that every rule in the catalogue now has a
 handler, the reference graph is built, the scorer computes the numbers, the estimator has
-its three layers and the publisher has its gate. All of that now compiles under warnings as
-errors, 56 tests exercise it, and it has read a solution file and produced findings, a score
-and a set of estimates. What it has still never read is a real export.
+its three layers and the publisher has its gate. All of that compiles under warnings as
+errors and 121 tests exercise it.
+
+It has read nine real exports from a live tenant, and each sweep of them found defects that
+the synthetic sample could not: a component type nobody read, a read count that overstated
+itself by a factor of twenty-eight, a rule firing on an estate that did not have the problem.
+A real export remains the most productive test this product has.
 
 `Api` and `Jobs` build too, now. They had been written against types that are not in this
 repository, because the files were written at different times against different assumptions
@@ -105,7 +115,7 @@ is about.
 
 ## What is unproven, in order of how much it would cost to be wrong
 
-0. **The engine compiles and 56 tests pass, so this list is shorter than it was.** What the
+0. **The engine compiles and 121 tests pass, so this list is shorter than it was.** What the
    compiler found is worth recording, because it says what kind of bug is still in here.
 
    Not one error came from generated code. The generators were right, which means the Python
@@ -318,17 +328,17 @@ drift in either ClosedXML or Syncfusion, which the handover had listed as likely
 
 ### What is still unproven
 
-**The database half.** Everything above was rendered by the command line, which composes its
-models in memory. `ReportComposer` reading stored rows has never run against real data, because
-that needs an engagement, a queued run and the worker, and nobody has signed in yet. The
-reconstruction is the part to watch: rebuilding a component from its stored attributes,
-deserialising the score, and re-rating complexity.
+**The database half, which is proven now.** This said the composer reading stored rows had
+never run against real data. It has: a run queued through the API, picked up by the worker,
+and read back by every screen. Finding out took fixing the defect that had stopped the
+worker ever completing a job, which is recorded below.
 
 **The solution fix only helps new runs.** Anything analysed before it has no solutions recorded
 and will render with the column empty.
 
-**The written sections are still empty.** The report prints its prompt where the text should be,
-which is correct and not finished, and there is still nowhere to type them.
+**The written sections have a screen now**, and the report no longer prints a prompt where
+nobody has written one: it leaves the section out and says nothing about it, which is a
+deliberate choice with a cost recorded below.
 
 ## Taking the migrator out of the screens
 
@@ -433,9 +443,10 @@ pills, which is the one thing on that page a consultant reads at a glance.
 **The translations are drafted, not natively reviewed.** They are consistent and the terminology
 is deliberate, and none of them has been read by somebody who speaks the language.
 
-**`backlog` is the one namespace still empty.** The other four are complete in six languages
-and the documents are written in the reader's language. Work item titles and acceptance
-criteria are still English.
+**All five namespaces are complete in six languages.** `backlog` was the last one empty and
+is not any more, so work item titles and acceptance criteria are written in the language the
+engagement asked for. Two tests hold the bundles to the keys the code actually uses, in both
+directions.
 
 The web application fetches every language but English from `/api/locales/{code}/{ns}` and that
 endpoint did not exist, so the bundles could never have reached a browser. English is imported at
@@ -586,8 +597,10 @@ they referenced was never here. Each of these is reversible and each is a decisi
   the repair beside it needed `DemoSeeder`, `DemoEngagement` and an `ops.DemoSeed` table. The
   table is not in any migration, the seeder was never written and the constants do not exist.
   `RepairAsync` existed only to reseed it, so it went too, and with it the only thing on this
-  page that a button could fix. **If the demonstration engagement is wanted, it is a feature
-  to build, not a check to restore.**
+  page that a button could fix. **The demonstration engagement was wanted and was built**, as
+  `DemoEstate` and `DemoSeeder`: it seeds itself on start, rebuilds when its seed version
+  moves, and its findings are produced by running the real rule engine rather than written
+  out, so it cannot disagree with the product.
 - **`SystemHealth` is an instance, not a static class.** `Program.cs` called
   `SystemHealth.CheckAsync(connectionString, keyVaultUri, ct)`, which never existed; the class
   reads its own configuration and exposes `RunAsync`. It is registered in the container now.
@@ -598,20 +611,20 @@ they referenced was never here. Each of these is reversible and each is a decisi
 - **`UserAccess.Allows` is called `Holds`.** A rename, not a gap, and the access check is now
   bound to the method that ranks roles rather than to nothing.
 
-### The web workspace and the API do not agree on routes
+### The web workspace and the API disagreed on routes, and do not now
 
-Found while doing the above and **not changed**, because it is a runtime mismatch rather than
-a compile error and the right side to move is a decision:
+Two of the three below are settled. They are kept because the shape of the mismatch is worth
+remembering: none of it failed a build and all of it failed a screen.
 
-- `SystemHealthPage.tsx` calls `GET /api/system/health`. `Program.cs` maps
-  `GET /api/health/detail`.
-- It also calls `POST /api/system/health/{id}/repair`. There is no repair endpoint, and after
-  the demonstration engagement went there is nothing for one to do.
-- It lists `sources` and `target` as check groups. Nothing produces a check in either group
-  any more. The `SourcesGroup` and `TargetGroup` constants are still there, unused, because
-  the same two words are still in the web workspace and in `locales.json`.
-
-None of this fails a build and all of it fails a screen.
+- `SystemHealthPage.tsx` called `GET /api/system/health` and `Program.cs` mapped
+  `GET /api/health/detail`. **Settled**: the API serves `/api/system/health`, in the shape
+  the page reads, and the page renders.
+- It also called `POST /api/system/health/{id}/repair`. **Settled by removal**: there is no
+  repair endpoint and nothing for one to do, and the page no longer asks for one.
+- It lists `sources` and `target` as check groups and nothing produces a check in either.
+  The `SourcesGroup` and `TargetGroup` constants are still there, unused. **Still open**, and
+  the smallest thing on this page: two constants, two words in the web workspace and two in
+  `locales.json`.
 
 ## What is not built at all
 
