@@ -69,5 +69,19 @@
   "report.aRange": "eine Spanne, kein Angebot",
   "report.checksThatCouldNotRun": "Prüfungen, die nicht laufen konnten",
   "report.whatThisSays": "Was dieser Bericht sagt",
-  "report.theWorstOfIt": "Das Schlimmste davon"
+  "report.theWorstOfIt": "Das Schlimmste davon",
+  "report.notWritten": "Von einem Berater zu schreiben, und für diesen Auftrag nicht geschrieben",
+  "report.notAssessed": "Nicht geprüft",
+  "report.severity.critical": "Kritisch",
+  "report.severity.high": "Hoch",
+  "report.severity.medium": "Mittel",
+  "report.severity.low": "Niedrig",
+  "report.severity.info": "Info",
+  "report.delivery": "Bereitstellung und ALM",
+  "report.readiness": "Veränderungsbereitschaft",
+  "report.functionalMaturity": "Funktionale Reife",
+  "report.debtByDomain": "Schulden nach Domäne",
+  "report.lowCode": "Low Code",
+  "report.proCode": "Pro Code",
+  "report.external": "Extern"
 }

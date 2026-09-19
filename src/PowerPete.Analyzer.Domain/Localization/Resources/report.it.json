@@ -69,5 +69,19 @@
   "report.aRange": "un intervallo, non un preventivo",
   "report.checksThatCouldNotRun": "controlli che non hanno potuto essere eseguiti",
   "report.whatThisSays": "Cosa dice questo rapporto",
-  "report.theWorstOfIt": "Il peggio"
+  "report.theWorstOfIt": "Il peggio",
+  "report.notWritten": "Scritto da un consulente, e non scritto per questo incarico",
+  "report.notAssessed": "Non valutato",
+  "report.severity.critical": "Critico",
+  "report.severity.high": "Alto",
+  "report.severity.medium": "Medio",
+  "report.severity.low": "Basso",
+  "report.severity.info": "Info",
+  "report.delivery": "Rilascio e ALM",
+  "report.readiness": "Prontezza al cambiamento",
+  "report.functionalMaturity": "Maturità funzionale",
+  "report.debtByDomain": "Debito per dominio",
+  "report.lowCode": "Low code",
+  "report.proCode": "Pro code",
+  "report.external": "Esterno"
 }

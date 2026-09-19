@@ -69,5 +69,19 @@
   "report.aRange": "une fourchette, pas un devis",
   "report.checksThatCouldNotRun": "contrôles qui n ont pas pu s exécuter",
   "report.whatThisSays": "Ce que dit ce rapport",
-  "report.theWorstOfIt": "Le pire"
+  "report.theWorstOfIt": "Le pire",
+  "report.notWritten": "Rédigé par un consultant, et non rédigé pour cette mission",
+  "report.notAssessed": "Non évalué",
+  "report.severity.critical": "Critique",
+  "report.severity.high": "Élevé",
+  "report.severity.medium": "Moyen",
+  "report.severity.low": "Faible",
+  "report.severity.info": "Info",
+  "report.delivery": "Livraison et ALM",
+  "report.readiness": "Aptitude au changement",
+  "report.functionalMaturity": "Maturité fonctionnelle",
+  "report.debtByDomain": "Dette par domaine",
+  "report.lowCode": "Low code",
+  "report.proCode": "Pro code",
+  "report.external": "Externe"
 }

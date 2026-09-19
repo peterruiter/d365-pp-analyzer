@@ -115,9 +115,7 @@ public sealed partial class AssessmentReportPdf
 
         // Delivery sits with the findings rather than at the back. The findings say what the
         // estate looks like; only the team can say why, and the two read as one argument.
-        WrittenSection(flow, model, "delivery", model.Text["report.delivery", "Delivery and ALM"],
-            "Describe the deployment path from a developer's machine to production, in the words the team used. "
-            + "The findings tell you what the estate looks like; only they can tell you why.");
+        WrittenSection(flow, model, "delivery", model.Text["report.delivery", "Delivery and ALM"]);
 
         Roadmap(flow, model);
         Backlog(flow, model);
@@ -128,12 +126,9 @@ public sealed partial class AssessmentReportPdf
         // would not carry them.
         FunctionalMaturity(flow, model);
 
-        WrittenSection(flow, model, "readiness", model.Text["report.readiness", "Readiness for change"],
-            "Score from the interviews. If you did not interview anybody, leave this section out rather than "
-            + "filling it in from impressions.");
+        WrittenSection(flow, model, "readiness", model.Text["report.readiness", "Readiness for change"]);
 
-        WrittenSection(flow, model, "scenarios", model.Text["report.scenarios", "Scenarios"],
-            "Name the scenarios the client is actually choosing between, in their words. For each: what it gives them, what it needs from them, and what worries you.");
+        WrittenSection(flow, model, "scenarios", model.Text["report.scenarios", "Scenarios"]);
 
         Method(flow, model);
 
@@ -501,7 +496,9 @@ public sealed partial class AssessmentReportPdf
 
         flow.Table(table =>
         {
-            table.Columns(1, 4, 3, 2);
+            // The severity column carries the longest word in several languages
+            // ("Schweregrad"), and at one unit it broke mid-word into "SCHWEREGR / AD".
+            table.Columns(3, 7, 6, 4);
             table.Header(
                 [
                     model.Text["report.severity", "Severity"],
@@ -513,7 +510,7 @@ public sealed partial class AssessmentReportPdf
 
             foreach (var entry in worst)
             {
-                table.Cell(entry.Finding.Severity.ToString(), colour: SeverityColour(entry.Finding.Severity));
+                table.Cell(SeverityLabel(model, entry.Finding.Severity), colour: SeverityColour(entry.Finding.Severity));
                 table.Cell(RuleName(model, entry.Finding));
                 table.Cell(entry.Finding.ComponentName ?? model.Text["report.solutionWide", "solution wide"]);
                 table.Cell(
@@ -632,8 +629,7 @@ public sealed partial class AssessmentReportPdf
             }
         }
 
-        WrittenBlock(flow, model, "managementSummary",
-            "What were they trying to achieve, and does what you found help or block it? Name the one thing you would fix first and why.");
+        WrittenBlock(flow, model, "managementSummary");
     }
 
     private static void Estate(Flow flow, Model model)
@@ -790,7 +786,7 @@ public sealed partial class AssessmentReportPdf
 
                     foreach (var entry in category.OrderBy(entry => entry.Finding.Severity).Take(25))
                     {
-                        table.Cell(entry.Finding.Severity.ToString(), colour: SeverityColour(entry.Finding.Severity));
+                        table.Cell(SeverityLabel(model, entry.Finding.Severity), colour: SeverityColour(entry.Finding.Severity));
                         table.Cell(RuleName(model, entry.Finding));
                         table.Cell(entry.Finding.ComponentName ?? "solution wide");
                         table.Cell($"{entry.Estimate.LowHours:0.#}–{entry.Estimate.HighHours:0.#}", right: true);
@@ -966,16 +962,46 @@ public sealed partial class AssessmentReportPdf
             "An identity matters here. A report produced under an administrator account is not evidence that a " +
             "least privileged integration could have produced the same one.",
             new TextStyle { Size = 9, Colour = CapgeminiBrand.Muted }, paddingTop: 10f);
+
+        // The sections nobody wrote, named once, here.
+        //
+        // They are left out of the body now rather than printed as empty boxes with an
+        // instruction to the consultant inside them, which read as a draft sent by
+        // mistake. Left out is not the same as unmentioned: a reader who wonders why there
+        // is no readiness section should be able to find out that nobody wrote one, and
+        // the page that already explains what was and was not looked at is where that
+        // belongs.
+        var unwritten = WrittenSections
+            .Where(section => Written(model, section.Id) is null)
+            .Select(section => model.Text[section.Key, section.Fallback])
+            .ToList();
+
+        if (unwritten.Count > 0)
+        {
+            flow.Text(
+                $"{model.Text["report.notWritten", "Written by a consultant, and not written for this engagement"]}: "
+                + $"{string.Join(", ", unwritten)}.",
+                new TextStyle { Size = 9, Colour = CapgeminiBrand.Muted }, paddingTop: 8f);
+        }
     }
 
     /// <summary>
-    /// A section only a consultant can write.
+    /// The sections of this report that no amount of reading an estate can produce.
     /// </summary>
     /// <remarks>
-    /// Prints the prompt when nobody has written anything, rather than dropping the section.
-    /// A report missing its scenarios because nobody noticed is worse than one that says so on
-    /// the page.
+    /// Held in one place because two things need the same list and must not disagree: the
+    /// body, which prints each one only where somebody wrote it, and the method section,
+    /// which names the ones nobody did.
     /// </remarks>
+    private static readonly (string Id, string Key, string Fallback)[] WrittenSections =
+    [
+        ("managementSummary", "report.managementSummary", "Management summary"),
+        ("delivery", "report.delivery", "Delivery and ALM"),
+        ("functionalMaturity", "report.functionalMaturity", "Functional maturity"),
+        ("readiness", "report.readiness", "Readiness for change"),
+        ("scenarios", "report.scenarios", "Scenarios")
+    ];
+
     /// <summary>
     /// The capability scores, as a shape and as prose.
     /// </summary>
@@ -992,9 +1018,18 @@ public sealed partial class AssessmentReportPdf
     /// <param name="model">What to write.</param>
     private static void FunctionalMaturity(Flow flow, Model model)
     {
+        var scored = model.Maturity.Any(axis => axis.Score is not null);
+
+        // Nothing scored and nothing written is no section. The chart was already left out
+        // when nobody had scored anything, on the grounds that a radar with no polygon in
+        // it looks like a rendering fault, and the written block underneath used to carry
+        // the explanation. It no longer prints one, so without this the section would be a
+        // heading, a rule, and nothing at all.
+        if (!scored && Written(model, "functionalMaturity") is null) return;
+
         Heading(flow, model.Text["report.functionalMaturity", "Functional maturity"]);
 
-        if (model.Maturity.Any(axis => axis.Score is not null))
+        if (scored)
         {
             RadarChart(flow,
                 [.. model.Maturity.Select(axis => (AxisLabel(model, axis.Axis), axis.Score))],
@@ -1009,8 +1044,7 @@ public sealed partial class AssessmentReportPdf
             }
         }
 
-        WrittenBlock(flow, model, "functionalMaturity",
-            "Score each capability nought to five from what you saw and heard. Say who told you, per axis.");
+        WrittenBlock(flow, model, "functionalMaturity");
     }
 
     /// <summary>An axis in the reader's language, or its own identifier.</summary>
@@ -1018,33 +1052,70 @@ public sealed partial class AssessmentReportPdf
     /// <param name="axis">The axis identifier from the contract.</param>
     private static string AxisLabel(Model model, string axis) => model.Text["axis." + axis, axis];
 
-    private static void WrittenSection(Flow flow, Model model, string id, string title, string prompt)
+    /// <summary>What a consultant wrote for a section, or null where nobody wrote anything.</summary>
+    /// <param name="model">The report.</param>
+    /// <param name="id">Which section.</param>
+    private static string? Written(Model model, string id) =>
+        model.Written.TryGetValue(id, out var text) && !string.IsNullOrWhiteSpace(text)
+            ? text
+            : null;
+
+    /// <summary>
+    /// A section that only a person can write, printed only where a person has.
+    /// </summary>
+    /// <remarks>
+    /// This used to print the section with its heading and a bordered panel saying nobody
+    /// had written it, on the argument that a report missing its scenarios because nobody
+    /// noticed is worse than one saying the scenarios are missing.
+    ///
+    /// That argument was about the wrong reader. A document that goes to a client with
+    /// three empty boxes in it and an instruction to the consultant in each one does not
+    /// read as candid, it reads as a draft somebody sent by mistake, and the client cannot
+    /// act on the prompt because the prompt is not addressed to them.
+    ///
+    /// The honesty is kept where it belongs: the method section at the back names the
+    /// sections nobody wrote, once, in a document that already explains what was and was
+    /// not looked at. Nothing is silently dropped; it is just not dropped into the middle
+    /// of the argument.
+    /// </remarks>
+    /// <param name="flow">Where to write.</param>
+    /// <param name="model">The report.</param>
+    /// <param name="id">Which section.</param>
+    /// <param name="title">Its heading.</param>
+    private static void WrittenSection(Flow flow, Model model, string id, string title)
     {
+        if (Written(model, id) is not { } text) return;
+
         Heading(flow, title);
-        WrittenBlock(flow, model, id, prompt);
+        Body(flow, text, paddingTop: 12f);
     }
 
-    private static void WrittenBlock(Flow flow, Model model, string id, string prompt)
+    /// <summary>The written half of a hybrid section, under the generated numbers.</summary>
+    /// <param name="flow">Where to write.</param>
+    /// <param name="model">The report.</param>
+    /// <param name="id">Which section.</param>
+    private static void WrittenBlock(Flow flow, Model model, string id)
     {
-        if (model.Written.TryGetValue(id, out var text) && !string.IsNullOrWhiteSpace(text))
-        {
-            Body(flow, text, paddingTop: 12f);
-            return;
-        }
+        if (Written(model, id) is { } text) Body(flow, text, paddingTop: 12f);
+    }
 
-        flow.Panel(
-            background: "#FFFFFF",
-            border: CapgeminiBrand.Line,
-            content: inner =>
-            {
-                inner.Text(model.Text["report.nobodyHasWritten", "Nobody has written this section."],
-                    new TextStyle { Size = 9.5f, Bold = true, Colour = CapgeminiBrand.Terracotta });
-                inner.Text(prompt, new TextStyle { Size = 9.5f, Colour = CapgeminiBrand.Muted }, paddingTop: 4f);
-                inner.Text("Nothing generated it, and nothing will. This is the half of an assessment that " +
-                           "comes from talking to people.",
-                    new TextStyle { Size = 9, Colour = CapgeminiBrand.Muted }, paddingTop: 4f);
-            },
-            paddingTop: 12f);
+    /// <summary>
+    /// A severity in the reader's language.
+    /// </summary>
+    /// <remarks>
+    /// The enum's own name was printed straight into the table, so a German report listed
+    /// its worst findings as "Critical" under a column headed "Schweregrad". Every other
+    /// word on the page was translated, which made the untranslated one look deliberate.
+    /// </remarks>
+    /// <param name="model">The report.</param>
+    /// <param name="severity">Which severity.</param>
+    private static string SeverityLabel(Model model, Severity severity)
+    {
+        var name = severity.ToString();
+
+        return model.Text[
+            $"report.severity.{char.ToLowerInvariant(name[0])}{name[1..]}",
+            name];
     }
 
     private static string SeverityColour(Severity severity) => severity switch

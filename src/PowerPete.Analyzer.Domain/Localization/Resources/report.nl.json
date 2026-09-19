@@ -69,5 +69,19 @@
   "report.aRange": "een bandbreedte, geen offerte",
   "report.checksThatCouldNotRun": "controles die niet konden draaien",
   "report.whatThisSays": "Wat dit rapport zegt",
-  "report.theWorstOfIt": "Het ergste ervan"
+  "report.theWorstOfIt": "Het ergste ervan",
+  "report.notWritten": "Door een consultant geschreven, en niet geschreven voor deze opdracht",
+  "report.notAssessed": "Niet beoordeeld",
+  "report.severity.critical": "Kritiek",
+  "report.severity.high": "Hoog",
+  "report.severity.medium": "Middel",
+  "report.severity.low": "Laag",
+  "report.severity.info": "Info",
+  "report.delivery": "Levering en ALM",
+  "report.readiness": "Gereedheid voor verandering",
+  "report.functionalMaturity": "Functionele volwassenheid",
+  "report.debtByDomain": "Schuld per domein",
+  "report.lowCode": "Low code",
+  "report.proCode": "Pro code",
+  "report.external": "Extern"
 }

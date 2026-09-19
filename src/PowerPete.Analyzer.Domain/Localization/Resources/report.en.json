@@ -69,5 +69,19 @@
   "report.aRange": "a range, not a quotation",
   "report.checksThatCouldNotRun": "checks that could not run",
   "report.whatThisSays": "What this report says",
-  "report.theWorstOfIt": "The worst of it"
+  "report.theWorstOfIt": "The worst of it",
+  "report.notWritten": "Written by a consultant, and not written for this engagement",
+  "report.notAssessed": "Not assessed",
+  "report.severity.critical": "Critical",
+  "report.severity.high": "High",
+  "report.severity.medium": "Medium",
+  "report.severity.low": "Low",
+  "report.severity.info": "Info",
+  "report.delivery": "Delivery and ALM",
+  "report.readiness": "Readiness for change",
+  "report.functionalMaturity": "Functional maturity",
+  "report.debtByDomain": "Debt by domain",
+  "report.lowCode": "Low code",
+  "report.proCode": "Pro code",
+  "report.external": "External"
 }

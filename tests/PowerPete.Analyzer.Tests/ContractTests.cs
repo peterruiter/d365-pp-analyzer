@@ -1,6 +1,7 @@
 namespace PowerPete.Analyzer.Tests;
 
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using FluentAssertions;
 using PowerPete.Analyzer.Domain;
 using Xunit;
@@ -428,6 +429,53 @@ public class DataLayerTests
         UnreadFromSolutionZip.Keys.Should().BeSubsetOf(
             unread,
             "this type is read now, so remove it from UnreadFromSolutionZip");
+    }
+
+    [Fact]
+    public void Every_key_the_report_asks_for_exists_in_every_language()
+    {
+        // The other half of the translation problem, and the quieter half.
+        //
+        // Every lookup in the renderer carries its English as a second argument, which is
+        // what stops a missing key leaving a hole on page four. It also means a key that
+        // exists in no bundle at all renders perfectly, in English, in all six languages,
+        // and nothing ever says so. Fourteen of them had accumulated that way, including
+        // three section headings and the whole legend of the low code donut.
+        //
+        // Scanned out of the source rather than listed here, so a key added tomorrow is
+        // checked tomorrow.
+        var source = Directory
+            .EnumerateFiles(Path.Combine(Solution(), "PowerPete.Analyzer.Export"), "*.cs", SearchOption.AllDirectories)
+            .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            .Select(File.ReadAllText);
+
+        var used = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var text in source)
+        {
+            foreach (Match match in Regex.Matches(text, @"\[\s*""(report\.[A-Za-z0-9.]+)""", RegexOptions.None, TimeSpan.FromSeconds(5)))
+            {
+                used.Add(match.Groups[1].Value);
+            }
+        }
+
+        used.Should().NotBeEmpty("the renderer looks keys up and the scan has to find them");
+
+        var missing = new List<string>();
+
+        foreach (var language in Contracts.Read("locales").Array("locales").Select(locale => locale.Str("code")))
+        {
+            var bundle = JsonDocument.Parse(File.ReadAllText(
+                Path.Combine(Resources(), $"report.{language}.json"))).RootElement;
+
+            missing.AddRange(used
+                .Where(key => !bundle.TryGetProperty(key, out _))
+                .Select(key => $"{language}: {key}"));
+        }
+
+        missing.Should().BeEmpty(
+            "a key with no bundle entry renders its English fallback in every language, silently");
     }
 
     /// <summary>The src folder.</summary>

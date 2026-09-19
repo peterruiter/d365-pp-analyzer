@@ -112,6 +112,14 @@ public sealed class ReportComposer(AnalysisStore analysis, WorkspaceStore worksp
             .ToDictionary(section => section.SectionId, section => section.Body, StringComparer.Ordinal);
 
         var name = engagement?.Name ?? "Engagement";
+
+        // English when the engagement does not say, and when it names one nobody ships:
+        // a language code the product cannot render would fall through every lookup and
+        // print resource keys down the page rather than failing where somebody would see.
+        var language = engagement?.ReportLanguage is { Length: > 0 } chosen
+            && LocaleCatalogue.All.Any(locale => locale.Code == chosen)
+                ? chosen
+                : "en";
         var mode = run?.Mode ?? "assessment";
         var produced = run?.CompletedUtc ?? run?.CreatedUtc ?? DateTime.UtcNow;
 
@@ -120,7 +128,13 @@ public sealed class ReportComposer(AnalysisStore analysis, WorkspaceStore worksp
             produced,
             new FindingsWorkbook.Model(
                 name, runId.Value, produced, mode, run?.CreatedBy,
-                score, findings, rated, customisation, backlog),
+                score, findings, rated, customisation, backlog,
+
+                // The engagement's language, which it has stored since the first release
+                // and which nothing ever read. Both documents defaulted to English, so a
+                // Dutch engagement produced a Dutch screen and an English report, and all
+                // six translated bundles sat in the assembly unused.
+                language),
             new AssessmentReportPdf.Model(
                 name, engagement?.ClientName, runId.Value, produced, mode, run?.CreatedBy,
                 [.. solutions.Select(solution => solution.UniqueName)],
@@ -144,8 +158,9 @@ public sealed class ReportComposer(AnalysisStore analysis, WorkspaceStore worksp
                     return (axis, scored is null ? (decimal?)null : scored.Score, scored?.Evidence);
                 })],
 
-                // Language stays default here; the caller picks it. The flag does not:
-                // the cover has to say out loud that the sample estate is a sample, and
+                language,
+
+                // The cover has to say out loud that the sample estate is a sample, and
                 // the only thing that knows is the identifier.
                 IsDemonstration: engagementId == AccessStore.DemoEngagementId));
     }
