@@ -962,45 +962,7 @@ public sealed partial class AssessmentReportPdf
             "An identity matters here. A report produced under an administrator account is not evidence that a " +
             "least privileged integration could have produced the same one.",
             new TextStyle { Size = 9, Colour = CapgeminiBrand.Muted }, paddingTop: 10f);
-
-        // The sections nobody wrote, named once, here.
-        //
-        // They are left out of the body now rather than printed as empty boxes with an
-        // instruction to the consultant inside them, which read as a draft sent by
-        // mistake. Left out is not the same as unmentioned: a reader who wonders why there
-        // is no readiness section should be able to find out that nobody wrote one, and
-        // the page that already explains what was and was not looked at is where that
-        // belongs.
-        var unwritten = WrittenSections
-            .Where(section => Written(model, section.Id) is null)
-            .Select(section => model.Text[section.Key, section.Fallback])
-            .ToList();
-
-        if (unwritten.Count > 0)
-        {
-            flow.Text(
-                $"{model.Text["report.notWritten", "Written by a consultant, and not written for this engagement"]}: "
-                + $"{string.Join(", ", unwritten)}.",
-                new TextStyle { Size = 9, Colour = CapgeminiBrand.Muted }, paddingTop: 8f);
-        }
     }
-
-    /// <summary>
-    /// The sections of this report that no amount of reading an estate can produce.
-    /// </summary>
-    /// <remarks>
-    /// Held in one place because two things need the same list and must not disagree: the
-    /// body, which prints each one only where somebody wrote it, and the method section,
-    /// which names the ones nobody did.
-    /// </remarks>
-    private static readonly (string Id, string Key, string Fallback)[] WrittenSections =
-    [
-        ("managementSummary", "report.managementSummary", "Management summary"),
-        ("delivery", "report.delivery", "Delivery and ALM"),
-        ("functionalMaturity", "report.functionalMaturity", "Functional maturity"),
-        ("readiness", "report.readiness", "Readiness for change"),
-        ("scenarios", "report.scenarios", "Scenarios")
-    ];
 
     /// <summary>
     /// The capability scores, as a shape and as prose.
@@ -1073,10 +1035,10 @@ public sealed partial class AssessmentReportPdf
     /// read as candid, it reads as a draft somebody sent by mistake, and the client cannot
     /// act on the prompt because the prompt is not addressed to them.
     ///
-    /// The honesty is kept where it belongs: the method section at the back names the
-    /// sections nobody wrote, once, in a document that already explains what was and was
-    /// not looked at. Nothing is silently dropped; it is just not dropped into the middle
-    /// of the argument.
+    /// So a section nobody wrote is simply not in the document. A reader cannot tell the
+    /// difference between a section that was considered and left blank and one that was
+    /// never part of this report, which is the cost of the decision and is accepted: the
+    /// alternative put an instruction to a colleague in front of a client.
     /// </remarks>
     /// <param name="flow">Where to write.</param>
     /// <param name="model">The report.</param>

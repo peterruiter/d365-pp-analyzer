@@ -831,10 +831,11 @@ boxes in it and an instruction to the consultant inside each one does not read a
 reads as a draft somebody sent by mistake, and the client cannot act on a prompt that is not
 addressed to them.
 
-Nothing is silently dropped. The method section at the back names the sections nobody wrote,
-once, on the page that already explains what was and was not looked at. Functional maturity
-drops out entirely when nothing is scored and nothing is written, which previously left a
-heading, a rule and an empty page.
+A section nobody wrote is simply not in the document. A reader cannot tell the difference
+between a section that was considered and left blank and one that was never part of this
+report, and that is the accepted cost: the alternative put an instruction to a colleague in
+front of a client. Functional maturity drops out entirely when nothing is scored and nothing
+is written, which previously left a heading, a rule and an empty page.
 
 An engagement with no consultant input is twelve pages rather than fifteen, with no empty
 ones in any language.
