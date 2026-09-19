@@ -670,7 +670,7 @@ The build gates, for reference:
 2. `./build/Test-Generators.ps1` — generates into a throwaway folder and checks the output.
    Passes.
 3. `./build/Invoke-CodeGen.ps1` — generates and builds. Twelve of twelve, no warnings.
-4. `dotnet test` — 120 tests, all passing.
+4. `dotnet test` — 121 tests, all passing.
 5. `./build/New-SampleSolution.ps1` then `analyse samples/SampleSolution.zip` — sixteen
    planted defects, twelve found and four correctly not assessed.
 
@@ -926,6 +926,45 @@ been translated and rendered as its own key, because nothing had ever opened the
 DevOps form either. The credential label said "Client secret" on every mode, which is right
 for an app registration and wrong for both tokens, and the mode chooser told somebody
 picking a target to pick the platform this connection reads.
+
+## The worker had never run a job
+
+Every run ever queued died before its first stage, and nothing noticed because nothing else
+goes through that path. The demonstration estate is built by the seeder, the command line
+analyser has no database, and the probes written during this work bypassed persistence. So
+extraction, analysis, scoring, backlog building and storage had never once run together
+against a real file through the queue.
+
+`GetEngagementAsync` selected nine columns into an eight property record. Dapper could not
+find a constructor for them and threw, and what it threw said "a parameterless default
+constructor or one matching signature ... is required for Engagement materialization",
+which names constructors rather than the column somebody added.
+
+It runs now. An IVR toolkit export uploaded to blob, an offline connection pointing at it, a
+run queued through the API and picked up by the worker: 403 components, 16 component types,
+13 findings, 16 rules correctly reported as not assessed, 4.5 percent low code, status
+partial. Those agree with what the offline probe finds in the same file, which is the point
+of checking them.
+
+### The guard that existed was the wrong half
+
+`Never_selects_star_into_a_record` catches a starred select. This was an explicit column
+list that had drifted from the record beside it, which fails identically and was not
+covered. `Never_selects_a_different_number_of_columns_than_the_record_has` reflects each
+record's constructor arity and counts the columns of the query that materialises it.
+
+It took three attempts to make it real, and both failures are worth recording because both
+are how a test ends up proving nothing:
+
+- Searching forward from the call for a select found one belonging to a method further down
+  the file, and reported an eight column record against a thirteen column query. A failure
+  about nothing is worse than no test.
+- Bounding that search at the next `Async<` found the one inside the call just matched,
+  truncated the window to nothing, and passed cleanly against the exact defect it was
+  written for.
+
+Both directions are now checked by hand: with the bug reintroduced it fails naming the
+count, and with it fixed it passes.
 
 ## What was ported rather than invented
 

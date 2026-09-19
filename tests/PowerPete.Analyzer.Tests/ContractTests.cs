@@ -478,6 +478,111 @@ public class DataLayerTests
             "a key with no bundle entry renders its English fallback in every language, silently");
     }
 
+    [Fact]
+    public void Never_selects_a_different_number_of_columns_than_the_record_has()
+    {
+        // The other half of the starred select, and the half that actually bit.
+        //
+        // Dapper materialises a record through its constructor and needs the columns to
+        // match it. A starred select fails that way and there is a test above for it. An
+        // explicit list can fail exactly the same way by drifting from the record beside
+        // it, and nothing caught that: GetEngagementAsync selected nine columns into an
+        // eight property record, threw about constructors rather than about columns, and
+        // killed every run the worker ever picked up.
+        //
+        // Counted rather than name matched. Dapper is forgiving about order and about
+        // case and unforgiving about arity, so arity is what this checks.
+        var sources = Directory
+            .EnumerateFiles(Path.Combine(Solution(), "PowerPete.Analyzer.Data"), "*.cs", SearchOption.AllDirectories)
+            .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal));
+
+        var mismatched = new List<string>();
+        var checkedAny = false;
+
+        foreach (var file in sources)
+        {
+            var text = File.ReadAllText(file);
+
+            // The shape this is looking for: a typed Dapper call, then the first SELECT
+            // literal after it. Anything it cannot read confidently is skipped rather
+            // than guessed at, because a test that invents a failure is worse than one
+            // that misses a case.
+            foreach (Match call in Regex.Matches(
+                text,
+                @"Query(?:Single|SingleOrDefault|First|FirstOrDefault)?Async<(?<type>[A-Za-z][A-Za-z0-9_]*)>\s*\(",
+                RegexOptions.None,
+                TimeSpan.FromSeconds(5)))
+            {
+                var type = Type.GetType($"PowerPete.Analyzer.Data.{call.Groups["type"].Value}, PowerPete.Analyzer.Data");
+
+                // Only records with one constructor. A tuple, a scalar or a type with
+                // several constructors is not something this can reason about.
+                if (type is null || !type.IsClass) continue;
+
+                var constructors = type.GetConstructors();
+                if (constructors.Length != 1) continue;
+
+                var arity = constructors[0].GetParameters().Length;
+                if (arity < 2) continue;
+
+                // Bounded, and bounded twice.
+                //
+                // A call whose SQL is in a variable has no literal after it, and an
+                // unbounded search walks forward into the next method and reads somebody
+                // else's select. It did: the first version of this test reported an eight
+                // column record against a thirteen column query from further down the
+                // file, which is a failure about nothing.
+                var window = text[call.Index..];
+                // Past this call's own text. Searching from a fixed offset finds the
+                // "Async<" inside the call that was just matched and truncates the window
+                // to nothing, which is how the first version of this passed against the
+                // exact defect it was written for.
+                var next = window.IndexOf("Async<", call.Length, StringComparison.Ordinal);
+
+                if (next > 0) window = window[..next];
+
+                var select = Regex.Match(
+                    window,
+                    @"SELECT\s+(?<columns>[^;]*?)\s+FROM\s",
+                    RegexOptions.IgnoreCase | RegexOptions.Singleline,
+                    TimeSpan.FromSeconds(5));
+
+                // Close to the call, or it belongs to something else. The literal sits a
+                // line or two below the call; anything further away is not this query's.
+                if (!select.Success || select.Index > 200) continue;
+
+                var columns = select.Groups["columns"].Value;
+
+                // A hole in an interpolated string is a column list held somewhere else,
+                // which is the thing this defect was fixed by adopting. Those are the
+                // ones that cannot drift, so they are the ones not worth parsing.
+                if (columns.Contains('{', StringComparison.Ordinal)) continue;
+
+                // Anything with its own parentheses or a star is a shape this is not
+                // confident about splitting.
+                if (columns.Contains('(', StringComparison.Ordinal)) continue;
+                if (columns.Contains('*', StringComparison.Ordinal)) continue;
+
+                var count = columns.Split(',').Count(column => column.Trim().Length > 0);
+
+                checkedAny = true;
+
+                if (count != arity)
+                {
+                    mismatched.Add(
+                        $"{Path.GetFileName(file)}: {type.Name} takes {arity} but the select has {count}");
+                }
+            }
+        }
+
+        checkedAny.Should().BeTrue("the scan has to be finding queries for this to mean anything");
+
+        mismatched.Should().BeEmpty(
+            "Dapper needs a constructor matching the columns, and the exception it throws when there is none "
+            + "names constructors rather than the column that was added");
+    }
+
     /// <summary>The src folder.</summary>
     private static string Solution()
     {
