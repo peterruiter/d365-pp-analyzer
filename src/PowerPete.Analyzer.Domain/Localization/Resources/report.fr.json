@@ -56,5 +56,16 @@
   "report.unrated": "Non évalué",
   "report.whatIsInTheEstate": "Ce que contient le parc",
   "report.whatWasNotAssessed": "Ce qui n'a pas été évalué",
-  "report.whyNot": "Pourquoi pas"
+  "report.whyNot": "Pourquoi pas",
+  "report.coverEyebrow": "Analyse de solution Power Platform",
+  "report.solutionsWord": "solution(s)",
+  "report.preparedBy": "Préparé par Capgemini. Les estimations sont des fourchettes issues d'un catalogue de règles, pas un devis.",
+  "report.sampleBanner": "Données d'exemple. Aucun patrimoine client, environnement ou personne n'est représenté ici.",
+  "report.footerSample": "données d'exemple",
+  "report.page": "Page",
+  "report.of": "sur",
+  "report.componentsRead": "Composants lus",
+  "report.estimatedEffort": "Effort estimé",
+  "report.aRange": "une fourchette, pas un devis",
+  "report.checksThatCouldNotRun": "contrôles qui n ont pas pu s exécuter"
 }

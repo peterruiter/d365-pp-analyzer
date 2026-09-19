@@ -2,32 +2,28 @@
   "meta.title": "Power Platform Solution Analyzer — Capgemini",
   "meta.description": "Lee un parque de Power Platform, dice qué es deuda técnica y estima cuánto costaría corregirla. Solo lectura. Nombra lo que no pudo comprobar.",
   "meta.ogDescription": "Una evaluación de un parque de Power Platform que nunca escribe en él y siempre dice qué no pudo leer.",
-
   "nav.what": "Qué hace",
   "nav.modes": "Vías de entrada",
   "nav.honesty": "Honestidad",
   "nav.safety": "Seguridad",
   "nav.output": "Resultado",
+  "nav.report": "El informe",
   "nav.rules": "Qué comprueba",
   "nav.privacy": "Privacidad",
   "nav.signin": "Iniciar sesión",
   "nav.menu": "Menú",
-
   "lang.choose": "Elegir idioma",
   "lang.heading": "Idioma",
   "lang.close": "Cerrar",
-
   "theme.lightOn": "Tema claro activo",
   "theme.darkOn": "Tema oscuro activo",
   "theme.toggle": "Cambiar entre claro y oscuro",
-
   "hero.eyebrow": "Capgemini · Power Platform",
   "hero.headline": "Descubra qué hay realmente ahí dentro.",
   "hero.lede": "Lee un parque de Power Platform, le dice qué es deuda técnica y cuánto costaría corregirla, y nombra cada comprobación que no pudo ejecutar. Nunca escribe en el entorno.",
   "hero.primary": "Iniciar sesión",
   "hero.secondary": "Ver qué hace",
   "hero.scroll": "Desplazar",
-
   "what.eyebrow": "Qué hace",
   "what.heading": "Tres movimientos, en el orden en que los pide un cliente.",
   "what.lede": "Nadie abre una herramienta de evaluación porque quiera una herramienta. Quiere saber qué tiene, qué falla y cuánto cuesta arreglarlo.",
@@ -37,28 +33,23 @@
   "what.card2.body": "Lo que Microsoft ha retirado o dejado obsoleto, lo que se construyó mal con independencia de con qué, y aquello de cuyo fallo nadie se enteraría. Cada hallazgo con la evidencia que lo activó.",
   "what.card3.title": "Le pone un número",
   "what.card3.body": "Un rango de horas por hallazgo con su razonamiento, agrupado en un backlog que alguien refinaría de verdad, sumado a un total cuya aritmética se puede comprobar en la sala.",
-
   "modes.eyebrow": "Vías de entrada",
   "modes.heading": "Tres formas de alcanzar un parque, y a qué renuncia cada una.",
   "modes.lede": "Se generan a partir del mismo contrato con el que funciona el producto, de modo que esta página no puede prometer un alcance que el producto no tiene.",
   "modes.note": "Lo que un modo no alcanza decide qué comprobaciones pueden ejecutarse siquiera. Toda comprobación que no pudo ejecutarse se nombra en el informe, con su motivo, y nunca se presenta como superada.",
-
   "modes.name.servicePrincipal": "Usuario de aplicación, solo lectura",
   "modes.summary.servicePrincipal": "Un registro de aplicación de Entra añadido al entorno con un rol de solo lectura. El modo para todo lo que deba repetirse. La definición del rol se entrega con el producto, así un equipo de seguridad revisa un archivo en lugar de una descripción.",
   "modes.name.delegated": "Usuario delegado",
   "modes.summary.delegated": "Usted, con la sesión iniciada, leyendo lo que ya puede leer. Nada que crear y nada que aprobar, por eso es la vía más rápida para ver algo real. No es repetible: una ejecución programada no puede tomar prestada su sesión.",
   "modes.name.offlineZip": "Archivo de solución",
   "modes.summary.offlineZip": "Una solución no administrada exportada, leída sin conexión. Sin conexión, sin credencial, sin revisión de seguridad. Es el modo que pasa la revisión en la primera semana mientras la petición de la entidad de servicio espera en una cola.",
-
   "modes.evidence.metadata": "Metadatos en vivo",
   "modes.evidence.solutionZip": "Archivo de solución",
   "modes.evidence.checker": "Power Apps checker",
   "modes.evidence.runtime": "Uso e historial de ejecución",
-
   "modes.reach.full": "Completo",
   "modes.reach.partial": "Parcial",
   "modes.reach.none": "Ninguno",
-
   "honesty.eyebrow": "Honestidad",
   "honesty.heading": "Le dice qué no pudo comprobar.",
   "honesty.body1": "Cada comprobación declara la evidencia que necesita. Si la conexión elegida no alcanza esa evidencia, la comprobación se informa como no evaluada, por su nombre y con el motivo. Nunca como superada y nunca contada como cero hallazgos.",
@@ -67,7 +58,6 @@
   "honesty.stat2.label": "Tipos de componente que conoce",
   "honesty.stat3.label": "Dominios sobre los que informa",
   "honesty.stat4.label": "Idiomas, en todo",
-
   "safety.eyebrow": "Seguridad",
   "safety.heading": "No puede cambiar nada en el entorno.",
   "safety.body1": "En ningún modo, y no hay ajuste que lo cambie. Un descubrimiento puede ejecutarse en una primera conversación sin comité de cambios, y eso es lo que lo hace utilizable antes de que nadie haya comprado nada.",
@@ -80,7 +70,6 @@
   "safety.card3.body": "Publicar exige una aprobación, y la aprobación registra exactamente el backlog aprobado. Si después cambia, la publicación se niega en lugar de escribir algo que nadie firmó.",
   "safety.card4.title": "Un cliente, un encargo",
   "safety.card4.body": "El acceso es por encargo y se aplica en la consulta y no en la pantalla, de modo que una página que olvide filtrar sigue sin poder mostrar el parque de un cliente a otro.",
-
   "output.eyebrow": "Resultado",
   "output.heading": "Qué sale del producto.",
   "output.lede": "Tres cosas, cada una para una persona distinta en la sala, todas producidas a partir de los resultados guardados de una ejecución y no de las reglas de hoy.",
@@ -90,13 +79,11 @@
   "output.card2.body": "Un PDF para quien no abrirá el libro. Qué se leyó, qué no se leyó, qué se encontró, cuánto costaría y dónde encaja el trabajo en una hoja de ruta.",
   "output.card3.title": "Un backlog refinado",
   "output.card3.body": "Un epic por categoría, una feature por regla que la necesite, una historia por hallazgo que merezca nombrarse, y lo trivial agrupado. Con criterios de aceptación y, si se desea, escrito directamente en Azure DevOps.",
-
   "rules.eyebrow": "Qué comprueba",
   "rules.heading": "Nueve categorías, contadas desde el catálogo en lugar de escritas aquí.",
   "rules.lede": "Añadir una comprobación actualiza esta página. Es intencionado: una página de marketing que promete más de lo que hace el producto es una que alguien acaba leyendo en voz alta en una reunión.",
   "rules.note": "Algunas provienen del propio Power Apps checker de Microsoft, incorporadas bajo los identificadores de regla de Microsoft para que un consultor pueda consultarlas. El resto son las que el checker no tiene: posición en el ciclo de vida, deuda repartida entre componentes, proliferación e higiene de soluciones.",
   "rules.count": "{0} comprobaciones",
-
   "rules.category.lifecycle": "Ciclo de vida y obsolescencia",
   "rules.categoryBody.lifecycle": "Componentes que Microsoft ha retirado, declarado obsoletos o dejado de mejorar. Un diálogo que sigue en una solución dice más de un parque que cualquier otro componente aislado.",
   "rules.category.modernisation": "Modernización",
@@ -115,11 +102,9 @@
   "rules.categoryBody.security": "Privilegios, secretos en definiciones y escritura a nivel de organización. No es una prueba de intrusión, y no pretende serlo.",
   "rules.category.operability": "Operabilidad",
   "rules.categoryBody.operability": "Si alguien se enteraría de que algo se ha roto. Un parque sin ninguna alerta de fallo es uno donde el primer aviso de una caída llega de un cliente.",
-
   "languages.eyebrow": "Idiomas",
   "languages.heading": "Seis idiomas, y tres ajustes separados.",
   "languages.body1": "Inglés, neerlandés, alemán, francés, español e italiano, en todo: las pantallas, las explicaciones de las reglas, los hallazgos, el informe y el backlog. El idioma en que usted lee el producto, el idioma en que sale el informe y el idioma en que se escribe el backlog son tres ajustes, porque una consultora neerlandesa que redacta un informe en inglés para la IT corporativa de un cliente y un backlog en español para el equipo de entrega es el caso normal y no la excepción.",
-
   "limits.eyebrow": "Límites",
   "limits.heading": "Qué no le dirá.",
   "limits.lede": "Una página que solo afirma es un folleto. Estas son las preguntas que hay que llevar a otro sitio.",
@@ -129,37 +114,30 @@
   "limits.card2.body": "Las comprobaciones de seguridad tratan de privilegios, secretos en definiciones y escritura a nivel de organización. No evalúan si se puede entrar en el parque.",
   "limits.card3.title": "No arregla nada",
   "limits.card3.body": "No hay modo de remediación ni se planea añadirlo. Todo lo que produce es una recomendación, un informe o un elemento de trabajo para quien hará el trabajo por su cuenta.",
-
   "closing.heading": "Descubra qué hay realmente ahí dentro.",
   "closing.body": "Inicie sesión con su cuenta de Capgemini. Le espera un parque de demostración, con hallazgos que el propio producto generó, para que haya algo que mirar antes de que un cliente le haya dado nada.",
-
   "footer.note": "Capgemini · Power Platform Solution Analyzer",
-
   "privacyBlock.eyebrow": "Privacidad",
   "privacyPage.title": "Privacidad — Power Platform Solution Analyzer",
   "privacyPage.description": "Qué lee este producto, qué descarta, qué se niega a hacer y dónde se guarda todo.",
   "privacyPage.heading": "Qué lee y qué no.",
   "privacyPage.lede": "Escrito para que lo lea la responsable de seguridad de un cliente y no un abogado. Si algo aquí no está lo bastante claro como para actuar, es un defecto y nos gustaría saberlo.",
-
   "privacyPage.reads.heading": "Qué lee",
   "privacyPage.reads.lede": "Solo lo que necesita una evaluación, y siempre únicamente leyendo:",
   "privacyPage.reads.item1": "Metadatos de soluciones y componentes: qué tablas, flujos, aplicaciones, plug-ins, roles y recursos web existen y cómo están configurados.",
   "privacyPage.reads.item2": "El contenido de un archivo de solución exportado, cuando se proporciona uno.",
   "privacyPage.reads.item3": "Uso e historial de ejecución, en la medida en que la conexión llegue: cuántas veces se ejecutó un flujo, cuántas falló, cuánto tardó un paso de plug-in.",
   "privacyPage.reads.item4": "Los resultados del Power Apps checker de Microsoft, donde se haya ejecutado.",
-
   "privacyPage.removed.heading": "Qué descarta",
   "privacyPage.removed.lede": "Algunas cosas se leen de paso y no se conservan:",
   "privacyPage.removed.item1": "Los secretos encontrados dentro de una definición se cuentan, nunca se almacenan y nunca se muestran. Un hallazgo dice que hay un secreto y dónde, no cuál es.",
   "privacyPage.removed.item2": "Las credenciales de una conexión viven en Azure Key Vault y se referencian por nombre. La base de datos del producto no contiene ningún secreto.",
   "privacyPage.removed.item3": "Los datos de negocio de las tablas no se leen. El producto cuenta filas; no las mira.",
-
   "privacyPage.refuses.heading": "Qué se niega a hacer",
   "privacyPage.refuses.lede": "No son ajustes. No hay configuración que active ninguno de ellos:",
   "privacyPage.refuses.item1": "Nunca escribe en un entorno de Power Platform, en ningún modo.",
   "privacyPage.refuses.item2": "Nunca publica en Azure DevOps sin una aprobación explícita del backlog exacto que se publica.",
   "privacyPage.refuses.item3": "Nunca muestra el parque de un encargo a alguien a quien no se le ha concedido acceso a ese encargo.",
-
   "privacyPage.documents.heading": "Qué va en los documentos",
   "privacyPage.documents.lede": "Tres cosas salen del producto, y conviene saber exactamente qué hay en cada una:",
   "privacyPage.documents.item1.title": "El libro.",
@@ -168,17 +146,35 @@
   "privacyPage.documents.item2.body": "El mismo material en forma de relato, más la lista de lo que no pudo comprobarse. Se nombran componentes allí donde un hallazgo trata de una cosa concreta.",
   "privacyPage.documents.item3.title": "Los elementos de trabajo.",
   "privacyPage.documents.item3.body": "Títulos, descripciones y criterios de aceptación, escritos en el propio proyecto de Azure DevOps del cliente. Nada sale de su tenant que no estuviera ya dentro.",
-
   "privacyPage.deletion.heading": "Eliminar un encargo",
   "privacyPage.deletion.body": "Eliminar un encargo elimina sus conexiones, sus ejecuciones, su inventario, sus hallazgos, sus estimaciones y su backlog, en una sola operación y sin papelera. Los elementos de trabajo ya publicados en el proyecto de Azure DevOps de un cliente son suyos y no se tocan.",
-
   "privacyPage.where.heading": "Dónde se ejecuta",
   "privacyPage.where.body": "En Microsoft Azure, en una región elegida para el despliegue, en la propia suscripción de Capgemini. La base de datos solo es accesible para la identidad administrada del producto; no hay contraseña que filtrar, porque no hay contraseña.",
-
   "privacyPage.cookies.heading": "Cookies en este sitio",
   "privacyPage.cookies.body": "Este sitio público coloca una cookie, y solo si usa el interruptor de claro y oscuro: recuerda cuál eligió. No hay analítica, ni rastreo, ni script de terceros, ni fuente, imagen u hoja de estilos cargada desde ningún sitio que le vería llegar. Iniciar sesión coloca una cookie de sesión, y es la que le mantiene dentro.",
-
   "privacyPage.closing.heading": "¿Aún sin respuesta?",
   "privacyPage.closing.body": "Pregunte al equipo que le dio acceso. Una pregunta que hubo que hacer suele significar que a esta página le falta un párrafo.",
-  "privacyPage.closing.link": "Volver al inicio"
+  "privacyPage.closing.link": "Volver al inicio",
+  "report.eyebrow": "El informe",
+  "report.heading": "Cada página aquí es real.",
+  "report.lede": "Producida por el producto a partir del patrimonio de demostración, no dibujada para esta página. Las cifras son las que encontraron las reglas.",
+  "report.previous": "Página anterior",
+  "report.next": "Página siguiente",
+  "report.pages": "Páginas del informe de evaluación",
+  "report.page1": "La portada. Qué se leyó, cómo y cuánto cuesta.",
+  "report.page2": "El resumen ejecutivo. Los tres hallazgos que importan, con un párrafo escrito.",
+  "report.page3": "Qué hay en el patrimonio, por dominio.",
+  "report.page4": "Personalización y complejidad. La proporción low code, con su definición al lado.",
+  "report.page5": "Los hallazgos, los peores primero, agrupados por categoría.",
+  "report.page6": "La hoja de ruta. Cada hallazgo situado según el tipo de problema.",
+  "report.page7": "Madurez funcional, puntuada en un taller. Dos ejes quedan sin puntuar.",
+  "report.page8": "Escenarios, en las palabras del propio cliente.",
+  "alt.pageCover": "Portada con la marca Capgemini y las cifras principales",
+  "alt.pageSummary": "La página del resumen ejecutivo",
+  "alt.pageEstate": "Un gráfico de barras de componentes por dominio",
+  "alt.pageComplexity": "Un anillo de la proporción low code y un desglose de complejidad",
+  "alt.pageFindings": "La tabla de hallazgos",
+  "alt.pageRoadmap": "La cuadrícula de la hoja de ruta",
+  "alt.pageMaturity": "Un gráfico radar de madurez funcional",
+  "alt.pageScenarios": "La página de escenarios"
 }

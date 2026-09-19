@@ -6,6 +6,7 @@ using PowerPete.Analyzer.Domain;
 using PowerPete.Analyzer.Domain.Localization;
 using PowerPete.Analyzer.Export.Pdf;
 using Syncfusion.Drawing;
+using Syncfusion.Pdf;
 using Syncfusion.Pdf.Graphics;
 
 /// <summary>
@@ -35,6 +36,7 @@ public sealed partial class AssessmentReportPdf
     /// <param name="Customisation">The components by customisation chart data.</param>
     /// <param name="Roadmap">The roadmap items.</param>
     /// <param name="Written">Consultant text, keyed by report section id.</param>
+    /// <param name="IsDemonstration">Whether this is the sample estate, which the cover has to say out loud.</param>
     /// <param name="Maturity">Capability axis, score and who said so. Empty until somebody scores it.</param>
     /// <param name="Language">The locale the document is written in. English when absent.</param>
     public sealed record Model(
@@ -51,7 +53,8 @@ public sealed partial class AssessmentReportPdf
         IReadOnlyList<RoadmapItem> Roadmap,
         IReadOnlyDictionary<string, string> Written,
         IReadOnlyList<(string Axis, decimal? Score, string? Evidence)> Maturity,
-        string Language = "en")
+        string Language = "en",
+        bool IsDemonstration = false)
     {
         /// <summary>
         /// The words this document is written in.
@@ -143,42 +146,273 @@ public sealed partial class AssessmentReportPdf
             new PointF(48f, 42f), new PointF(size.Width - 48f, 42f));
     }
 
+    /// <summary>
+    /// The running footer: where it came from, the page number and the wordmark.
+    /// </summary>
+    /// <remarks>
+    /// The page number is a composite field rather than a counter this code keeps, because
+    /// the renderer adds pages of its own whenever a table outgrows one and a number kept
+    /// here would not know about them.
+    /// </remarks>
+    /// <param name="graphics">The page.</param>
+    /// <param name="size">Its size.</param>
+    /// <param name="theme">Fonts.</param>
+    /// <param name="model">What to write.</param>
     private static void Footer(PdfGraphics graphics, SizeF size, PdfTheme theme, Model model)
     {
         var style = new TextStyle { Size = 7.5f, Colour = CapgeminiBrand.Muted };
+        var right = size.Width - 48f;
+
+        graphics.DrawLine(PdfTheme.Pen(CapgeminiBrand.Line, 0.5f),
+            new PointF(48f, size.Height - 30f), new PointF(right, size.Height - 30f));
+
+        var origin = model.IsDemonstration
+            ? model.Text["report.footerSample", "sample data"]
+            : $"{model.Text["report.readVia", "read via"]} {model.ExtractionMode}";
 
         graphics.DrawString(
-            $"Produced {model.ProducedUtc:yyyy-MM-dd} from run {model.RunId.ToString()[..8]}. Read via {model.ExtractionMode}.",
-            theme.Font(style), PdfTheme.Brush(CapgeminiBrand.Muted), new PointF(48f, size.Height - 24f));
+            $"{model.EngagementName}  ·  {model.ProducedUtc:yyyy-MM-dd}  ·  {origin}",
+            theme.Font(style), PdfTheme.Brush(CapgeminiBrand.Muted),
+            new RectangleF(48f, size.Height - 22f, size.Width - 96f - 150f, 12f));
+
+        var markHeight = FooterWordmarkWidth * CapgeminiBrand.WordmarkAspect;
+        using var mark = new MemoryStream(CapgeminiBrand.WordmarkBlue, writable: false);
+        graphics.DrawImage(
+            new PdfBitmap(mark), right - FooterWordmarkWidth, size.Height - 24f, FooterWordmarkWidth, markHeight);
+
+        var numbers = new PdfCompositeField(
+            theme.Font(style),
+            PdfTheme.Brush(style.Colour),
+            model.Text["report.page", "Page"] + " {0} " + model.Text["report.of", "of"] + " {1}",
+            new PdfAutomaticField[] { new PdfPageNumberField(), new PdfPageCountField() })
+        {
+            // Bounds and the draw point are added together rather than one replacing the
+            // other, so the box carries the width and the point stays at zero on that axis.
+            StringFormat = PdfTheme.Format(style with { Align = PdfTextAlignment.Right }),
+            Bounds = new RectangleF(0, 0, right - FooterWordmarkWidth - 10f, 12f)
+        };
+
+        numbers.Draw(graphics, new PointF(0, size.Height - 22f));
     }
 
+    /// <summary>Width of the wordmark reversed out of the cover band.</summary>
+    private const float CoverWordmarkWidth = 132f;
+
+    /// <summary>Width of the wordmark in the running footer.</summary>
+    private const float FooterWordmarkWidth = 64f;
+
+    /// <summary>
+    /// The cover.
+    /// </summary>
+    /// <remarks>
+    /// Carries the same furniture as the other reports in this suite, because a client
+    /// receives two of them from the same account team in the same month and a document
+    /// that does not look like its siblings reads as a document from somebody else. The
+    /// wordmark reversed out of the navy band, the product name and the tagline opposite
+    /// it, a blue rule under the band, and the wordmark again in blue in every footer.
+    ///
+    /// None of that was here. The palette and the typeface were already right and the
+    /// wordmark was already embedded in the assembly; nothing ever drew it.
+    /// </remarks>
+    /// <param name="surface">The document.</param>
+    /// <param name="model">What to write.</param>
     private static void Cover(PdfSurface surface, Model model)
     {
-        var page = surface.AddPage();
+        var page = surface.AddPageWithoutHeader();
         var graphics = page.Graphics;
         var width = surface.PageWidth;
 
-        graphics.DrawRectangle(PdfTheme.Brush(CapgeminiBrand.DarkBlue), new RectangleF(0, 0, width, 300f));
+        const float band = 360f;
+
+        // Started above the top of the content area so the band swallows the running
+        // header. The header is a document template and templates paint underneath page
+        // content, so the cover simply covers it; the alternative is a stray "Demonstration
+        // estate" floating above the navy, which is what the first render did.
+        var top = -surface.HeaderHeight;
+
+        graphics.DrawRectangle(
+            PdfTheme.Brush(CapgeminiBrand.DarkBlue), new RectangleF(0, top, width, band - top));
+
+        // The rule under the band, which is the one piece of the brand that is load bearing
+        // rather than decorative: it is what makes the band read as a header rather than as
+        // a block of colour somebody left there.
+        graphics.DrawRectangle(PdfTheme.Brush(CapgeminiBrand.Blue), new RectangleF(0, band, width, 3.5f));
+
+        var markHeight = CoverWordmarkWidth * CapgeminiBrand.WordmarkAspect;
+        using (var mark = new MemoryStream(CapgeminiBrand.WordmarkWhite, writable: false))
+        {
+            graphics.DrawImage(new PdfBitmap(mark), 48f, 40f, CoverWordmarkWidth, markHeight);
+        }
+
+        // The product and the tagline, right aligned against the wordmark, exactly as the
+        // sibling reports set them.
+        // Line height forced to one and the boxes left generous. Syncfusion draws nothing
+        // at all when a line box does not fit its rectangle: no exception, no partial
+        // glyph, an empty space where the text was. The default line height of 1.45 puts a
+        // 9pt string in a 14pt box over the edge by a fraction of a point, and the first
+        // render of this cover came out with the wordmark present and the product name and
+        // the tagline simply absent.
+        var eyebrow = new TextStyle
+        {
+            Size = 9,
+            Colour = CapgeminiBrand.LightBlue,
+            Align = PdfTextAlignment.Right,
+            LineHeight = 1f
+        };
+
+        graphics.DrawString(
+            model.Text["report.coverEyebrow", "Power Platform solution analysis"].ToUpperInvariant(),
+            surface.Theme.Font(eyebrow), PdfTheme.Brush(eyebrow.Colour),
+            new RectangleF(48f, 42f, width - 96f, 24f), PdfTheme.Format(eyebrow));
+
+        var tagline = new TextStyle
+        {
+            Size = 15,
+            Colour = CapgeminiBrand.White,
+            Align = PdfTextAlignment.Right,
+            LineHeight = 1f
+        };
+
+        graphics.DrawString(
+            CapgeminiBrand.Tagline,
+            surface.Theme.Font(tagline), PdfTheme.Brush(tagline.Colour),
+            new RectangleF(48f, 60f, width - 96f, 32f), PdfTheme.Format(tagline));
 
         graphics.DrawString(model.Text["report.platform", "Power Platform"],
-            surface.Theme.Font(new TextStyle { Size = 30, Bold = true, Colour = "#FFFFFF" }),
-            PdfTheme.Brush("#FFFFFF"), new PointF(48f, 120f));
+            surface.Theme.Font(new TextStyle { Size = 30, Bold = true, Colour = CapgeminiBrand.White }),
+            PdfTheme.Brush(CapgeminiBrand.White), new PointF(48f, 160f));
 
         graphics.DrawString(model.Text["report.title", "Solution assessment"],
             surface.Theme.Font(new TextStyle { Size = 30, Bold = true, Colour = CapgeminiBrand.LightBlue }),
-            PdfTheme.Brush(CapgeminiBrand.LightBlue), new PointF(48f, 160f));
+            PdfTheme.Brush(CapgeminiBrand.LightBlue), new PointF(48f, 200f));
 
         graphics.DrawString(model.ClientName ?? model.EngagementName,
-            surface.Theme.Font(new TextStyle { Size = 14, Colour = "#FFFFFF" }),
-            PdfTheme.Brush("#FFFFFF"), new PointF(48f, 220f));
+            surface.Theme.Font(new TextStyle { Size = 14, Colour = CapgeminiBrand.White }),
+            PdfTheme.Brush(CapgeminiBrand.White), new PointF(48f, 254f));
 
         // The extraction mode is on the cover rather than in an appendix. A report from an
         // offline export and one from a live connection answer different questions, and
         // whoever forwards this will not read the appendix.
         graphics.DrawString(
-            $"{model.ProducedUtc:d MMMM yyyy}  ·  read via {model.ExtractionMode}  ·  {model.SolutionNames.Count} solution(s)",
+            $"{model.ProducedUtc:d MMMM yyyy}  ·  {model.Text["report.readVia", "read via"]} {model.ExtractionMode}"
+            + $"  ·  {model.SolutionNames.Count} {model.Text["report.solutionsWord", "solution(s)"]}",
             surface.Theme.Font(new TextStyle { Size = 10, Colour = CapgeminiBrand.LightBlue }),
-            PdfTheme.Brush(CapgeminiBrand.LightBlue), new PointF(48f, 250f));
+            PdfTheme.Brush(CapgeminiBrand.LightBlue), new PointF(48f, 282f));
+
+        graphics.DrawString(
+            model.Text["report.preparedBy", "Prepared by Capgemini. Estimates are ranges from a rule catalogue, not a quotation."],
+            surface.Theme.Font(new TextStyle { Size = 8, Colour = CapgeminiBrand.Muted }),
+            PdfTheme.Brush("#9AA6BF"), new PointF(48f, 304f));
+
+        // Said on the cover, in a colour nobody scrolls past. A demonstration report that
+        // reaches a client without this line is a report about an estate they do not have,
+        // with their account team's logo on it.
+        if (model.IsDemonstration)
+        {
+            graphics.DrawRectangle(
+                PdfTheme.Brush(CapgeminiBrand.Terracotta), new RectangleF(48f, band - 42f, width - 96f, 26f));
+
+            graphics.DrawString(
+                model.Text["report.sampleBanner", "Sample data. No client estate, environment or person is represented here."].ToUpperInvariant(),
+                surface.Theme.Font(new TextStyle { Size = 8, Bold = true, Colour = CapgeminiBrand.White, LineHeight = 1f }),
+                PdfTheme.Brush(CapgeminiBrand.White), new PointF(58f, band - 35f));
+        }
+
+        CoverFigures(surface, page, model, band + 34f);
+    }
+
+    /// <summary>
+    /// The four numbers, on the cover, under the band.
+    /// </summary>
+    /// <remarks>
+    /// The sibling reports put their headline figures on page one and this one had an empty
+    /// half page under the band, which reads as a document somebody did not finish rather
+    /// than as a cover.
+    ///
+    /// Four numbers and no more, because the argument of this product is on the next page
+    /// and a cover crowded with figures invites somebody to quote one without it. The last
+    /// of the four is how many checks could not run, which belongs beside the other three
+    /// for exactly that reason: a findings count means nothing without it.
+    /// </remarks>
+    /// <param name="surface">The document.</param>
+    /// <param name="page">The cover.</param>
+    /// <param name="model">What to write.</param>
+    /// <param name="top">Where to start, under the band.</param>
+    private static void CoverFigures(PdfSurface surface, PdfPage page, Model model, float top)
+    {
+        var flow = new Flow(surface, 48f, surface.PageWidth - 96f, top, page, measuring: false);
+
+        var figures = new (string Label, string Value, string Note, string Accent)[]
+        {
+            (model.Text["report.componentsRead", "Components read"],
+             model.Score.ComponentsTotal.ToString("N0", Culture),
+             $"{model.SolutionNames.Count} {model.Text["report.solutionsWord", "solution(s)"]}",
+             CapgeminiBrand.Blue),
+
+            (model.Text["report.findings", "Findings"],
+             model.Findings.Count.ToString("N0", Culture),
+             model.Score.LowCodeShare is { } share
+                 ? $"{share.ToString("P0", Culture)} {model.Text["report.lowCode", "Low code"].ToLowerInvariant()}"
+                 : string.Empty,
+             CapgeminiBrand.LightBlue),
+
+            (model.Text["report.estimatedEffort", "Estimated effort"],
+
+             // Formatted against Culture rather than by plain interpolation. An
+             // interpolated hole uses the current culture, so this line came out as
+             // "342,00-1.324 h" on a machine set to Dutch and would have printed
+             // differently depending on which region the container happened to run in.
+             string.Create(Culture, $"{model.Score.TotalLowHours:N0}–{model.Score.TotalHighHours:N0} h"),
+             model.Text["report.aRange", "a range, not a quotation"],
+             CapgeminiBrand.Turquoise),
+
+            (model.Text["report.notAssessed", "Not assessed"],
+             $"{model.Score.NotAssessed.Count} / {RuleCatalogue.All.Count}",
+             model.Text["report.checksThatCouldNotRun", "checks that could not run"],
+             CapgeminiBrand.Terracotta)
+        };
+
+        flow.Row(
+            row =>
+            {
+                foreach (var (label, value, note, accent) in figures)
+                {
+                    row.Relative(1, cell => cell.Panel(
+                        panel =>
+                        {
+                            panel.Text(label.ToUpperInvariant(), new TextStyle
+                            {
+                                Size = 7.5f,
+                                Colour = CapgeminiBrand.Muted,
+                                LetterSpacing = 0.4f,
+                                LineHeight = 1.2f
+                            });
+
+                            panel.Text(value, new TextStyle
+                            {
+                                // Sized so the widest of the four, an hour range, stays on
+                                // one line. A card that wraps is taller than its neighbours
+                                // and the row stops reading as a row.
+                                Size = 16,
+                                Bold = true,
+                                Colour = CapgeminiBrand.DarkBlue,
+                                LineHeight = 1.25f
+                            }, paddingTop: 5f);
+
+                            panel.Text(note, new TextStyle
+                            {
+                                Size = 7.5f,
+                                Colour = CapgeminiBrand.Muted,
+                                LineHeight = 1.3f
+                            }, paddingTop: 3f);
+                        },
+                        background: CapgeminiBrand.Background,
+                        padding: 12f,
+                        accent: accent,
+                        accentWidth: 3.5f));
+                }
+            },
+            gap: 12f);
     }
 
     private static void Heading(Flow flow, string text)

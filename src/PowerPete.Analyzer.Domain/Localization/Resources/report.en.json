@@ -56,5 +56,16 @@
   "report.unrated": "Unrated",
   "report.whatIsInTheEstate": "What is in the estate",
   "report.whatWasNotAssessed": "What was not assessed",
-  "report.whyNot": "Why not"
+  "report.whyNot": "Why not",
+  "report.coverEyebrow": "Power Platform solution analysis",
+  "report.solutionsWord": "solution(s)",
+  "report.preparedBy": "Prepared by Capgemini. Estimates are ranges from a rule catalogue, not a quotation.",
+  "report.sampleBanner": "Sample data. No client estate, environment or person is represented here.",
+  "report.footerSample": "sample data",
+  "report.page": "Page",
+  "report.of": "of",
+  "report.componentsRead": "Components read",
+  "report.estimatedEffort": "Estimated effort",
+  "report.aRange": "a range, not a quotation",
+  "report.checksThatCouldNotRun": "checks that could not run"
 }

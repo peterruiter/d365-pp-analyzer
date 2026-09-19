@@ -56,5 +56,16 @@
   "report.unrated": "Unbewertet",
   "report.whatIsInTheEstate": "Was in der Landschaft steckt",
   "report.whatWasNotAssessed": "Was nicht bewertet wurde",
-  "report.whyNot": "Warum nicht"
+  "report.whyNot": "Warum nicht",
+  "report.coverEyebrow": "Power Platform Lösungsanalyse",
+  "report.solutionsWord": "Lösung(en)",
+  "report.preparedBy": "Erstellt von Capgemini. Die Schätzungen sind Spannen aus einem Regelkatalog und kein Angebot.",
+  "report.sampleBanner": "Beispieldaten. Hier werden keine Kundenlandschaft, Umgebung oder Person dargestellt.",
+  "report.footerSample": "Beispieldaten",
+  "report.page": "Seite",
+  "report.of": "von",
+  "report.componentsRead": "Gelesene Komponenten",
+  "report.estimatedEffort": "Geschätzter Aufwand",
+  "report.aRange": "eine Spanne, kein Angebot",
+  "report.checksThatCouldNotRun": "Prüfungen, die nicht laufen konnten"
 }

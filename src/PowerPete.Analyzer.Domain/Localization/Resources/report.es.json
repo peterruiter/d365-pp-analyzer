@@ -56,5 +56,16 @@
   "report.unrated": "Sin valorar",
   "report.whatIsInTheEstate": "Qué hay en el entorno",
   "report.whatWasNotAssessed": "Qué no se evaluó",
-  "report.whyNot": "Por qué no"
+  "report.whyNot": "Por qué no",
+  "report.coverEyebrow": "Análisis de soluciones de Power Platform",
+  "report.solutionsWord": "solución(es)",
+  "report.preparedBy": "Elaborado por Capgemini. Las estimaciones son rangos de un catálogo de reglas, no un presupuesto.",
+  "report.sampleBanner": "Datos de muestra. Aquí no se representa ningún patrimonio de cliente, entorno ni persona.",
+  "report.footerSample": "datos de muestra",
+  "report.page": "Página",
+  "report.of": "de",
+  "report.componentsRead": "Componentes leídos",
+  "report.estimatedEffort": "Esfuerzo estimado",
+  "report.aRange": "un rango, no un presupuesto",
+  "report.checksThatCouldNotRun": "comprobaciones que no pudieron ejecutarse"
 }

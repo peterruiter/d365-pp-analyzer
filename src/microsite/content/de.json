@@ -2,32 +2,28 @@
   "meta.title": "Power Platform Solution Analyzer — Capgemini",
   "meta.description": "Liest eine Power-Platform-Landschaft, benennt technische Schulden und schätzt, was deren Behebung kostet. Nur lesend. Nennt, was es nicht prüfen konnte.",
   "meta.ogDescription": "Eine Bewertung einer Power-Platform-Landschaft, die niemals in sie schreibt und immer sagt, was sie nicht lesen konnte.",
-
   "nav.what": "Was es tut",
   "nav.modes": "Zugangswege",
   "nav.honesty": "Ehrlichkeit",
   "nav.safety": "Sicherheit",
   "nav.output": "Ergebnis",
+  "nav.report": "Der Bericht",
   "nav.rules": "Was es prüft",
   "nav.privacy": "Datenschutz",
   "nav.signin": "Anmelden",
   "nav.menu": "Menü",
-
   "lang.choose": "Sprache wählen",
   "lang.heading": "Sprache",
   "lang.close": "Schließen",
-
   "theme.lightOn": "Helles Design aktiv",
   "theme.darkOn": "Dunkles Design aktiv",
   "theme.toggle": "Zwischen hell und dunkel wechseln",
-
   "hero.eyebrow": "Capgemini · Power Platform",
   "hero.headline": "Herausfinden, was wirklich drin ist.",
   "hero.lede": "Es liest eine Power-Platform-Landschaft, sagt Ihnen, was technische Schuld ist und was deren Behebung kostet, und nennt jede Prüfung, die es nicht ausführen konnte. Es schreibt niemals in die Umgebung.",
   "hero.primary": "Anmelden",
   "hero.secondary": "Ansehen, was es tut",
   "hero.scroll": "Scrollen",
-
   "what.eyebrow": "Was es tut",
   "what.heading": "Drei Schritte, in der Reihenfolge, in der Kunden danach fragen.",
   "what.lede": "Niemand öffnet ein Bewertungswerkzeug, weil er ein Werkzeug will. Man will wissen, was man hat, was daran falsch ist und was die Behebung kostet.",
@@ -37,28 +33,23 @@
   "what.card2.body": "Was Microsoft entfernt oder abgekündigt hat, was schlecht gebaut wurde, unabhängig womit, und wovon niemand erfahren würde, wenn es ausfällt. Jeweils mit dem Beleg, der es ausgelöst hat.",
   "what.card3.title": "Setzt eine Zahl darauf",
   "what.card3.body": "Eine Stundenspanne pro Befund mit Begründung, gruppiert zu einem Backlog, das jemand tatsächlich pflegen würde, summiert zu einer Gesamtzahl, deren Rechnung im Raum nachprüfbar ist.",
-
   "modes.eyebrow": "Zugangswege",
   "modes.heading": "Drei Wege zu einer Landschaft, und was jeder davon aufgibt.",
   "modes.lede": "Diese werden aus demselben Vertrag erzeugt, auf dem das Produkt läuft, damit diese Seite keine Reichweite verspricht, die das Produkt nicht hat.",
   "modes.note": "Was ein Modus nicht erreicht, entscheidet darüber, welche Prüfungen überhaupt laufen können. Jede Prüfung, die nicht laufen konnte, wird im Bericht namentlich mit Begründung genannt und nie als bestanden ausgewiesen.",
-
   "modes.name.servicePrincipal": "Anwendungsbenutzer, nur lesend",
   "modes.summary.servicePrincipal": "Eine Entra-App-Registrierung, die der Umgebung als Anwendungsbenutzer mit einer Leserolle hinzugefügt wird. Der Modus für alles Wiederholbare. Die Rollendefinition liegt dem Produkt bei, sodass ein Sicherheitsteam eine Datei prüft statt einer Beschreibung.",
   "modes.name.delegated": "Delegierter Benutzer",
   "modes.summary.delegated": "Sie, angemeldet, lesen, was Sie ohnehin lesen dürfen. Nichts anzulegen und nichts zu genehmigen, deshalb der schnellste Weg zu etwas Echtem. Nicht wiederholbar: ein geplanter Lauf kann Ihre Sitzung nicht ausleihen.",
   "modes.name.offlineZip": "Lösungsdatei",
   "modes.summary.offlineZip": "Eine exportierte nicht verwaltete Lösung, offline gelesen. Keine Verbindung, kein Zugangsdatum, keine Sicherheitsprüfung. Das ist der Modus, der in Woche eins durchkommt, während der Antrag auf einen Dienstprinzipal in einer Warteschlange liegt.",
-
   "modes.evidence.metadata": "Live-Metadaten",
   "modes.evidence.solutionZip": "Lösungsdatei",
   "modes.evidence.checker": "Power Apps Checker",
   "modes.evidence.runtime": "Nutzung und Ausführungsverlauf",
-
   "modes.reach.full": "Vollständig",
   "modes.reach.partial": "Teilweise",
   "modes.reach.none": "Keine",
-
   "honesty.eyebrow": "Ehrlichkeit",
   "honesty.heading": "Es sagt Ihnen, was es nicht prüfen konnte.",
   "honesty.body1": "Jede Prüfung erklärt, welchen Beleg sie braucht. Erreicht die gewählte Verbindung diesen Beleg nicht, wird die Prüfung als nicht geprüft ausgewiesen, namentlich und mit Begründung. Nie als bestanden und nie als null Befunde.",
@@ -67,7 +58,6 @@
   "honesty.stat2.label": "Komponententypen, die es kennt",
   "honesty.stat3.label": "Domänen, über die es berichtet",
   "honesty.stat4.label": "Sprachen, durchgängig",
-
   "safety.eyebrow": "Sicherheit",
   "safety.heading": "Es kann nichts in der Umgebung verändern.",
   "safety.body1": "In keinem Modus, und es gibt keine Einstellung, die das ändert. Eine Erhebung lässt sich im ersten Gespräch ohne Change Advisory Board durchführen, und genau das macht sie nutzbar, bevor jemand etwas gekauft hat.",
@@ -80,7 +70,6 @@
   "safety.card3.body": "Veröffentlichen erfordert eine Freigabe, und die Freigabe hält genau das freigegebene Backlog fest. Ändert es sich danach, verweigert die Veröffentlichung, statt etwas zu schreiben, das niemand unterschrieben hat.",
   "safety.card4.title": "Ein Kunde, ein Auftrag",
   "safety.card4.body": "Zugriff gilt pro Auftrag und wird in der Abfrage durchgesetzt statt im Bildschirm, sodass eine Seite, die das Filtern vergisst, trotzdem nicht die Landschaft eines Kunden einem anderen zeigen kann.",
-
   "output.eyebrow": "Ergebnis",
   "output.heading": "Was das Produkt verlässt.",
   "output.lede": "Drei Dinge, jedes für eine andere Person im Raum, alle aus den gespeicherten Ergebnissen eines Laufs erzeugt und nicht aus den Regeln von heute.",
@@ -90,13 +79,11 @@
   "output.card2.body": "Ein PDF für die Person, die die Mappe nicht öffnen wird. Was gelesen wurde, was nicht, was gefunden wurde, was es kosten würde und wo die Arbeit auf einer Roadmap steht.",
   "output.card3.title": "Ein gepflegtes Backlog",
   "output.card3.body": "Ein Epic je Kategorie, ein Feature je Regel, die eines braucht, eine Story je Befund, der benannt gehört, und die Kleinigkeiten gebündelt. Mit Akzeptanzkriterien und auf Wunsch direkt nach Azure DevOps geschrieben.",
-
   "rules.eyebrow": "Was es prüft",
   "rules.heading": "Neun Kategorien, aus dem Katalog gezählt statt hier getippt.",
   "rules.lede": "Eine neue Prüfung aktualisiert diese Seite. Das ist Absicht: eine Marketingseite, die mehr verspricht als das Produkt tut, wird irgendwann in einer Besprechung laut vorgelesen.",
   "rules.note": "Einige stammen aus Microsofts eigenem Power Apps Checker und werden unter Microsofts Regelkennungen eingefügt, damit man sie nachschlagen kann. Die übrigen sind die, die der Checker nicht hat: Position im Lebenszyklus, über Komponenten verteilte Schuld, Wildwuchs und Lösungshygiene.",
   "rules.count": "{0} Prüfungen",
-
   "rules.category.lifecycle": "Lebenszyklus und Abkündigung",
   "rules.categoryBody.lifecycle": "Komponenten, die Microsoft entfernt, abgekündigt oder nicht mehr weiterentwickelt hat. Ein Dialog, der noch in einer Lösung sitzt, sagt mehr über eine Landschaft als jede andere einzelne Komponente.",
   "rules.category.modernisation": "Modernisierung",
@@ -115,11 +102,9 @@
   "rules.categoryBody.security": "Rechte, Geheimnisse in Definitionen und Schreibrechte auf Organisationsebene. Kein Penetrationstest, und es gibt auch nicht vor, einer zu sein.",
   "rules.category.operability": "Betreibbarkeit",
   "rules.categoryBody.operability": "Ob überhaupt jemand merkt, wenn etwas ausfällt. Eine Landschaft ganz ohne Fehleralarmierung ist eine, in der die erste Störungsmeldung von einem Kunden kommt.",
-
   "languages.eyebrow": "Sprachen",
   "languages.heading": "Sechs Sprachen und drei getrennte Einstellungen.",
   "languages.body1": "Englisch, Niederländisch, Deutsch, Französisch, Spanisch und Italienisch, durchgängig: die Bildschirme, die Regelerläuterungen, die Befunde, der Bericht und das Backlog. Die Sprache, in der Sie das Produkt lesen, die Sprache des Berichts und die Sprache des Backlogs sind drei Einstellungen, weil eine niederländische Beraterin, die einen englischen Bericht für die Konzern-IT eines Kunden und ein spanisches Backlog für das Lieferteam schreibt, der Normalfall ist und kein Sonderfall.",
-
   "limits.eyebrow": "Grenzen",
   "limits.heading": "Was es Ihnen nicht sagt.",
   "limits.lede": "Eine Seite, die nur behauptet, ist eine Broschüre. Das sind die Fragen, die anderswo hingehören.",
@@ -129,37 +114,30 @@
   "limits.card2.body": "Die Sicherheitsprüfungen betreffen Rechte, Geheimnisse in Definitionen und Schreibrechte auf Organisationsebene. Sie bewerten nicht, ob in die Landschaft eingebrochen werden kann.",
   "limits.card3.title": "Es repariert nichts",
   "limits.card3.body": "Es gibt keinen Behebungsmodus und es ist keiner geplant. Alles, was es hervorbringt, ist eine Empfehlung, ein Bericht oder ein Arbeitselement für jemanden, der die Arbeit selbst tut.",
-
   "closing.heading": "Herausfinden, was wirklich drin ist.",
   "closing.body": "Melden Sie sich mit Ihrem Capgemini-Konto an. Eine Demonstrationslandschaft wartet, mit Befunden, die das Produkt selbst erzeugt hat, damit es etwas anzusehen gibt, bevor ein Kunde Ihnen irgendetwas gegeben hat.",
-
   "footer.note": "Capgemini · Power Platform Solution Analyzer",
-
   "privacyBlock.eyebrow": "Datenschutz",
   "privacyPage.title": "Datenschutz — Power Platform Solution Analyzer",
   "privacyPage.description": "Was dieses Produkt liest, was es entfernt, was es verweigert und wo alles aufbewahrt wird.",
   "privacyPage.heading": "Was es liest, und was nicht.",
   "privacyPage.lede": "Geschrieben, um von der Sicherheitsbeauftragten eines Kunden gelesen zu werden, nicht von einer Juristin. Wenn hier etwas nicht klar genug ist, um danach zu handeln, ist das ein Mangel, und wir hören gern davon.",
-
   "privacyPage.reads.heading": "Was es liest",
   "privacyPage.reads.lede": "Nur was eine Bewertung braucht, und immer ausschließlich lesend:",
   "privacyPage.reads.item1": "Metadaten von Lösungen und Komponenten: welche Tabellen, Flows, Apps, Plug-ins, Rollen und Webressourcen existieren und wie sie konfiguriert sind.",
   "privacyPage.reads.item2": "Den Inhalt einer exportierten Lösungsdatei, sofern eine bereitgestellt wird.",
   "privacyPage.reads.item3": "Nutzung und Ausführungsverlauf, soweit die Verbindung sie erreicht: wie oft ein Flow lief, wie oft er scheiterte, wie lange ein Plug-in-Schritt dauerte.",
   "privacyPage.reads.item4": "Die Ergebnisse von Microsofts Power Apps Checker, wo er ausgeführt wurde.",
-
   "privacyPage.removed.heading": "Was es entfernt",
   "privacyPage.removed.lede": "Manches wird im Vorbeigehen gelesen und nicht aufbewahrt:",
   "privacyPage.removed.item1": "In einer Definition gefundene Geheimnisse werden gezählt, nie gespeichert und nie angezeigt. Ein Befund sagt, dass ein Geheimnis vorhanden ist und wo, nicht welches.",
   "privacyPage.removed.item2": "Zugangsdaten für eine Verbindung liegen in Azure Key Vault und werden über ihren Namen angesprochen. Die Produktdatenbank enthält kein einziges Geheimnis.",
   "privacyPage.removed.item3": "Geschäftsdaten in den Tabellen werden nicht gelesen. Das Produkt zählt Zeilen; es sieht nicht hinein.",
-
   "privacyPage.refuses.heading": "Was es verweigert",
   "privacyPage.refuses.lede": "Das sind keine Einstellungen. Es gibt keine Konfiguration, die eines davon einschaltet:",
   "privacyPage.refuses.item1": "Es schreibt niemals in eine Power-Platform-Umgebung, in keinem Modus.",
   "privacyPage.refuses.item2": "Es veröffentlicht niemals nach Azure DevOps ohne ausdrückliche Freigabe genau dieses Backlogs.",
   "privacyPage.refuses.item3": "Es zeigt niemals die Landschaft eines Auftrags jemandem, dem dafür kein Zugriff gewährt wurde.",
-
   "privacyPage.documents.heading": "Was in den Dokumenten steht",
   "privacyPage.documents.lede": "Drei Dinge verlassen das Produkt, und es lohnt sich zu wissen, was genau darin steht:",
   "privacyPage.documents.item1.title": "Die Arbeitsmappe.",
@@ -168,17 +146,35 @@
   "privacyPage.documents.item2.body": "Dasselbe Material als Erzählung, dazu die Liste des Ungeprüften. Komponenten werden namentlich genannt, wo ein Befund genau eine Sache betrifft.",
   "privacyPage.documents.item3.title": "Die Arbeitselemente.",
   "privacyPage.documents.item3.body": "Titel, Beschreibungen und Akzeptanzkriterien, geschrieben in das eigene Azure-DevOps-Projekt des Kunden. Nichts verlässt dessen Tenant, was nicht ohnehin darin war.",
-
   "privacyPage.deletion.heading": "Einen Auftrag löschen",
   "privacyPage.deletion.body": "Einen Auftrag zu löschen löscht seine Verbindungen, Läufe, den Bestand, die Befunde, die Schätzungen und das Backlog, in einem Vorgang und ohne Papierkorb. Arbeitselemente, die bereits in das Azure-DevOps-Projekt eines Kunden veröffentlicht wurden, gehören diesem und bleiben unangetastet.",
-
   "privacyPage.where.heading": "Wo es läuft",
   "privacyPage.where.body": "In Microsoft Azure, in einer für die Bereitstellung gewählten Region, im eigenen Abonnement von Capgemini. Die Datenbank ist nur für die verwaltete Identität des Produkts erreichbar; es gibt kein Passwort, das auslaufen könnte, weil es keines gibt.",
-
   "privacyPage.cookies.heading": "Cookies auf dieser Seite",
   "privacyPage.cookies.body": "Diese öffentliche Seite setzt ein Cookie, und nur wenn Sie den Hell-Dunkel-Schalter benutzen: es merkt sich Ihre Wahl. Es gibt keine Analyse, kein Tracking, kein Skript Dritter und keine Schrift, kein Bild und kein Stylesheet, das von irgendwo geladen würde, wo man Ihre Ankunft sähe. Die Anmeldung setzt ein Sitzungscookie, und das hält Sie angemeldet.",
-
   "privacyPage.closing.heading": "Noch nicht beantwortet?",
   "privacyPage.closing.body": "Fragen Sie das Team, das Ihnen Zugang gegeben hat. Eine Frage, die gestellt werden musste, bedeutet meist, dass dieser Seite ein Absatz fehlt.",
-  "privacyPage.closing.link": "Zurück zum Anfang"
+  "privacyPage.closing.link": "Zurück zum Anfang",
+  "report.eyebrow": "Der Bericht",
+  "report.heading": "Jede Seite hier ist echt.",
+  "report.lede": "Vom Produkt aus der Demonstrationslandschaft erzeugt, nicht für diese Seite gezeichnet. Die Zahlen sind die, die die Regeln gefunden haben.",
+  "report.previous": "Vorherige Seite",
+  "report.next": "Nächste Seite",
+  "report.pages": "Seiten aus dem Bewertungsbericht",
+  "report.page1": "Das Deckblatt. Was gelesen wurde, wie, und was es kostet.",
+  "report.page2": "Die Zusammenfassung. Die drei wichtigen Befunde, mit einem geschriebenen Absatz.",
+  "report.page3": "Was in der Landschaft steckt, nach Domäne.",
+  "report.page4": "Anpassung und Komplexität. Das Low-Code-Verhältnis, mit seiner Definition daneben.",
+  "report.page5": "Die Befunde, das Schlimmste zuerst, nach Kategorie gruppiert.",
+  "report.page6": "Die Roadmap. Jeder Befund nach Art des Problems eingeordnet.",
+  "report.page7": "Funktionale Reife, im Workshop bewertet. Zwei Achsen bleiben unbewertet.",
+  "report.page8": "Szenarien, in den Worten des Kunden.",
+  "alt.pageCover": "Deckblatt mit der Capgemini-Wortmarke und den Kennzahlen",
+  "alt.pageSummary": "Die Seite mit der Zusammenfassung",
+  "alt.pageEstate": "Ein Balkendiagramm der Komponenten nach Domäne",
+  "alt.pageComplexity": "Ein Ringdiagramm des Low-Code-Verhältnisses und eine Komplexitätsübersicht",
+  "alt.pageFindings": "Die Befundtabelle",
+  "alt.pageRoadmap": "Das Roadmap-Raster",
+  "alt.pageMaturity": "Ein Netzdiagramm der funktionalen Reife",
+  "alt.pageScenarios": "Die Szenarienseite"
 }

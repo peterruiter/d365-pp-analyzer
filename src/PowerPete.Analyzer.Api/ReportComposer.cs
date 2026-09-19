@@ -142,7 +142,12 @@ public sealed class ReportComposer(AnalysisStore analysis, WorkspaceStore worksp
                     var scored = maturity.FirstOrDefault(entry => entry.AxisId == axis);
 
                     return (axis, scored is null ? (decimal?)null : scored.Score, scored?.Evidence);
-                })]));
+                })],
+
+                // Language stays default here; the caller picks it. The flag does not:
+                // the cover has to say out loud that the sample estate is a sample, and
+                // the only thing that knows is the identifier.
+                IsDemonstration: engagementId == AccessStore.DemoEngagementId));
     }
 
     private static T? Read<T>(JsonElement breakdown, string name) =>

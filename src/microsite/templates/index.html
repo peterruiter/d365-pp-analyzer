@@ -14,18 +14,24 @@
 
 <main>
 
-  <!-- One column rather than the split the sibling products use. Those carry a
-       screenshot of themselves beside the headline; this one has no screenshots yet,
-       and an invented picture of a product is worse than none. The hero keeps its
-       full height and its gradients, so the page still opens the same way. -->
+  <!-- The split the sibling products use. It carried one column for a while because
+       there was nothing true to put beside the headline, and an invented picture of a
+       product is worse than none. There is now: the cover of the assessment report, as
+       the product renders it from the demonstration estate. -->
   <section class="hero">
-    <div class="shell">
-      <p class="eyebrow">{{hero.eyebrow}}</p>
-      <h1>{{hero.headline}}</h1>
-      <p class="lede">{{hero.lede}}</p>
-      <div class="actions">
-        <a class="button button--primary" href="/account/signin">{{hero.primary}} <span aria-hidden="true">&rarr;</span></a>
-        <a class="button button--ghost" href="#what">{{hero.secondary}}</a>
+    <div class="shell split">
+      <div>
+        <p class="eyebrow">{{hero.eyebrow}}</p>
+        <h1>{{hero.headline}}</h1>
+        <p class="lede">{{hero.lede}}</p>
+        <div class="actions">
+          <a class="button button--primary" href="/account/signin">{{hero.primary}} <span aria-hidden="true">&rarr;</span></a>
+          <a class="button button--ghost" href="#what">{{hero.secondary}}</a>
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <img src="/assets/report-cover.png" alt="{{alt.pageCover}}" loading="eager" width="1240" height="1755">
       </div>
     </div>
     <span class="scroll-cue">{{hero.scroll}}</span>
@@ -151,6 +157,38 @@
           <h3>{{output.card3.title}}</h3>
           <p>{{output.card3.body}}</p>
         </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- The artefact itself. Eight pages out of the demonstration estate, rendered by the
+       product rather than drawn for this page, which is the only claim worth making about
+       a screenshot. Scroll snap does the flipping so it works with a trackpad and a touch
+       screen; the buttons are for a mouse and are hidden when there is no script. -->
+  <section id="report">
+    <div class="shell">
+      <div class="section-head reveal">
+        <p class="eyebrow">{{report.eyebrow}}</p>
+        <h2>{{report.heading}}</h2>
+        <p>{{report.lede}}</p>
+      </div>
+
+      <div class="flip">
+        <div class="flip-controls">
+          <button type="button" data-flip="-1" aria-label="{{report.previous}}">&larr;</button>
+          <button type="button" data-flip="1" aria-label="{{report.next}}">&rarr;</button>
+        </div>
+
+        <div class="flip-track" id="flip-track" tabindex="0" aria-label="{{report.pages}}">
+          <figure><img src="/assets/page-cover.jpg" alt="{{alt.pageCover}}" loading="lazy" width="868" height="1229"><figcaption>{{report.page1}}</figcaption></figure>
+          <figure><img src="/assets/page-summary.jpg" alt="{{alt.pageSummary}}" loading="lazy" width="868" height="1229"><figcaption>{{report.page2}}</figcaption></figure>
+          <figure><img src="/assets/page-estate.jpg" alt="{{alt.pageEstate}}" loading="lazy" width="868" height="1229"><figcaption>{{report.page3}}</figcaption></figure>
+          <figure><img src="/assets/page-complexity.jpg" alt="{{alt.pageComplexity}}" loading="lazy" width="868" height="1229"><figcaption>{{report.page4}}</figcaption></figure>
+          <figure><img src="/assets/page-findings.jpg" alt="{{alt.pageFindings}}" loading="lazy" width="868" height="1229"><figcaption>{{report.page5}}</figcaption></figure>
+          <figure><img src="/assets/page-roadmap.jpg" alt="{{alt.pageRoadmap}}" loading="lazy" width="868" height="1229"><figcaption>{{report.page6}}</figcaption></figure>
+          <figure><img src="/assets/page-maturity.jpg" alt="{{alt.pageMaturity}}" loading="lazy" width="868" height="1229"><figcaption>{{report.page7}}</figcaption></figure>
+          <figure><img src="/assets/page-scenarios.jpg" alt="{{alt.pageScenarios}}" loading="lazy" width="868" height="1229"><figcaption>{{report.page8}}</figcaption></figure>
+        </div>
       </div>
     </div>
   </section>

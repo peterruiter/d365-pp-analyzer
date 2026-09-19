@@ -97,6 +97,28 @@ internal sealed class PdfSurface : IDisposable
     /// <summary>Starts a new page and returns it.</summary>
     public PdfPage AddPage() => document.Pages.Add();
 
+    /// <summary>
+    /// Starts a page that the running header does not appear on.
+    /// </summary>
+    /// <remarks>
+    /// For a cover. The header is a document template, and a template paints over page
+    /// content rather than under it, so a cover cannot simply draw its band on top of the
+    /// header: the engagement name ends up floating in white space above the navy.
+    ///
+    /// Its own section is the way to opt out, because ApplyDocumentTopTemplate is a
+    /// property of a section rather than of a page. The footer stays, which is deliberate:
+    /// the sibling reports carry the page number and the wordmark on the cover too.
+    /// </remarks>
+    public PdfPage AddPageWithoutHeader()
+    {
+        var section = document.Sections.Add();
+        section.PageSettings.Size = document.PageSettings.Size;
+        section.PageSettings.Margins.All = 0;
+        section.Template.ApplyDocumentTopTemplate = false;
+
+        return section.Pages.Add();
+    }
+
     /// <summary>Opens a column of content across the page, inside the given horizontal insets.</summary>
     /// <param name="insetLeft">Left inset of the text column.</param>
     /// <param name="insetRight">Right inset of the text column.</param>

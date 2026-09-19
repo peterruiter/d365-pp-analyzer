@@ -56,5 +56,16 @@
   "report.unrated": "Non valutato",
   "report.whatIsInTheEstate": "Che cosa contiene il parco",
   "report.whatWasNotAssessed": "Che cosa non è stato valutato",
-  "report.whyNot": "Perché no"
+  "report.whyNot": "Perché no",
+  "report.coverEyebrow": "Analisi delle soluzioni Power Platform",
+  "report.solutionsWord": "soluzione/i",
+  "report.preparedBy": "Redatto da Capgemini. Le stime sono intervalli da un catalogo di regole, non un preventivo.",
+  "report.sampleBanner": "Dati di esempio. Qui non è rappresentato alcun patrimonio cliente, ambiente o persona.",
+  "report.footerSample": "dati di esempio",
+  "report.page": "Pagina",
+  "report.of": "di",
+  "report.componentsRead": "Componenti letti",
+  "report.estimatedEffort": "Sforzo stimato",
+  "report.aRange": "un intervallo, non un preventivo",
+  "report.checksThatCouldNotRun": "controlli che non hanno potuto essere eseguiti"
 }

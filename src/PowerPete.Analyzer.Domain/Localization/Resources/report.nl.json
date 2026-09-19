@@ -56,5 +56,16 @@
   "report.unrated": "Ongewaardeerd",
   "report.whatIsInTheEstate": "Wat er in het landschap zit",
   "report.whatWasNotAssessed": "Wat niet is beoordeeld",
-  "report.whyNot": "Waarom niet"
+  "report.whyNot": "Waarom niet",
+  "report.coverEyebrow": "Power Platform-oplossingsanalyse",
+  "report.solutionsWord": "oplossing(en)",
+  "report.preparedBy": "Opgesteld door Capgemini. Schattingen zijn bandbreedtes uit een regelcatalogus, geen offerte.",
+  "report.sampleBanner": "Voorbeeldgegevens. Hier wordt geen klantomgeving, omgeving of persoon weergegeven.",
+  "report.footerSample": "voorbeeldgegevens",
+  "report.page": "Pagina",
+  "report.of": "van",
+  "report.componentsRead": "Componenten gelezen",
+  "report.estimatedEffort": "Geschatte inspanning",
+  "report.aRange": "een bandbreedte, geen offerte",
+  "report.checksThatCouldNotRun": "controles die niet konden draaien"
 }
