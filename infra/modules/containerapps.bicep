@@ -260,7 +260,11 @@ resource worker 'Microsoft.App/containerApps@2024-03-01' = {
         {
           name: 'worker'
           image: startingImage
+          // "work" is the poll loop. Without it the dispatcher prints its help and exits
+          // zero, which the platform treats as a container that finished and restarts, over
+          // and over, with a successful exit code and a help screen in the log.
           command: empty(image) ? null : ['/app/jobs-entrypoint.sh']
+          args: empty(image) ? null : ['work']
           resources: { cpu: json('1.0'), memory: '2Gi' }
           env: containerEnv
         }

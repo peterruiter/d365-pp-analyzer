@@ -1,5 +1,6 @@
 namespace PowerPete.Analyzer.Jobs;
 
+using System.Globalization;
 using System.Text.Json;
 using PowerPete.Analyzer.Analysis;
 using PowerPete.Analyzer.Data;
@@ -39,21 +40,25 @@ public sealed record WorkerSettings(
     {
         var missing = new List<string>();
 
-        var connectionString = Environment.GetEnvironmentVariable("ANALYZER_SQL_CONNECTION");
+        // Through DeploymentSettings rather than by name. The container is given
+        // ConnectionStrings__Analyzer and KeyVault__Uri; this used to ask for
+        // ANALYZER_SQL_CONNECTION and ANALYZER_KEYVAULT_URI and find neither.
+        var connectionString = DeploymentSettings.FromEnvironment(DeploymentSettings.SqlConnection);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            missing.Add("ANALYZER_SQL_CONNECTION is not set. There is nowhere to record a run.");
+            missing.Add(Unset(DeploymentSettings.SqlConnection) + " There is nowhere to record a run.");
         }
 
-        var vault = Environment.GetEnvironmentVariable("ANALYZER_KEYVAULT_URI");
+        var vault = DeploymentSettings.FromEnvironment(DeploymentSettings.KeyVaultUri);
         if (string.IsNullOrWhiteSpace(vault))
         {
             // Not fatal. An engagement running entirely on uploaded solution files needs no
             // credential at all, and refusing to start would make the safest mode the hardest
             // one to use.
             Console.Error.WriteLine(
-                "ANALYZER_KEYVAULT_URI is not set. Offline engagements will work; anything needing a " +
-                "credential will fail when it reaches the connection.");
+                Unset(DeploymentSettings.KeyVaultUri)
+                + " Offline engagements will work; anything needing a credential will fail when it "
+                + "reaches the connection.");
         }
 
         problems = missing;
@@ -62,14 +67,27 @@ public sealed record WorkerSettings(
         return new WorkerSettings(
             connectionString!,
             vault,
-            Environment.GetEnvironmentVariable("ANALYZER_UPLOAD_CONTAINER"),
-            Environment.GetEnvironmentVariable("ANALYZER_OPENAI_ENDPOINT"),
-            Environment.GetEnvironmentVariable("ANALYZER_OPENAI_DEPLOYMENT"),
-            Environment.GetEnvironmentVariable("ANALYZER_WORKER_ID") ?? Environment.MachineName,
+            DeploymentSettings.FromEnvironment(DeploymentSettings.UploadContainer),
+            DeploymentSettings.FromEnvironment(DeploymentSettings.OpenAiEndpoint),
+            DeploymentSettings.FromEnvironment(DeploymentSettings.OpenAiDeployment),
+            DeploymentSettings.FromEnvironment(DeploymentSettings.WorkerId) ?? Environment.MachineName,
             typeof(WorkerSettings).Assembly.GetName().Version?.ToString() ?? "unknown",
             TimeSpan.FromSeconds(
-                int.TryParse(Environment.GetEnvironmentVariable("ANALYZER_POLL_SECONDS"), out var seconds) ? seconds : 10));
+                int.TryParse(
+                    DeploymentSettings.FromEnvironment(DeploymentSettings.PollSeconds),
+                    CultureInfo.InvariantCulture,
+                    out var seconds)
+                    ? seconds
+                    : 10));
     }
+
+    /// <summary>Says a setting is unset, naming every spelling that would have counted.</summary>
+    /// <param name="setting">The setting.</param>
+    /// <returns>A sentence an operator can act on.</returns>
+    private static string Unset(DeploymentSetting setting) =>
+        string.Create(
+            CultureInfo.InvariantCulture,
+            $"{string.Join(" or ", DeploymentSettings.Names(setting).Select(DeploymentSettings.EnvironmentName))} is not set.");
 }
 
 /// <summary>

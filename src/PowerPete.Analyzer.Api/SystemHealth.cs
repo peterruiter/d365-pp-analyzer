@@ -201,7 +201,7 @@ public sealed class SystemHealth(IConfiguration configuration)
 
     private async Task<SystemCheck> VaultAsync(CancellationToken cancellationToken)
     {
-        var uri = configuration["KeyVault:Uri"];
+        var uri = DeploymentSettings.Read(DeploymentSettings.KeyVaultUri, name => configuration[name]);
 
         if (string.IsNullOrWhiteSpace(uri))
         {
@@ -251,7 +251,7 @@ public sealed class SystemHealth(IConfiguration configuration)
 
         var tenant = configuration["AzureAd:TenantId"];
         var client = configuration["AzureAd:ClientId"];
-        var admin = configuration["Access:InitialGlobalAdminUpn"];
+        var admin = DeploymentSettings.Read(DeploymentSettings.InitialGlobalAdmin, name => configuration[name]);
 
         if (string.IsNullOrWhiteSpace(tenant) || string.IsNullOrWhiteSpace(client))
         {
@@ -486,7 +486,7 @@ public sealed class SystemHealth(IConfiguration configuration)
         SyncfusionLicence.Register(trimmed, force: true);
         var coversPdf = SyncfusionLicence.IsRegisteredForPdf;
 
-        var vault = configuration["KeyVault:Uri"];
+        var vault = DeploymentSettings.Read(DeploymentSettings.KeyVaultUri, name => configuration[name]);
 
         if (string.IsNullOrWhiteSpace(vault))
         {

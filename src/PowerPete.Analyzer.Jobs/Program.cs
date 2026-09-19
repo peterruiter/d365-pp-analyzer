@@ -97,7 +97,7 @@ public static class Program
                        [--json]                 No database, no environment, no credentials.
                        [--xlsx <file>]          Also writes the findings workbook.
                        [--pdf <file>]           Also writes the assessment report. Needs a
-                                                Syncfusion licence key in SYNCFUSION_LICENCE_KEY.
+                                                Syncfusion licence key in SYNCFUSION_LICENSE.
                        [--language <code>]      Writes the documents in that language.
               rules [category]                  Lists the rule catalogue.
               components                        Lists the component types, with craft and lifecycle.

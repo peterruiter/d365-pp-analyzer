@@ -3,6 +3,7 @@ namespace PowerPete.Analyzer.Tests;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using FluentAssertions;
+using PowerPete.Analyzer.Data;
 using PowerPete.Analyzer.Domain;
 using Xunit;
 
@@ -584,6 +585,144 @@ public class DataLayerTests
     }
 
     /// <summary>The src folder.</summary>
+    [Fact]
+    public void Reads_every_setting_the_infrastructure_writes()
+    {
+        // This is the test that would have caught a deployment that was broken from the day
+        // it was first deployed.
+        //
+        // The bicep wrote KeyVault__Uri. The API read KeyVaultUri, found nothing, and built
+        // the secret store that refuses. The worker read ANALYZER_KEYVAULT_URI and found
+        // nothing either. The system health page read KeyVault:Uri, found it, wrote a probe
+        // secret and reported a healthy vault. Nothing disagreed out loud, and the only
+        // symptom was a 503 at the last step of the sign-in wizard.
+        //
+        // Both directions, because each one hides a different fault. A name written and never
+        // read is a setting an operator thinks they have set. A name read and never written is
+        // a feature that is off in every deployment.
+        var written = WrittenByTheInfrastructure();
+
+        written.Should().NotBeEmpty("the bicep sets environment variables and this has to be reading them");
+
+        // Variables the platform and the Azure SDK read for themselves. They belong in the
+        // container definition and no code of ours asks for them by name.
+        var platform = new[] { "AZURE_CLIENT_ID", "APPLICATIONINSIGHTS_CONNECTION_STRING" };
+
+        var accepted = DeploymentSettings.All
+            .SelectMany(DeploymentSettings.Names)
+            .Select(DeploymentSettings.EnvironmentName)
+            .ToHashSet(StringComparer.Ordinal);
+
+        var unread = written
+            .Where(name => !platform.Contains(name, StringComparer.Ordinal))
+            .Where(name => !accepted.Contains(name))
+            .ToList();
+
+        unread.Should().BeEmpty(
+            "the infrastructure sets these on the container and nothing in the product reads them, "
+            + "so an operator can set them correctly and watch the feature stay off");
+
+        var unwritten = DeploymentSettings.All
+            .Where(setting => setting.Deployed)
+            .Where(setting => !DeploymentSettings.Names(setting)
+                .Select(DeploymentSettings.EnvironmentName)
+                .Any(name => written.Contains(name, StringComparer.Ordinal)))
+            .Select(setting => setting.Name)
+            .ToList();
+
+        unwritten.Should().BeEmpty(
+            "these are read from a deployed container and the bicep never sets them under any name "
+            + "the code accepts");
+    }
+
+    [Fact]
+    public void Runs_the_worker_assembly_the_build_actually_produces()
+    {
+        // The other half of the same deployment, and the one that cost more. The worker's
+        // entry point ran "dotnet PowerPete.Analyzer.Jobs.dll", the Jobs project sets
+        // AssemblyName to analyzer, and the container crash looped every five minutes from
+        // the first deployment onwards. Every run ever queued sat in the queue.
+        var root = Directory.GetParent(Solution())!.FullName;
+
+        var assemblyName = Regex.Match(
+            File.ReadAllText(Path.Combine(Solution(), "PowerPete.Analyzer.Jobs", "PowerPete.Analyzer.Jobs.csproj")),
+            @"<AssemblyName>(?<name>[^<]+)</AssemblyName>",
+            RegexOptions.None,
+            TimeSpan.FromSeconds(5));
+
+        assemblyName.Success.Should().BeTrue("the worker project sets its own assembly name and this reads it");
+
+        var expected = $"{assemblyName.Groups["name"].Value}.dll";
+        var dockerfile = File.ReadAllText(Path.Combine(root, "Dockerfile"));
+
+        var entryPoint = Regex.Match(
+            dockerfile,
+            @"exec dotnet (?<path>\S+\.dll)",
+            RegexOptions.None,
+            TimeSpan.FromSeconds(5));
+
+        entryPoint.Success.Should().BeTrue("the image writes a shell entry point for the worker");
+
+        Path.GetFileName(entryPoint.Groups["path"].Value).Should().Be(
+            expected,
+            "the worker entry point has to name the assembly the publish step produces, or the "
+            + "container starts, fails to find it, and restarts for ever");
+    }
+
+    [Fact]
+    public void Tells_the_worker_container_to_work()
+    {
+        // The third way one deployment managed to run nothing.
+        //
+        // With the assembly found, the container ran the dispatcher with no arguments. The
+        // dispatcher's answer to no arguments is its help screen and exit 0, which the
+        // platform reads as a container that finished its work, so it started it again. A
+        // crash loop that exits successfully and prints a help screen looks like nothing at
+        // all in a log.
+        //
+        // Both places, because they protect each other. The bicep passes it, and the image
+        // falls back to it for a container deployed by hand.
+        var root = Directory.GetParent(Solution())!.FullName;
+
+        var bicep = File.ReadAllText(Path.Combine(root, "infra", "modules", "containerapps.bicep"));
+
+        var worker = bicep[bicep.IndexOf("name: 'worker'", StringComparison.Ordinal)..];
+
+        worker.Should().NotBeEmpty("the bicep defines a worker container and this reads it");
+
+        worker[..worker.IndexOf("scale:", StringComparison.Ordinal)]
+            .Should().Contain(
+                "'work'",
+                "the worker container has to be told which command to run, or it prints its help "
+                + "and exits zero for ever");
+
+        File.ReadAllText(Path.Combine(root, "Dockerfile"))
+            .Should().Contain(
+                "set -- work",
+                "the image has to default to the poll loop, so a worker deployed without arguments "
+                + "still polls");
+    }
+
+    /// <summary>Every environment variable name the container definition sets.</summary>
+    private static List<string> WrittenByTheInfrastructure()
+    {
+        var root = Directory.GetParent(Solution())!.FullName;
+        var bicep = File.ReadAllText(Path.Combine(root, "infra", "modules", "containerapps.bicep"));
+
+        // An environment entry, which is a name with a value or a secret reference beside it.
+        // Matching a bare name picked up the registry sku and the container names, which are
+        // not settings and would have to be excused one by one as the file grew.
+        return Regex
+            .Matches(
+                bicep,
+                @"\{ name: '(?<name>[A-Za-z0-9_]+)', (?:value|secretRef):",
+                RegexOptions.None,
+                TimeSpan.FromSeconds(5))
+            .Select(match => match.Groups["name"].Value)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+    }
+
     private static string Solution()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

@@ -11,6 +11,12 @@ every start, the reports render with charts in six languages, the offline upload
 to end, and a run queued through the API is picked up by the worker and produces findings
 from a real export.
 
+That last clause was true of a worker run on a laptop and false of the deployed one. The
+deployed worker had never completed a single poll, from the first deployment to this one,
+for three reasons at once. They are recorded below. The line stays because it is true again,
+and this paragraph stays because the distinction between "the product does this" and "the
+product did this once, locally" is the whole point of the file.
+
 **What has never happened is a read of a live client environment.** Interactive sign-in has
 never completed a round trip: it needs an account in a client tenant and a browser, and it
 is the last unproven path of consequence. An earlier version of this line said interactive
@@ -978,6 +984,83 @@ are how a test ends up proving nothing:
 
 Both directions are now checked by hand: with the bug reintroduced it fails naming the
 count, and with it fixed it passes.
+
+## The deployed worker had never run, and the sign-in could not find its vault
+
+Reported as one symptom: interactive sign-in answered 503 with "No Key Vault is configured,
+so there is nowhere to keep the sign-in." The vault existed, held a probe secret written by
+this very deployment, and the operations page reported it healthy and writable.
+
+Three separate defects, none of which produced an error anybody would read.
+
+### One setting, four spellings
+
+The bicep writes `KeyVault__Uri`. Three places read it, and no two agreed:
+
+| Reader | Asked for | Found |
+|---|---|---|
+| System health | `KeyVault:Uri` | The vault. Wrote its probe secret, reported healthy |
+| API startup | `KeyVaultUri` | Nothing. Built the secret store that refuses |
+| Worker | `ANALYZER_KEYVAULT_URI` | Nothing |
+
+So the page that exists to tell an operator whether the vault works said yes, and the code
+that needs the vault behaved as though there were none. The same disagreement was live on
+three more settings: the first global administrator and the support contact were written as
+`Access__InitialGlobalAdminUpn` and `Support__AdminContact` and read as `InitialGlobalAdmin`
+and `AdminContactEmail`.
+
+The doc comment on `SecretStore.For` had already predicted this exactly, in those words, and
+put the choice of store in one place so it could not happen. It was the right idea one layer
+too low: the *name* of the setting is as much a part of the decision as the choice of store.
+`DeploymentSettings` now names each setting once with its accepted aliases, and the API, the
+worker and the health page all read through it.
+
+### The worker's entry point named an assembly that has never existed
+
+`PowerPete.Analyzer.Jobs.csproj` sets `AssemblyName` to `analyzer`, so its command line reads
+like a tool. The Dockerfile wrote an entry point running `dotnet PowerPete.Analyzer.Jobs.dll`.
+The container started, said the application did not exist, and restarted, every five minutes,
+since the first deployment.
+
+Nothing caught it because the API half of the same image ran perfectly, the version numbers
+agreed, and nobody reads the log of a component whose only job is to be quiet.
+
+### And then it printed its help and exited successfully
+
+With the assembly found, the container ran the dispatcher with no arguments, because the
+bicep set `command` and no `args`. The dispatcher's answer to no arguments is its help screen
+and exit 0. The platform reads exit 0 as a container that finished, and starts it again.
+
+A crash loop that exits successfully and prints a help screen is invisible twice over: there
+is no error, and the log looks like documentation.
+
+### What holds each of them now
+
+- `Reads_every_setting_the_infrastructure_writes` parses the container definition and fails in
+  both directions. A name the infrastructure writes and no reader accepts is an operator
+  setting something correctly and watching the feature stay off. A setting the code needs and
+  the infrastructure never writes is a feature off in every deployment.
+- `Runs_the_worker_assembly_the_build_actually_produces` reads `AssemblyName` out of the
+  project file and holds the Dockerfile's entry point to it. The image also asserts the file
+  exists at build time, so a rename fails a build rather than a deployment.
+- `Tells_the_worker_container_to_work` holds both the bicep argument and the image's fallback
+  to `work` when it is given none.
+
+All three were checked by reintroducing the defect: each fails naming the real cause, and
+passes once fixed.
+
+### What this cost, and the pattern
+
+Every run ever queued through the deployed product sat in the queue. The estate on screen was
+built by the seeder, the reports were rendered by the command line, and every probe of the
+pipeline bypassed the deployment, so nothing in the product ever asked the worker for
+anything and noticed it was not there.
+
+This is the same shape as the column arity defect two sessions ago: the failure was total,
+permanent and silent, and it survived because the thing that would have revealed it was the
+one path nobody had run end to end. The lesson is not about settings or about Docker. It is
+that a component with no output is a component with no evidence, and this product now has
+three tests whose whole job is to be that evidence.
 
 ## What was ported rather than invented
 

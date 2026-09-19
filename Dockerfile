@@ -93,7 +93,26 @@ RUN dotnet publish src/PowerPete.Analyzer.Jobs/PowerPete.Analyzer.Jobs.csproj \
 # A shell entry point rather than the assembly directly, so the Container Apps Job can pass
 # arguments through to the command dispatcher without the platform's own argument handling
 # getting in the way.
-RUN printf '#!/bin/sh\nexec dotnet PowerPete.Analyzer.Jobs.dll "$@"\n' > /app/publish/jobs-entrypoint.sh \
+#
+# analyzer.dll, not PowerPete.Analyzer.Jobs.dll. The Jobs project sets AssemblyName to
+# "analyzer" so its command line reads like a tool, and this line named the project instead.
+# Nothing caught it. The image built, the API half of it ran perfectly, and the worker crash
+# looped every five minutes from the first deployment onwards saying the application did not
+# exist. Every run queued through the product sat in the queue, and nobody read the worker's
+# log because the product it feeds looked healthy.
+#
+# So the name is asserted rather than trusted. If the assembly name changes again the image
+# fails to build, which is somewhere somebody is looking.
+RUN test -f /app/publish/analyzer.dll \
+ || (echo 'The worker assembly is not analyzer.dll. Check AssemblyName in PowerPete.Analyzer.Jobs.csproj and fix the entry point below to match.'; ls /app/publish/*.dll; exit 1)
+
+# "work" when nothing is passed, because the only thing that runs this image without
+# arguments is the worker container app, and the dispatcher's answer to no arguments is to
+# print its help and exit 0. That is what the container did once it could find the assembly:
+# started, printed the help, exited successfully, restarted, for ever, with nothing in the log
+# that reads like a failure. The bicep passes "work" explicitly as well; this is so an image
+# deployed without it still polls rather than looping quietly.
+RUN printf '#!/bin/sh\nif [ $# -eq 0 ]; then set -- work; fi\nexec dotnet /app/analyzer.dll "$@"\n' > /app/publish/jobs-entrypoint.sh \
  && chmod +x /app/publish/jobs-entrypoint.sh
 
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime

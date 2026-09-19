@@ -65,8 +65,16 @@ var connectionString = builder.Configuration.GetConnectionString("Analyzer")
         "No connection string. The API cannot start without somewhere to read engagements from, and starting " +
         "anyway would mean a sign-in page in front of nothing.");
 
-var keyVaultUri = builder.Configuration["KeyVaultUri"] ?? Environment.GetEnvironmentVariable("ANALYZER_KEYVAULT_URI");
-var initialAdmin = builder.Configuration["InitialGlobalAdmin"] ?? Environment.GetEnvironmentVariable("ANALYZER_INITIAL_ADMIN");
+// Through DeploymentSettings rather than by name, because reading them by name here is
+// what broke the deployment: the container was given KeyVault__Uri, this line asked for
+// KeyVaultUri, and interactive sign-in failed at the last step saying no vault was
+// configured while the operations page said one was.
+string? Setting(DeploymentSetting setting) =>
+    DeploymentSettings.Read(setting, name => builder.Configuration[name]);
+
+var keyVaultUri = Setting(DeploymentSettings.KeyVaultUri);
+var initialAdmin = Setting(DeploymentSettings.InitialGlobalAdmin);
+var adminContact = Setting(DeploymentSettings.AdminContact) ?? string.Empty;
 
 builder.Services.AddSingleton<DevOpsProjects>();
 builder.Services.AddSingleton<JiraProjects>();
@@ -79,8 +87,7 @@ builder.Services.AddSingleton<ReportComposer>();
 
 // Where an uploaded solution file goes. Absent on a local run, which the endpoint reports
 // rather than throwing: everything except the offline mode works without it.
-var uploadContainer = builder.Configuration["Uploads:ContainerUri"]
-    ?? Environment.GetEnvironmentVariable("ANALYZER_UPLOAD_CONTAINER");
+var uploadContainer = Setting(DeploymentSettings.UploadContainer);
 
 builder.Services.AddSingleton(new SolutionUploads(
     string.IsNullOrWhiteSpace(uploadContainer) ? null : new Uri(uploadContainer)));
@@ -145,9 +152,7 @@ else
             // Configurable because this name is on screen, and the screenshots on the
             // public site are taken from a local run. "Local development" across the top
             // of a picture on a marketing page is not what it is trying to say.
-            builder.Configuration["LocalSignIn:DisplayName"]
-                ?? Environment.GetEnvironmentVariable("ANALYZER_LOCAL_DISPLAY_NAME")
-                ?? "Local development"))
+            Setting(DeploymentSettings.LocalSignInDisplayName) ?? "Local development"))
         .AddAuthentication(LocalSignInHandler.SchemeName)
         .AddScheme<AuthenticationSchemeOptions, LocalSignInHandler>(LocalSignInHandler.SchemeName, null);
 }
@@ -1726,7 +1731,7 @@ app.MapGet("/api/auth/status", async (HttpContext context) =>
             authConfigured = configured,
             authenticated = false,
             registered = false,
-            adminContact = builder.Configuration["AdminContactEmail"] ?? string.Empty
+            adminContact = adminContact
         });
     }
 
@@ -1750,7 +1755,7 @@ app.MapGet("/api/auth/status", async (HttpContext context) =>
         userId,
         displayName = DisplayName(context.User),
         access.IsGlobalAdmin,
-        adminContact = builder.Configuration["AdminContactEmail"] ?? string.Empty,
+        adminContact = adminContact,
         language = preferences.Language,
         theme = preferences.Theme
     });
