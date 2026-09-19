@@ -670,7 +670,7 @@ The build gates, for reference:
 2. `./build/Test-Generators.ps1` — generates into a throwaway folder and checks the output.
    Passes.
 3. `./build/Invoke-CodeGen.ps1` — generates and builds. Twelve of twelve, no warnings.
-4. `dotnet test` — 100 tests, all passing.
+4. `dotnet test` — 101 tests, all passing.
 5. `./build/New-SampleSolution.ps1` then `analyse samples/SampleSolution.zip` — sixteen
    planted defects, twelve found and four correctly not assessed.
 
@@ -797,6 +797,47 @@ that an invented picture of a product is worse than none. There is something tru
 Still no screenshots of the application itself. They need a signed-in session and the only
 account on this machine is in the wrong tenant, so that is the one thing on the microsite
 that is still missing.
+
+## The report was English in six languages
+
+The engagement has stored a report language since the first release and nothing ever read
+it. Both documents defaulted to English, so a Dutch engagement produced a Dutch screen and
+an English report, and all six translated bundles sat in the assembly unused. The composer
+already loads the engagement; it passes the language now.
+
+Rendering all six then found the quieter half of the same problem. **Fourteen keys the
+renderer asks for had never existed in any bundle**, including three section headings, the
+whole legend of the low code donut, and every severity value in every table.
+
+Every lookup carries its English as a second argument, which is the thing that stops a
+missing key leaving a hole on page four. It is also why this was invisible: a key that
+exists in no bundle at all renders perfectly, in English, in all six languages, and nothing
+ever says so. `Every_key_the_report_asks_for_exists_in_every_language` scans the renderer
+for the keys it uses and holds every bundle to them, so a key added tomorrow is checked
+tomorrow.
+
+German runs a page longer than English and the cover's fitted table drops a row to make
+room, which is the measuring doing its job. `Schweregrad` broke mid-word into
+`SCHWEREGR / AD` until the severity column was widened.
+
+### The consultant's sections are left out when nobody wrote one
+
+They used to print with a heading and a bordered panel saying nobody had written it, on the
+argument that a report missing its scenarios because nobody noticed is worse than one that
+says so on the page.
+
+That argument was about the wrong reader. A document that reaches a client with three empty
+boxes in it and an instruction to the consultant inside each one does not read as candid, it
+reads as a draft somebody sent by mistake, and the client cannot act on a prompt that is not
+addressed to them.
+
+Nothing is silently dropped. The method section at the back names the sections nobody wrote,
+once, on the page that already explains what was and was not looked at. Functional maturity
+drops out entirely when nothing is scored and nothing is written, which previously left a
+heading, a rule and an empty page.
+
+An engagement with no consultant input is twelve pages rather than fifteen, with no empty
+ones in any language.
 
 ## What was ported rather than invented
 
