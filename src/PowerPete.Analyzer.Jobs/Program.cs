@@ -269,6 +269,10 @@ public static class Program
                     customisation,
                     roadmap,
                     new Dictionary<string, string>(StringComparer.Ordinal),
+
+                    // The command line has no engagement, so there is nobody to have scored
+                    // anything. The section prints its prompt, which is the honest answer.
+                    [],
                     language));
 
                 await File.WriteAllBytesAsync(pdf, bytes).ConfigureAwait(false);

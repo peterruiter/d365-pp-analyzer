@@ -573,6 +573,94 @@ public sealed class AnalysisStore(string connectionString)
         return [.. rows];
     }
 
+    /// <summary>One capability axis, as somebody scored it.</summary>
+    /// <param name="AxisId">Which axis, from report-model.json.</param>
+    /// <param name="Score">Nought to five.</param>
+    /// <param name="Evidence">Who told them, which the prompt asks for per axis.</param>
+    /// <param name="UpdatedByName">Who scored it.</param>
+    public sealed record MaturityScore(string AxisId, decimal Score, string? Evidence, string UpdatedByName);
+
+    /// <summary>Every maturity score on one engagement.</summary>
+    /// <param name="engagementId">Which engagement.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task<IReadOnlyList<MaturityScore>> GetMaturityAsync(
+        Guid engagementId,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        var rows = await connection.QueryAsync<MaturityScore>(new CommandDefinition(
+            """
+            SELECT AxisId, Score, Evidence, UpdatedByName
+            FROM findings.MaturityScore
+            WHERE EngagementId = @engagementId
+            ORDER BY AxisId;
+            """,
+            new { engagementId },
+            cancellationToken: cancellationToken));
+
+        return [.. rows];
+    }
+
+    /// <summary>
+    /// Scores one axis, or removes it when the score is taken away.
+    /// </summary>
+    /// <remarks>
+    /// A null score deletes rather than storing a zero. Nought is a real score on this
+    /// scale and means the capability is absent; not having looked is a different statement
+    /// and the radar leaves that axis out rather than drawing it at the origin.
+    /// </remarks>
+    /// <param name="engagementId">Which engagement.</param>
+    /// <param name="axisId">Which axis.</param>
+    /// <param name="score">Nought to five, or null to remove it.</param>
+    /// <param name="evidence">Who told them.</param>
+    /// <param name="userId">Who scored it.</param>
+    /// <param name="displayName">Their name.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task SaveMaturityAsync(
+        Guid engagementId,
+        string axisId,
+        decimal? score,
+        string? evidence,
+        string userId,
+        string displayName,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        if (score is null)
+        {
+            await connection.ExecuteAsync(new CommandDefinition(
+                "DELETE FROM findings.MaturityScore WHERE EngagementId = @engagementId AND AxisId = @axisId;",
+                new { engagementId, axisId },
+                cancellationToken: cancellationToken)).ConfigureAwait(false);
+
+            return;
+        }
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            MERGE findings.MaturityScore AS target
+            USING (SELECT @engagementId AS EngagementId, @axisId AS AxisId) AS source
+                ON target.EngagementId = source.EngagementId AND target.AxisId = source.AxisId
+            WHEN MATCHED THEN UPDATE SET
+                Score = @score, Evidence = @evidence, UpdatedUtc = SYSUTCDATETIME(),
+                UpdatedBy = @userId, UpdatedByName = @displayName
+            WHEN NOT MATCHED THEN INSERT (EngagementId, AxisId, Score, Evidence, UpdatedBy, UpdatedByName)
+                VALUES (@engagementId, @axisId, @score, @evidence, @userId, @displayName);
+            """,
+            new
+            {
+                engagementId,
+                axisId,
+                score,
+                evidence = string.IsNullOrWhiteSpace(evidence) ? null : evidence.Trim(),
+                userId = AccessStore.Normalise(userId),
+                displayName
+            },
+            cancellationToken: cancellationToken)).ConfigureAwait(false);
+    }
+
     /// <summary>One section of the report that a person wrote.</summary>
     /// <param name="SectionId">Which section, from report-model.json.</param>
     /// <param name="Body">What they wrote.</param>

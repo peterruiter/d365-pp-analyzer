@@ -420,4 +420,144 @@ public sealed partial class AssessmentReportPdf
 
         flow.Gap(12f);
     }
+
+    private const float RadarSize = 250f;
+
+    /// <summary>
+    /// The maturity scores, as the shape they make.
+    /// </summary>
+    /// <remarks>
+    /// The one chart in this document whose numbers no part of the product produced. Every
+    /// point is a judgement somebody made in an interview, which is why the axis labels carry
+    /// the scores as text as well: a shape is memorable and a number is checkable, and this
+    /// is the section most likely to be quoted back.
+    ///
+    /// Axes with no score are drawn as spokes and skipped by the shape rather than plotted at
+    /// the origin. Nought means the capability is absent, which is a finding; not having
+    /// looked is not, and a polygon that dives to the centre on an unscored axis says the
+    /// first when it means the second.
+    ///
+    /// The scale prints beside it. A 1.9 with no scale next to it is meaningless and gets
+    /// quoted anyway.
+    /// </remarks>
+    /// <param name="flow">Where it goes.</param>
+    /// <param name="scores">Axis label and score, in the order they go round.</param>
+    /// <param name="scale">The scale, written beside the chart.</param>
+    private static void RadarChart(
+        Flow flow,
+        IReadOnlyList<(string Label, decimal? Score)> scores,
+        string scale)
+    {
+        if (scores.Count < 3) return;
+
+        const float max = 5f;
+        const int rings = 5;
+
+        // Taller than the circle and centred across the full width. The labels sit outside
+        // the outer ring on every side, and a circle drawn hard against the left margin puts
+        // the ones on that side off the page: the first render lost biAndAnalytics and
+        // customer360 entirely.
+        const float labelRoom = 14f;
+
+        flow.Fixed(RadarSize + (labelRoom * 2), (graphics, box) =>
+        {
+            var radius = (RadarSize / 2) - labelRoom;
+            var centreX = box.Left + (box.Width / 2);
+            var centreY = box.Top + labelRoom + (RadarSize / 2);
+
+            PointF At(int index, float value)
+            {
+                // Starting at the top and going clockwise, which is how everybody reads one.
+                var angle = (-Math.PI / 2) + (2 * Math.PI * index / scores.Count);
+                var distance = radius * (value / max);
+
+                return new PointF(
+                    centreX + (float)(Math.Cos(angle) * distance),
+                    centreY + (float)(Math.Sin(angle) * distance));
+            }
+
+            // The web: one ring per point on the scale, so somebody can read a score off the
+            // shape rather than only off the labels.
+            for (var ring = 1; ring <= rings; ring++)
+            {
+                var corners = Enumerable.Range(0, scores.Count)
+                    .Select(index => At(index, ring))
+                    .ToArray();
+
+                graphics.DrawPolygon(PdfTheme.Pen(CapgeminiBrand.Line, ring == rings ? 0.8f : 0.4f), corners);
+            }
+
+            for (var index = 0; index < scores.Count; index++)
+            {
+                var spoke = At(index, max);
+                graphics.DrawLine(PdfTheme.Pen(CapgeminiBrand.Line, 0.4f), centreX, centreY, spoke.X, spoke.Y);
+            }
+
+            // The shape. Only the scored axes, and only when enough of them are scored for a
+            // polygon to mean anything.
+            var scored = scores
+                .Select((entry, index) => (entry.Score, index))
+                .Where(entry => entry.Score is not null)
+                .Select(entry => At(entry.index, (float)entry.Score!.Value))
+                .ToArray();
+
+            if (scored.Length >= 3)
+            {
+                graphics.DrawPolygon(
+                    PdfTheme.Pen(CapgeminiBrand.Blue, 1.6f),
+                    PdfTheme.Brush(CapgeminiBrand.BlueSoft),
+                    scored);
+
+                foreach (var point in scored)
+                {
+                    graphics.DrawEllipse(PdfTheme.Brush(CapgeminiBrand.Blue),
+                        new RectangleF(point.X - 2.2f, point.Y - 2.2f, 4.4f, 4.4f));
+                }
+            }
+
+            var font = flow.Theme.Font(new TextStyle { Size = 7f });
+
+            for (var index = 0; index < scores.Count; index++)
+            {
+                var (label, score) = scores[index];
+                var anchor = At(index, max + 0.62f);
+
+                // Labels sit outside the outer ring and are aligned by which side of the
+                // circle they are on, or the ones on the left run back over the shape.
+                var left = anchor.X < centreX - 4f;
+                var centred = Math.Abs(anchor.X - centreX) <= 4f;
+
+                // Wide enough for the longest axis name plus its score, and explicitly not
+                // wrapping. serviceRequestManagement wrapped onto a second line that fell
+                // outside the box, and the score went with it: the label read as unscored
+                // while the point was plotted, which is the worst of both.
+                const float labelWidth = 124f;
+
+                var area = centred
+                    ? new RectangleF(anchor.X - (labelWidth / 2), anchor.Y - 6f, labelWidth, 13f)
+                    : left
+                        ? new RectangleF(anchor.X - labelWidth, anchor.Y - 6f, labelWidth, 13f)
+                        : new RectangleF(anchor.X, anchor.Y - 6f, labelWidth, 13f);
+
+                var align = centred
+                    ? PdfTextAlignment.Center
+                    : left ? PdfTextAlignment.Right : PdfTextAlignment.Left;
+
+                graphics.DrawString(
+                    score is null
+                        ? $"{label}  —"
+                        : string.Create(CultureInfo.InvariantCulture, $"{label}  {score:0.#}"),
+                    font,
+                    PdfTheme.Brush(score is null ? CapgeminiBrand.Muted : CapgeminiBrand.Ink),
+                    area,
+                    new PdfStringFormat(align, PdfVerticalAlignment.Middle)
+                    {
+                        WordWrap = PdfWordWrapType.None
+                    });
+            }
+        }, paddingTop: 10f);
+
+        flow.Text(scale, new TextStyle { Size = 8.5f, Colour = CapgeminiBrand.Muted }, paddingTop: 6f);
+        flow.Gap(12f);
+    }
 }

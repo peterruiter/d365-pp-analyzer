@@ -106,6 +106,8 @@ public sealed class ReportComposer(AnalysisStore analysis, WorkspaceStore worksp
                 []))
             .ToList();
 
+        var maturity = await analysis.GetMaturityAsync(engagementId, cancellationToken).ConfigureAwait(false);
+
         var written = (await analysis.GetNarrativeAsync(engagementId, cancellationToken).ConfigureAwait(false))
             .ToDictionary(section => section.SectionId, section => section.Body, StringComparer.Ordinal);
 
@@ -129,7 +131,18 @@ public sealed class ReportComposer(AnalysisStore analysis, WorkspaceStore worksp
                 // a section has not been written the report still prints its prompt, which
                 // is a great deal better than generating a readiness score from metadata and
                 // letting it read like one produced from twenty interviews.
-                written));
+                written,
+
+                // Every axis the contract declares, in its order, whether or not anybody has
+                // scored it. The radar draws an unscored axis as a spoke with no point on
+                // it: nought means the capability is absent, and not having looked is a
+                // different statement that must not be drawn as the first.
+                [.. MaturityAxes().Select(axis =>
+                {
+                    var scored = maturity.FirstOrDefault(entry => entry.AxisId == axis);
+
+                    return (axis, scored is null ? (decimal?)null : scored.Score, scored?.Evidence);
+                })]));
     }
 
     private static T? Read<T>(JsonElement breakdown, string name) =>
@@ -138,6 +151,31 @@ public sealed class ReportComposer(AnalysisStore analysis, WorkspaceStore worksp
             : default;
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+
+    /// <summary>
+    /// The capability axes, in the order the contract declares them.
+    /// </summary>
+    /// <remarks>
+    /// Read from the contract rather than listed here, so the radar, the scoring form and
+    /// the report cannot disagree about which axes exist or what order they go round in. A
+    /// radar whose axes move between two engagements is not comparable with itself.
+    /// </remarks>
+    private static IReadOnlyList<string> MaturityAxes()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "build", "contracts", "report-model.json");
+
+        if (!File.Exists(path)) return [];
+
+        using var document = JsonDocument.Parse(File.ReadAllText(path));
+
+        return
+        [
+            .. document.RootElement.GetProperty("maturityAxes").GetProperty("groups").EnumerateArray()
+                .SelectMany(group => group.GetProperty("axes").EnumerateArray())
+                .Select(axis => axis.GetString())
+                .OfType<string>()
+        ];
+    }
 
     /// <summary>
     /// The score the run stored, or as much of it as an older run kept.

@@ -1264,3 +1264,63 @@
   .narrative-body { padding-left: 14px; padding-right: 14px; }
   .narrative-foot .secondary-button { width: 100%; }
 }
+
+/* --------------------------------------------------------------- maturity --
+   Sixteen capability axes, scored nought to five. A row per axis: the name,
+   the scale as six buttons, and who told you.
+
+   Buttons rather than a slider or a number box. There are six values, a number
+   box invites a 7 and a decimal, and a slider is a control somebody has to drag
+   precisely to say something they already know exactly. */
+
+.maturity-body { padding: 4px 23px 20px; }
+.axis-group { margin-top: 20px; }
+.axis-group h3 { margin: 0 0 8px; color: var(--cp-accent); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+
+.axis-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.1fr) auto minmax(0, 1.4fr);
+  gap: 14px;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--cp-border);
+}
+
+.axis-name { color: var(--brand-ink); font-size: 13px; }
+.axis-scale { display: flex; gap: 4px; }
+
+.axis-point {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--cp-border);
+  border-radius: 4px;
+  background: var(--cp-surface);
+  color: var(--cp-text-muted);
+  font: inherit;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.axis-point:hover:not(:disabled) { border-color: var(--cp-accent); color: var(--cp-accent); }
+.axis-point.chosen { border-color: var(--brand-blue); background: var(--brand-blue); color: var(--cp-on-brand); font-weight: 700; }
+.axis-point:disabled { opacity: .55; }
+
+.axis-evidence {
+  width: 100%;
+  min-height: 30px;
+  padding: 5px 8px;
+  border: 1px solid var(--cp-border);
+  border-radius: 6px;
+  background: var(--cp-surface);
+  color: var(--cp-text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.axis-evidence:focus { border-color: var(--cp-accent); outline: 2px solid var(--cp-accent-soft); outline-offset: 1px; }
+
+@media (max-width: 860px) {
+  .axis-row { grid-template-columns: 1fr; gap: 7px; }
+  .maturity-body { padding-left: 14px; padding-right: 14px; }
+}

@@ -35,6 +35,7 @@ public sealed partial class AssessmentReportPdf
     /// <param name="Customisation">The components by customisation chart data.</param>
     /// <param name="Roadmap">The roadmap items.</param>
     /// <param name="Written">Consultant text, keyed by report section id.</param>
+    /// <param name="Maturity">Capability axis, score and who said so. Empty until somebody scores it.</param>
     /// <param name="Language">The locale the document is written in. English when absent.</param>
     public sealed record Model(
         string EngagementName,
@@ -49,6 +50,7 @@ public sealed partial class AssessmentReportPdf
         IReadOnlyList<CustomisationRow> Customisation,
         IReadOnlyList<RoadmapItem> Roadmap,
         IReadOnlyDictionary<string, string> Written,
+        IReadOnlyList<(string Axis, decimal? Score, string? Evidence)> Maturity,
         string Language = "en")
     {
         /// <summary>
@@ -117,8 +119,7 @@ public sealed partial class AssessmentReportPdf
         // The three sections nothing in an estate can produce. They were declared in the
         // report model and never emitted, so a consultant could write them and the document
         // would not carry them.
-        WrittenSection(flow, model, "functionalMaturity", model.Text["report.functionalMaturity", "Functional maturity"],
-            "Score each capability nought to five from what you saw and heard. Say who told you, per axis.");
+        FunctionalMaturity(flow, model);
 
         WrittenSection(flow, model, "readiness", model.Text["report.readiness", "Readiness for change"],
             "Score from the interviews. If you did not interview anybody, leave this section out rather than "
@@ -602,6 +603,48 @@ public sealed partial class AssessmentReportPdf
     /// A report missing its scenarios because nobody noticed is worse than one that says so on
     /// the page.
     /// </remarks>
+    /// <summary>
+    /// The capability scores, as a shape and as prose.
+    /// </summary>
+    /// <remarks>
+    /// The radar goes above the writing rather than below it. It is the thing a reader looks
+    /// at first in this section, and the paragraph underneath is there to say what the shape
+    /// means, which only works in that order.
+    ///
+    /// Where nobody has scored anything the chart is left out entirely rather than drawn
+    /// empty. A radar with no polygon in it looks like a rendering fault, and the written
+    /// block below already says plainly that nobody has done this.
+    /// </remarks>
+    /// <param name="flow">Where it goes.</param>
+    /// <param name="model">What to write.</param>
+    private static void FunctionalMaturity(Flow flow, Model model)
+    {
+        Heading(flow, model.Text["report.functionalMaturity", "Functional maturity"]);
+
+        if (model.Maturity.Any(axis => axis.Score is not null))
+        {
+            RadarChart(flow,
+                [.. model.Maturity.Select(axis => (AxisLabel(model, axis.Axis), axis.Score))],
+                model.Text["report.maturityScale", "Scored nought to five, by a consultant, from interviews and demonstrations. Nothing here is inferred from the estate."]);
+
+            // Who said so, where anybody wrote it down. A score with no provenance is the
+            // most quotable figure in the document and the easiest to have made up.
+            foreach (var axis in model.Maturity.Where(axis => !string.IsNullOrWhiteSpace(axis.Evidence)))
+            {
+                flow.Text($"{AxisLabel(model, axis.Axis)}: {axis.Evidence}",
+                    new TextStyle { Size = 9, Colour = CapgeminiBrand.Muted }, paddingTop: 3f);
+            }
+        }
+
+        WrittenBlock(flow, model, "functionalMaturity",
+            "Score each capability nought to five from what you saw and heard. Say who told you, per axis.");
+    }
+
+    /// <summary>An axis in the reader's language, or its own identifier.</summary>
+    /// <param name="model">The document.</param>
+    /// <param name="axis">The axis identifier from the contract.</param>
+    private static string AxisLabel(Model model, string axis) => model.Text["axis." + axis, axis];
+
     private static void WrittenSection(Flow flow, Model model, string id, string title, string prompt)
     {
         Heading(flow, title);

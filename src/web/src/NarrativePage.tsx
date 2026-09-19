@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useT, type Translate } from './i18n';
 import { getJson, sendJson } from './workspace';
 import { useCan } from './access';
+import { MaturityPanel } from './MaturityPanel';
 
 /** A report section somebody has to write, as the report model declares it. */
 type Section = {
@@ -204,15 +205,21 @@ export function NarrativePage({ engagementId }: { engagementId: string }) {
       </section>
 
       {sections.map((section) => (
-        <SectionEditor
-          key={section.id}
-          section={section}
-          existing={written.find((entry) => entry.sectionId === section.id)}
-          engagementId={engagementId}
-          readOnly={readOnly}
-          t={t}
-          onSaved={remember}
-        />
+        <div key={section.id}>
+          <SectionEditor
+            section={section}
+            existing={written.find((entry) => entry.sectionId === section.id)}
+            engagementId={engagementId}
+            readOnly={readOnly}
+            t={t}
+            onSaved={remember}
+          />
+
+          {/* The scores belong with the paragraph that explains them. */}
+          {section.id === 'functionalMaturity' && (
+            <MaturityPanel engagementId={engagementId} readOnly={readOnly} />
+          )}
+        </div>
       ))}
     </>
   );

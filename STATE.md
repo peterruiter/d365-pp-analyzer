@@ -546,12 +546,14 @@ None of this fails a build and all of it fails a screen.
 
 ### Built since, and what is left of each
 
-- **Charts.** Eight of the thirteen declared visuals are drawn: components by domain, the
+- **Charts.** Nine of the eleven declared visuals are drawn: components by domain, the
   low code donut, components by customisation, lifecycle, findings by severity, where the
-  hours sit, the estimate ranges and the roadmap grid. The five that are not are
-  componentsBySolution, which the score does not carry, and the maturity, readiness and
-  benchmark visuals, which have no data behind them until the consultant input screens
-  exist. Every chart sits beside the table it summarises, deliberately: a number that
+  hours sit, the estimate ranges, the roadmap grid and the maturity radar. The two that are not
+  are componentsBySolution, which the score does not carry, and maturityVersusBenchmark,
+  which needs a benchmark configured per engagement with its source and collection date. The
+  ADKAR profile and the PCT triangle were dropped from the contract: both are change
+  management instruments rather than anything an estate assessment produces, and the
+  readiness section keeps its prose instead. Every chart sits beside the table it summarises, deliberately: a number that
   appears only in a picture is a number nobody can audit.
 - **Interactive sign-in.** Works. Type the environment address, sign in, and the refresh
   token goes to Key Vault for the worker to redeem. Entra rotates refresh tokens and the

@@ -1009,6 +1009,71 @@ app.MapPut("/api/engagements/{engagementId:guid}/narrative/{sectionId}",
     return Results.Ok(new { saved = !string.IsNullOrWhiteSpace(request.Body) });
 }).RequireAuthorization();
 
+// ------------------------------------------------------------------ maturity --
+// Sixteen capability axes, scored nought to five by somebody who sat in the interviews.
+// The axes come from report-model.json; the numbers come from a person and never from
+// anything this product infers.
+app.MapGet("/api/maturity-axes", () =>
+{
+    var path = Path.Combine(AppContext.BaseDirectory, "build", "contracts", "report-model.json");
+
+    if (!File.Exists(path))
+    {
+        return Results.Problem(
+            "The report model contract is not in this image. The scoring form is generated from it.",
+            statusCode: StatusCodes.Status500InternalServerError);
+    }
+
+    using var document = JsonDocument.Parse(File.ReadAllText(path));
+    var axes = document.RootElement.GetProperty("maturityAxes");
+
+    // Materialised inside the using, or the serialiser reads a disposed document.
+    var groups = axes.GetProperty("groups").EnumerateArray()
+        .Select(group => new
+        {
+            id = group.GetProperty("id").GetString(),
+            axes = group.GetProperty("axes").EnumerateArray().Select(axis => axis.GetString()).ToList()
+        })
+        .ToList();
+
+    return Results.Ok(new { scale = axes.GetProperty("scale").GetString(), groups });
+}).RequireAuthorization();
+
+app.MapGet("/api/engagements/{engagementId:guid}/maturity",
+    async (HttpContext context, AnalysisStore analysis, Guid engagementId) =>
+{
+    if (await Denied(context, engagementId, EngagementRoles.Viewer) is { } denied) return denied;
+
+    var scores = await analysis.GetMaturityAsync(engagementId, context.RequestAborted);
+
+    return Results.Ok(scores.Select(score => new
+    {
+        score.AxisId,
+        score.Score,
+        score.Evidence,
+        score.UpdatedByName
+    }));
+}).RequireAuthorization();
+
+app.MapPut("/api/engagements/{engagementId:guid}/maturity/{axisId}",
+    async (HttpContext context, AnalysisStore analysis, Guid engagementId, string axisId, ScoreAxis request) =>
+{
+    ArgumentNullException.ThrowIfNull(request);
+
+    if (await Denied(context, engagementId, EngagementRoles.Contributor) is { } denied) return denied;
+
+    if (request.Score is { } value && (value < 0 || value > 5))
+    {
+        return Results.BadRequest(new { error = "The scale is nought to five." });
+    }
+
+    await analysis.SaveMaturityAsync(
+        engagementId, axisId, request.Score, request.Evidence,
+        UserId(context.User), DisplayName(context.User), context.RequestAborted);
+
+    return Results.Ok(new { scored = request.Score is not null });
+}).RequireAuthorization();
+
 // ------------------------------------------------------- interactive sign in --
 // Two endpoints and a round trip through Entra.
 //
@@ -1469,6 +1534,11 @@ app.MapPut("/api/system/settings/syncfusion", async (HttpContext context, SetSyn
 app.MapFallbackToFile("app/index.html");
 
 app.Run();
+
+/// <summary>One capability axis, as somebody scored it.</summary>
+/// <param name="Score">Nought to five, or null to take the score away.</param>
+/// <param name="Evidence">Who told them.</param>
+internal sealed record ScoreAxis(decimal? Score, string? Evidence);
 
 /// <summary>One written section, on its way to being stored.</summary>
 /// <param name="Body">What the consultant wrote. Blank removes the section.</param>
