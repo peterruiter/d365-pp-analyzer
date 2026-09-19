@@ -6,6 +6,9 @@ export type Engagement = {
   status: string;
   accessRole: string;
   createdUtc: string;
+
+  /** The demonstration estate, which everybody can read and nobody can change. */
+  isDemonstration?: boolean;
 };
 
 /** A configured way into one estate. */

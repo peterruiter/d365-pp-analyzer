@@ -1,0 +1,64 @@
+<header class="topbar{{stuck}}" id="topbar">
+  <a class="brand" href="{{url.home}}">
+    <img src="/assets/capgemini-white.svg" alt="Capgemini">
+    <span>Solution Analyzer</span>
+  </a>
+
+  <nav>
+    <a href="{{url.home}}#what">{{nav.what}}</a>
+    <a href="{{url.home}}#modes">{{nav.modes}}</a>
+    <a href="{{url.home}}#honesty">{{nav.honesty}}</a>
+    <a href="{{url.home}}#safety">{{nav.safety}}</a>
+    <a href="{{url.home}}#output">{{nav.output}}</a>
+    <a href="{{url.home}}#rules">{{nav.rules}}</a>
+    <a href="{{url.privacy}}">{{nav.privacy}}</a>
+  </nav>
+
+  <div class="utility">
+    <button class="lang-button" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="lang-menu">
+      {{icon.globe}}
+      <span class="lang-code">{{lang}}</span>
+      <span class="visually-hidden">{{lang.choose}}</span>
+    </button>
+    {{chrome.themeToggle}}
+    <a class="button button--ghost" href="/account/signin">{{nav.signin}}</a>
+  </div>
+
+  <button class="burger" id="burger" type="button" aria-expanded="false" aria-controls="drawer" aria-label="{{nav.menu}}">
+    <span></span><span></span><span></span>
+  </button>
+</header>
+
+<div class="drawer" id="drawer">
+  <div class="drawer-links">
+    <a href="{{url.home}}#what">{{nav.what}}</a>
+    <a href="{{url.home}}#modes">{{nav.modes}}</a>
+    <a href="{{url.home}}#honesty">{{nav.honesty}}</a>
+    <a href="{{url.home}}#safety">{{nav.safety}}</a>
+    <a href="{{url.home}}#output">{{nav.output}}</a>
+    <a href="{{url.home}}#rules">{{nav.rules}}</a>
+    <a href="{{url.privacy}}">{{nav.privacy}}</a>
+    <a class="button button--primary" href="/account/signin">{{nav.signin}}</a>
+  </div>
+
+  <!-- The floor of Capgemini's own mobile menu: the language on the left, light
+       and dark on the right. Neither is a link, so neither closes the drawer. -->
+  <div class="drawer-floor">
+    <button class="lang-button" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="lang-menu">
+      {{icon.globe}}
+      <span class="lang-code">{{lang}}</span>
+      <span class="visually-hidden">{{lang.choose}}</span>
+    </button>
+    {{chrome.themeToggle}}
+  </div>
+</div>
+
+<div class="lang-menu" id="lang-menu" role="dialog" aria-modal="true" aria-label="{{lang.choose}}">
+  <div class="lang-menu-panel">
+    <div class="lang-menu-head">
+      <span>{{lang.heading}}</span>
+      <button class="lang-menu-close" type="button" aria-label="{{lang.close}}">&times;</button>
+    </div>
+    {{lang.options}}
+  </div>
+</div>

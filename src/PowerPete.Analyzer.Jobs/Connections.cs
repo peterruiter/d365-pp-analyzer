@@ -11,6 +11,7 @@ using PowerPete.Analyzer.Dataverse;
 using PowerPete.Analyzer.DevOps;
 using PowerPete.Analyzer.Domain;
 using PowerPete.Analyzer.Estimation;
+using PowerPete.Analyzer.Pipeline;
 using PowerPete.Analyzer.Pipeline.Stages;
 
 /// <summary>

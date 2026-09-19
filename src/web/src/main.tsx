@@ -64,11 +64,12 @@ function viewFromHash(): string {
   return addressable.includes(name) ? name : 'Overview';
 }
 
-function NavItem({ workspace, label, active, disabled, onOpen }: {
+function NavItem({ workspace, label, active, disabled, disabledReason, onOpen }: {
   workspace: string;
   label: string;
   active: boolean;
   disabled: boolean;
+  disabledReason: string;
   onOpen: () => void;
 }) {
   return (
@@ -76,6 +77,7 @@ function NavItem({ workspace, label, active, disabled, onOpen }: {
       type="button"
       className={`nav-item ${active ? 'active' : ''}`}
       disabled={disabled}
+      title={disabled ? disabledReason : undefined}
       onClick={onOpen}
       aria-current={active ? 'page' : undefined}
       data-workspace={workspace}
@@ -275,7 +277,7 @@ function App() {
             </button>
             <span className="engagement-meta">
               {engagement
-                ? t('shell.role-access', t('role.' + engagement.accessRole.toLowerCase()))
+                ? t('shell.role-access', t('role.' + (engagement.accessRole ?? 'viewer').toLowerCase()))
                 : t('shell.open-administration-to-get-started')}
             </span>
             {engagementsOpen && (
@@ -309,6 +311,7 @@ function App() {
                 label={viewLabel(t, item)}
                 active={activeView === item}
                 disabled={!engagement}
+                disabledReason={t('shell.pick-an-engagement-first')}
                 onOpen={() => { setActiveView(item); setMenuOpen(false); }}
               />
             ))}

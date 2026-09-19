@@ -11,6 +11,8 @@ using PowerPete.Analyzer.Export.Pdf;
 using PowerPete.Analyzer.Api;
 using PowerPete.Analyzer.Data;
 using PowerPete.Analyzer.Domain;
+using PowerPete.Analyzer.Pipeline;
+using Microsoft.Data.SqlClient;
 
 // The four modes ops.Connection is constrained to. Kept beside the endpoint that writes one
 // so a mode the database would refuse is refused here, with a sentence rather than a 500.
@@ -83,6 +85,31 @@ builder.Services.AddAuthorization();
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
+
+// The demonstration engagement, rebuilt whenever its seed version has moved.
+//
+// Before the pipeline rather than inside a hosted service, so a deployment that cannot write
+// it says so in the startup log where somebody is already looking, rather than at three in
+// the afternoon when a consultant opens the product in front of a client and finds it empty.
+//
+// It is allowed to fail. A demonstration is not worth refusing to start over: a database
+// that has not been migrated yet, or a managed identity that has not been granted a login,
+// should produce a product that works for everybody who already has an engagement and a line
+// in the log explaining why the demonstration is missing.
+try
+{
+    var written = await new DemoSeeder(connectionString).EnsureAsync(CancellationToken.None);
+
+    if (app.Logger.IsEnabled(LogLevel.Information))
+    {
+        app.Logger.LogInformation("{Message}", DemoSeeder.Describe(written));
+    }
+}
+catch (SqlException exception)
+{
+    app.Logger.LogError(exception,
+        "The demonstration engagement could not be written. Everything else still works; the demonstration will be missing.");
+}
 
 // The container app terminates TLS at its ingress and forwards plain HTTP to this process,
 // so without this every URL the framework builds for itself carries the scheme it was
@@ -173,7 +200,29 @@ app.MapGet("/api/me", async (HttpContext context) =>
     });
 }).RequireAuthorization();
 
-app.MapGet("/account/signin", () => Results.Challenge(new() { RedirectUri = "/" }));
+// Into the product, not back to the front door.
+//
+// This redirected to "/" until somebody signed in for the first time and was returned to the
+// public microsite, having just proved who they were, with no sign that anything had
+// happened. The site root is the page for people who are not signed in; a person who has
+// just signed in wants the thing they signed in for.
+//
+// A return address is honoured when the sign-in was provoked by a link into the product, so
+// somebody who followed a link to a report lands on the report rather than on the overview.
+// Only relative paths: an absolute one here is an open redirect, and a sign-in page that
+// forwards to wherever the query string says is a phishing primitive with our domain on it.
+app.MapGet("/account/signin", (HttpContext context) =>
+{
+    var requested = context.Request.Query["returnUrl"].ToString();
+
+    var target = requested.StartsWith('/') && !requested.StartsWith("//", StringComparison.Ordinal)
+        ? requested
+        : "/app/";
+
+    return Results.Challenge(new() { RedirectUri = target });
+});
+
+// Out to the microsite, which is the only page a signed out person can read.
 app.MapGet("/account/signout", () => Results.SignOut(new() { RedirectUri = "/" },
     [CookieAuthenticationDefaults.AuthenticationScheme, OpenIdConnectDefaults.AuthenticationScheme]));
 
@@ -181,7 +230,32 @@ app.MapGet("/account/signout", () => Results.SignOut(new() { RedirectUri = "/" }
 app.MapGet("/api/engagements", async (HttpContext context, WorkspaceStore store) =>
 {
     var access = await AccessFor(context);
-    return Results.Ok(await store.ListEngagementsAsync(access, context.RequestAborted));
+    var engagements = await store.ListEngagementsAsync(access, context.RequestAborted);
+
+    // The role goes out with the row. It is not a column on the engagement, because it is a
+    // property of the reader rather than of the engagement, but every screen needs it to
+    // decide what to show and the alternative is the shell asking a second time per row.
+    //
+    // A global administrator holds Admin on everything, including engagements they have no
+    // row for, which is the whole point of being one.
+    return Results.Ok(engagements.Select(engagement => new
+    {
+        engagement.EngagementId,
+        engagement.Name,
+        engagement.ClientName,
+        engagement.Status,
+        engagement.IsRegulated,
+        engagement.ReportLanguage,
+        engagement.BacklogLanguage,
+        engagement.CreatedUtc,
+        accessRole = access.Roles.TryGetValue(engagement.EngagementId, out var role)
+            ? role
+            : access.IsGlobalAdmin ? EngagementRoles.Admin : EngagementRoles.Viewer,
+
+        // The demonstration is read only for everybody and says so, rather than letting
+        // somebody discover it by pressing a button that fails.
+        isDemonstration = engagement.EngagementId == AccessStore.DemoEngagementId
+    }));
 }).RequireAuthorization();
 
 app.MapPost("/api/engagements", async (HttpContext context, WorkspaceStore store, CreateEngagement request) =>

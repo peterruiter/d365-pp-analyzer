@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="{{htmlLang}}">
+<head>
+<title>{{privacyPage.title}}</title>
+<meta name="description" content="{{privacyPage.description}}">
+{{> _head}}
+</head>
+<body>
+
+{{> _header}}
+
+<main>
+
+  <section class="page-head on-ink">
+    <div class="shell">
+      <p class="eyebrow">{{privacyBlock.eyebrow}}</p>
+      <h1>{{privacyPage.heading}}</h1>
+      <p class="lede">{{privacyPage.lede}}</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="shell prose">
+      <div class="reveal">
+        <h2>{{privacyPage.reads.heading}}</h2>
+        <p>{{privacyPage.reads.lede}}</p>
+        <ul>
+          <li>{{privacyPage.reads.item1}}</li>
+          <li>{{privacyPage.reads.item2}}</li>
+          <li>{{privacyPage.reads.item3}}</li>
+          <li>{{privacyPage.reads.item4}}</li>
+        </ul>
+      </div>
+
+      <div class="reveal">
+        <h2>{{privacyPage.removed.heading}}</h2>
+        <p>{{privacyPage.removed.lede}}</p>
+        <ul>
+          <li>{{privacyPage.removed.item1}}</li>
+          <li>{{privacyPage.removed.item2}}</li>
+          <li>{{privacyPage.removed.item3}}</li>
+        </ul>
+      </div>
+
+      <div class="reveal">
+        <h2>{{privacyPage.refuses.heading}}</h2>
+        <p>{{privacyPage.refuses.lede}}</p>
+        <ul>
+          <li>{{privacyPage.refuses.item1}}</li>
+          <li>{{privacyPage.refuses.item2}}</li>
+          <li>{{privacyPage.refuses.item3}}</li>
+        </ul>
+      </div>
+
+      <div class="reveal">
+        <h2>{{privacyPage.documents.heading}}</h2>
+        <p>{{privacyPage.documents.lede}}</p>
+        <ul>
+          <li><strong>{{privacyPage.documents.item1.title}}</strong> {{privacyPage.documents.item1.body}}</li>
+          <li><strong>{{privacyPage.documents.item2.title}}</strong> {{privacyPage.documents.item2.body}}</li>
+          <li><strong>{{privacyPage.documents.item3.title}}</strong> {{privacyPage.documents.item3.body}}</li>
+        </ul>
+      </div>
+
+      <div class="reveal">
+        <h2>{{privacyPage.deletion.heading}}</h2>
+        <p>{{privacyPage.deletion.body}}</p>
+      </div>
+
+      <div class="reveal">
+        <h2>{{privacyPage.where.heading}}</h2>
+        <p>{{privacyPage.where.body}}</p>
+      </div>
+
+      <div class="reveal">
+        <h2>{{privacyPage.cookies.heading}}</h2>
+        <p>{{privacyPage.cookies.body}}</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="on-ink closing">
+    <div class="shell">
+      <div class="reveal">
+        <h2>{{privacyPage.closing.heading}}</h2>
+        <p>{{privacyPage.closing.body}}</p>
+        <div class="actions">
+          <a class="button button--primary" href="{{url.home}}">{{privacyPage.closing.link}}</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+{{> _footer}}
+
+</body>
+</html>

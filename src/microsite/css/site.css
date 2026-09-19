@@ -1,0 +1,1087 @@
+/* ===========================================================================
+   Intent Miner, public site.
+
+   Built on the same Capgemini ramp the product uses, which is the point: a
+   visitor who signs in should not feel they have changed companies. The
+   vocabulary is borrowed from the Helix microsite, light headlines at large
+   sizes, ink surfaces, generous rhythm, and content that arrives on scroll.
+   =========================================================================== */
+
+:root {
+  --cap-blue-25: #f0f7ff;
+  --cap-blue-50: #deeeff;
+  --cap-blue-100: #b6d8ff;
+  --cap-blue-300: #52a0f5;
+  --cap-blue-600: #0058ab;
+  --cap-blue-700: #00438a;
+  --cap-blue-900: #001e47;
+
+  --cap-lightblue-300: #4ccbf7;
+  --cap-lightblue-600: #1db8f2;
+  --cap-turquoise-600: #00d5d0;
+
+  /* Capgemini's own call to action hover: the outline fills pale and the text goes
+     near black. Sampled from their site rather than invented. */
+  --cap-hover-fill: #c7ccd3;
+  --cap-hover-ink: #171a22;
+
+  --ink-900: #121a38;
+  --ink-800: #18224a;
+  --ink-700: #1f2a4d;
+
+  --grey-white: #ffffff;
+  --grey-2: #f4f4f4;
+  --grey-3: #e0e0e0;
+  --grey-7: #6f6f6f;
+  --grey-8: #525252;
+
+  --text-high: var(--ink-900);
+
+  /* Running text is nearly as dark as a heading, which is the other half of the
+     Capgemini setting: light weight only reads as elegant rather than faint when
+     the colour carries full contrast. Their own body copy is rgb(23, 26, 34) on
+     white. At the old mid grey, 300 weight went thin. Captions stay grey, because
+     those are meant to recede. */
+  --text-mid: #333a52;
+  --on-dark-high: #ffffff;
+  --on-dark-mid: #c8d2e1;
+
+  /* Surfaces, named by the job they do rather than by their colour, which is what
+     lets the dark theme below move them without touching a single rule.
+
+     --surface-ink is the deliberately dark band: the hero, the header, the footer
+     and the sections that carry a diagram. It stays dark in both themes, and goes
+     a step deeper in dark so the alternation between a band and the page survives
+     rather than collapsing into one flat colour. */
+  --surface: var(--grey-white);
+  --surface-card: var(--grey-white);
+  --surface-tint: var(--cap-blue-25);
+  --surface-ink: var(--ink-900);
+  --surface-drawer: rgba(18, 26, 56, .96);
+  --border: var(--grey-3);
+  --caption: var(--grey-7);
+
+  --elev-1: 0 1px 2px rgba(18, 26, 56, .06), 0 1px 3px rgba(18, 26, 56, .08);
+  --elev-2: 0 2px 6px rgba(18, 26, 56, .07), 0 6px 16px rgba(18, 26, 56, .08);
+  --elev-3: 0 8px 20px rgba(18, 26, 56, .10), 0 18px 48px rgba(18, 26, 56, .12);
+
+  --ease-out: cubic-bezier(.22, .61, .36, 1);
+  --header-h: 76px;
+  --shell: 1240px;
+  --pad-x: clamp(20px, 5vw, 80px);
+}
+
+* { box-sizing: border-box; }
+
+/* Every in-page link has to clear the fixed header.
+   Without this an anchor scrolls its target to the very top of the viewport, which is
+   exactly where the header is, so following "What it does" from the menu landed on a
+   section whose heading was hidden behind the bar. It reads as the link going to the
+   wrong place. scroll-padding-top on the scroll container fixes every anchor at once,
+   including the ones reached by keyboard, rather than needing scroll-margin on each
+   target. The extra room is so the heading arrives with air above it rather than
+   welded to the underside of the bar. */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--header-h) + 26px);
+}
+
+body {
+  margin: 0;
+  font-family: Ubuntu, "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 17px;
+  font-weight: 300;
+  line-height: 1.62;
+  letter-spacing: .012em;
+  color: var(--text-mid);
+  background: var(--surface);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Measured against capgemini.com rather than guessed. Their type system is light
+   weight, open tracking and generous leading: headings at 300 with letter-spacing
+   normal and a line height of 1.25, body at 300 with slightly positive tracking.
+   This had headings at -.02em, which is four times tighter than the brand and in
+   the opposite direction, and body at 400, which is a weight the brand does not
+   use for running text.
+
+   The one departure is leading on the headings. Capgemini's largest headline is
+   40px and ours reaches 82px, where 1.25 leaves a visible gap between the lines of
+   a single sentence, so these sit at 1.14. */
+h1, h2, h3 { color: var(--text-high); margin: 0; font-weight: 300; letter-spacing: normal; line-height: 1.14; }
+p { margin: 0; }
+a { color: inherit; }
+
+.shell { max-width: var(--shell); margin: 0 auto; padding-inline: var(--pad-x); }
+
+/* Present to a screen reader, absent from the page. Used by the controls whose
+   meaning is carried by an icon. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.eyebrow {
+  margin: 0 0 14px;
+  color: var(--cap-lightblue-600);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+/* ------------------------------------------------------------------ chrome -- */
+
+.topbar {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  height: var(--header-h);
+  padding-inline: var(--pad-x);
+  background: transparent;
+  transition: background .35s var(--ease-out), box-shadow .35s var(--ease-out);
+}
+
+.topbar.is-stuck { background: var(--surface-ink); box-shadow: var(--elev-2); }
+
+.brand { display: flex; align-items: center; gap: 16px; text-decoration: none; }
+.brand img { width: 132px; }
+.brand span {
+  white-space: nowrap;
+  padding-left: 16px;
+  border-left: 1px solid rgba(255, 255, 255, .3);
+  color: var(--on-dark-high);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.topbar nav { display: flex; align-items: center; flex-wrap: nowrap; gap: 28px; }
+.topbar nav a { color: var(--on-dark-mid); font-size: 14px; white-space: nowrap; text-decoration: none; transition: color .2s var(--ease-out); }
+.topbar nav a:hover { color: var(--on-dark-high); }
+
+/* The Capgemini call to action, measured off their own subscribe button rather than
+   approximated: a pill at 1.5rem, 14px at weight 300, 0.0105rem of tracking, 38px tall,
+   0.5rem by 1rem of padding. It was a square-cornered 15px at weight 500, which is a
+   different design language entirely.
+
+   The hover is theirs too, and it is the part that carries the brand: the outline fills
+   with a pale grey and the text flips to near black, rather than the border merely
+   brightening. --cap-hover-fill and --cap-hover-ink are their values. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 38px;
+  padding: 8px 20px;
+  border: 1px solid transparent;
+  border-radius: 24px;
+  font-size: 14px;
+  font-weight: 300;
+  letter-spacing: .0105em;
+  line-height: 1.3;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .2s var(--ease-out), border-color .2s var(--ease-out), color .2s var(--ease-out);
+}
+
+.button--primary { background: var(--cap-blue-600); border-color: var(--cap-blue-600); color: #fff; }
+.button--primary:hover { background: var(--cap-hover-fill); border-color: var(--cap-hover-fill); color: var(--cap-hover-ink); }
+.button--ghost { border-color: rgba(255, 255, 255, .75); color: #fff; }
+.button--ghost:hover { background: var(--cap-hover-fill); border-color: var(--cap-hover-fill); color: var(--cap-hover-ink); }
+
+/* -------------------------------------------------------------------- hero -- */
+
+.hero {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 100svh;
+  padding: 140px 0 100px;
+  overflow: hidden;
+  background: var(--surface-ink);
+  color: var(--on-dark-mid);
+  text-align: left;
+}
+
+/* Two slow drifting fields of colour. Cheap, GPU friendly, and it stops a large
+   flat navy rectangle from reading as an empty page while the eye travels down. */
+.hero::before,
+.hero::after {
+  content: "";
+  position: absolute;
+  width: 760px;
+  height: 760px;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: .5;
+  pointer-events: none;
+}
+
+.hero::before { top: -260px; right: -180px; background: radial-gradient(circle, var(--cap-blue-600), transparent 65%); animation: drift-a 22s var(--ease-out) infinite alternate; }
+.hero::after { bottom: -320px; left: -220px; background: radial-gradient(circle, var(--cap-turquoise-600), transparent 65%); opacity: .32; animation: drift-b 26s var(--ease-out) infinite alternate; }
+
+@keyframes drift-a { to { transform: translate3d(-70px, 60px, 0) scale(1.12); } }
+@keyframes drift-b { to { transform: translate3d(60px, -50px, 0) scale(1.08); } }
+
+.hero .shell { position: relative; z-index: 1; width: 100%; }
+
+.hero h1 {
+  max-width: 20ch;
+  color: var(--on-dark-high);
+  font-size: clamp(40px, 5.4vw, 74px);
+}
+
+.hero h1 em {
+  font-style: normal;
+  background: linear-gradient(100deg, var(--cap-lightblue-300), var(--cap-turquoise-600));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hero .lede { max-width: 58ch; margin-top: 28px; font-size: clamp(17px, 1.5vw, 21px); }
+.hero .actions { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 40px; }
+
+.scroll-cue {
+  position: absolute;
+  bottom: 34px;
+  left: 50%;
+  z-index: 1;
+  translate: -50% 0;
+  color: var(--on-dark-mid);
+  font-size: 11px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.scroll-cue::after {
+  content: "";
+  display: block;
+  width: 1px;
+  height: 34px;
+  margin: 12px auto 0;
+  background: linear-gradient(var(--cap-lightblue-600), transparent);
+  animation: cue 2.4s var(--ease-out) infinite;
+}
+
+@keyframes cue { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+
+/* ---------------------------------------------------------------- sections -- */
+
+section { padding: clamp(72px, 9vw, 128px) 0; }
+section.on-tint { background: var(--surface-tint); }
+section.on-ink { background: var(--surface-ink); color: var(--on-dark-mid); }
+section.on-ink h2, section.on-ink h3 { color: var(--on-dark-high); }
+
+.section-head { max-width: 62ch; margin-bottom: 56px; }
+.section-head h2 { font-size: clamp(30px, 3.6vw, 50px); }
+.section-head p { margin-top: 20px; font-size: clamp(16px, 1.3vw, 19px); }
+
+.grid { display: grid; gap: 24px; }
+.grid--3 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.grid--4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+
+.card {
+  padding: 32px;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--cap-blue-600);
+  box-shadow: var(--elev-1);
+  transition: box-shadow .3s var(--ease-out), transform .3s var(--ease-out);
+}
+
+.card:hover { box-shadow: var(--elev-2); transform: translateY(-3px); }
+.card h3 { margin-bottom: 12px; font-size: 21px; font-weight: 400; }
+.card p { font-size: 15px; }
+
+.card:nth-child(2) { border-top-color: var(--cap-lightblue-600); }
+.card:nth-child(3) { border-top-color: var(--cap-turquoise-600); }
+.card:nth-child(4) { border-top-color: var(--ink-900); }
+
+.stat { padding: 28px 0; border-top: 1px solid rgba(255, 255, 255, .16); }
+.stat strong { display: block; color: var(--on-dark-high); font-size: clamp(34px, 4vw, 52px); font-weight: 300; letter-spacing: -.03em; }
+.stat span { display: block; margin-top: 10px; font-size: 14px; }
+
+/* ------------------------------------------------------------------ footer -- */
+
+footer { padding: 64px 0; background: var(--surface-ink); color: var(--on-dark-mid); font-size: 14px; }
+footer .shell { display: flex; flex-wrap: wrap; gap: 24px; justify-content: space-between; align-items: center; }
+footer a { color: var(--on-dark-mid); text-decoration: none; }
+footer a:hover { color: var(--on-dark-high); }
+
+/* ------------------------------------------------------------------ motion -- */
+
+/* Scoped to .js, which the document sets on itself before the first paint. Without
+   that scope a failed script, a blocked script or a crawler leaves every section
+   below the hero at zero opacity, which is an invisible page rather than an
+   unanimated one. Enhancement, not decoration masquerading as structure. */
+.js .reveal { opacity: 0; transform: translateY(22px); transition: opacity .7s var(--ease-out), transform .7s var(--ease-out); }
+.js .reveal.is-in { opacity: 1; transform: none; }
+
+/* Faster and shorter on a phone, and worth writing down why.
+
+   Desktop shows three cards in a row, so one reveal covers a third of the screen and
+   .7s reads as the row arriving. A phone stacks everything into one column: the same
+   thirty-four elements now arrive one at a time, every one of them filling the width,
+   and a scroll down the page runs the same animation over and over. What is a flourish
+   at three across is a wait at one across.
+
+   The trigger moves too, in site.js. The two belong together: shortening the animation
+   without moving the trigger just makes a late arrival brief instead of slow. */
+@media (max-width: 900px) {
+  .js .reveal { transform: translateY(10px); transition-duration: .32s; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .js .reveal { opacity: 1; transform: none; transition: none; }
+  .hero::before, .hero::after, .scroll-cue::after { animation: none; }
+  .card:hover, .button--primary:hover { transform: none; }
+
+}
+
+/* ========================================================== mobile menu == */
+
+.burger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.burger span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  margin-inline: auto;
+  background: #fff;
+  transition: transform .3s var(--ease-out), opacity .2s var(--ease-out);
+}
+
+.burger[aria-expanded="true"] span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.burger[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+.burger[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+.drawer {
+  position: fixed;
+  inset: var(--header-h) 0 0;
+  z-index: 29;
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  padding: 28px var(--pad-x) 40px;
+  background: var(--surface-drawer);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.drawer.is-open { display: flex; }
+
+.drawer a {
+  padding: 18px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .12);
+  color: var(--on-dark-high);
+  font-size: 20px;
+  font-weight: 300;
+  text-decoration: none;
+}
+
+.drawer .button { justify-content: center; margin-top: 24px; border-bottom: 0; font-size: 16px; }
+
+/* The drawer is the whole navigation below this width, so the bar keeps only the
+   brand and the control that opens it. */
+@media (max-width: 1199px) {
+  .topbar nav,
+  .topbar > .button { display: none; }
+  .burger { display: flex; }
+  .topbar.is-open { background: var(--surface-ink); }
+  .brand span { padding-left: 12px; }
+
+  .hero { min-height: auto; padding: 120px 0 72px; }
+  .brand img { width: 108px; }
+  .brand span { font-size: 12px; }
+
+  /* The cue sits over the buttons once the hero stops being full height, and a
+     phone does not need telling that a page scrolls. */
+  .scroll-cue { display: none; }
+
+  .hero .actions { flex-direction: column; align-items: stretch; }
+  .hero .actions .button { justify-content: center; }
+}
+
+/* Scrolling the page behind an open drawer is disorienting, so it stops. */
+body.menu-open { overflow: hidden; }
+
+/* ============================================================ hero, two up == */
+
+/* The visual takes the larger half now.
+
+   It used to take the smaller one, which worked only because the screenshot was
+   being stretched to a thousand pixels tall and filled the space by accident. At
+   its true proportions it is a 1.44:1 landscape image, so a five line headline
+   towered over it. The column is wider and the headline is allowed a little more
+   width, which costs it a line and brings the two blocks to roughly the same
+   height. */
+.hero .shell.split {
+  display: grid;
+  grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr);
+  gap: clamp(32px, 4vw, 64px);
+  align-items: center;
+}
+
+.hero-visual { position: relative; }
+
+/* The product, square on and sharp.
+
+   This used to carry perspective(1600px) rotateY(-9deg), which was a mistake for a
+   reason worth writing down: a 3D transform makes the browser rasterise the element
+   into a texture at its layout size and then resample it onto the rotated plane. The
+   near edge gets upsampled and the whole image goes soft. It read as a badly
+   compressed screenshot rather than as a tilted one, and the tilt itself fought the
+   text beside it. No transform, no resampling, native pixels.
+
+   Intent Miner sharpens this image as the reader scrolls, because its headline says
+   "in focus" and the effect is that pun landing. This product's headline is about
+   moving a contact centre, so the same effect here is only a blurred screenshot.
+   It is deliberately not ported. */
+.hero-visual img {
+  display: block;
+  width: 100%;
+
+  /* Load bearing. The tag carries width="1440" height="1000" so the layout reserves
+     the right box before the file arrives, and those attributes are presentational
+     hints: a real height: 1000px. Setting only width in CSS leaves both dimensions
+     specified, so the browser stops honouring the aspect ratio and stretches the
+     picture to fill a 1000px-tall box in a 620px-wide column. Every other image rule
+     on this page already says height: auto; this one did not, and the 3D rotation it
+     used to carry disguised the distortion. */
+  height: auto;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 4px;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, .45);
+}
+
+/* ================================================================= output == */
+
+.figure {
+  margin: 0;
+  padding: 20px;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  box-shadow: var(--elev-2);
+}
+
+.figure img { display: block; width: 100%; height: auto; }
+.figure figcaption { margin-top: 16px; color: var(--caption); font-size: 14px; line-height: 1.5; }
+
+.figure--wide { padding: 24px; }
+
+.split-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 28px;
+  align-items: start;
+}
+
+.lede-block { max-width: 54ch; }
+.lede-block h3 { margin-bottom: 14px; font-size: clamp(22px, 2.2vw, 30px); }
+.lede-block p + p { margin-top: 16px; }
+
+/* Screens shown at an angle in a row, so the section reads as a product rather
+   than a gallery. */
+.screens { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 28px; }
+
+.screens figure {
+  margin: 0;
+  overflow: hidden;
+  background: var(--surface-ink);
+  border: 1px solid rgba(255, 255, 255, .1);
+  box-shadow: var(--elev-3);
+}
+
+.screens img { display: block; width: 100%; height: auto; }
+.screens figcaption { padding: 18px 22px; color: var(--on-dark-mid); font-size: 14px; }
+
+/* ============================================================== the numbers == */
+
+.stat strong { font-variant-numeric: tabular-nums; }
+
+/* ================================================================ closing == */
+
+.closing { text-align: center; }
+.closing h2 { margin-inline: auto; max-width: 20ch; font-size: clamp(32px, 4.4vw, 58px); }
+.closing p { margin: 24px auto 0; max-width: 58ch; }
+.closing .actions { justify-content: center; margin-top: 36px; }
+
+@media (max-width: 900px) {
+  .hero .shell.split { grid-template-columns: 1fr; }
+  .hero-visual { display: none; }
+}
+
+/* ============================================================ the artefact == */
+
+/* A strip of report pages you scroll sideways through. Scroll snap does the
+   flipping, so it works with a trackpad, a touch screen and no script at all;
+   the buttons are there for a mouse and are hidden when there is no script to
+   drive them. */
+.flip {
+  position: relative;
+  margin-top: 8px;
+}
+
+.flip-track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: min(78vw, 420px);
+  gap: 24px;
+  padding: 8px 4px 28px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+}
+
+.flip-track figure {
+  margin: 0;
+  scroll-snap-align: center;
+  transition: transform .4s var(--ease-out), box-shadow .4s var(--ease-out);
+}
+
+.flip-track img {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--surface-card);
+  border: 1px solid rgba(255, 255, 255, .14);
+  box-shadow: var(--elev-3);
+}
+
+.flip-track figure:hover { transform: translateY(-6px); }
+.flip-track figcaption { margin-top: 14px; color: var(--on-dark-mid); font-size: 13px; }
+
+.flip-controls { display: none; gap: 10px; margin-top: 4px; }
+.js .flip-controls { display: flex; }
+
+/* Round, which is what a pill is when its content is one glyph wide, and the same hover
+   as the rest: the outline fills pale and the arrow goes near black. */
+.flip-controls button {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, .55);
+  border-radius: 50%;
+  color: #fff;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .2s var(--ease-out), border-color .2s var(--ease-out), color .2s var(--ease-out);
+}
+
+.flip-controls button:hover:not([disabled]) {
+  background: var(--cap-hover-fill);
+  border-color: var(--cap-hover-fill);
+  color: var(--cap-hover-ink);
+}
+
+.flip-controls button[disabled] { opacity: .3; cursor: default; }
+
+/* ============================================================== languages == */
+
+.langs { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: clamp(28px, 4vw, 64px); align-items: center; }
+
+.lang-picker { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+
+/* The same pill as every other button on the site. These were square, which made the
+   one row of controls that is genuinely a set of choices look like it belonged to a
+   different page. */
+.lang-picker button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 8px 18px;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  color: var(--text-high);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 300;
+  letter-spacing: .0105em;
+  cursor: pointer;
+  transition: background .2s var(--ease-out), border-color .2s var(--ease-out), color .2s var(--ease-out);
+}
+
+.lang-picker button:hover { background: var(--cap-hover-fill); border-color: var(--cap-hover-fill); color: var(--cap-hover-ink); }
+.lang-picker button[aria-pressed="true"] { background: var(--cap-blue-600); border-color: var(--cap-blue-600); color: #fff; }
+
+.lang-page { margin: 0; }
+.lang-page img { display: block; width: 100%; height: auto; border: 1px solid var(--border); box-shadow: var(--elev-3); }
+.lang-page figcaption { margin-top: 14px; color: var(--caption); font-size: 14px; }
+
+@media (max-width: 900px) {
+  .langs { grid-template-columns: 1fr; }
+}
+
+/* ============================================================ inner pages == */
+
+.page-head { padding: 168px 0 clamp(64px, 8vw, 104px); }
+.page-head h1 { max-width: 18ch; color: var(--on-dark-high); font-size: clamp(38px, 5.2vw, 68px); }
+.page-head .lede { max-width: 62ch; margin-top: 26px; font-size: clamp(17px, 1.4vw, 20px); }
+
+.prose { max-width: 76ch; }
+.prose > div + div { margin-top: clamp(44px, 5vw, 68px); }
+.prose h2 { font-size: clamp(24px, 2.6vw, 34px); }
+.prose p { margin-top: 18px; }
+.prose ul { margin: 20px 0 0; padding-left: 22px; }
+.prose li { margin-bottom: 12px; line-height: 1.65; }
+.prose li strong { color: var(--text-high); font-weight: 500; }
+
+/* ================================================================== tiles ==
+   Two grids use this: the extraction modes and the rule categories. Both are
+   generated from the contracts the product runs on rather than typed into the
+   page, so neither can drift from what the product actually does.
+
+   The class is called connector because it is the same component the sibling
+   products use for the systems they read, and three sites sharing a stylesheet
+   is worth more than a name that fits one of them perfectly. */
+
+.connector-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.connector {
+  padding: 22px 24px;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--cap-blue-600);
+  transition: box-shadow .25s var(--ease-out), transform .25s var(--ease-out);
+}
+
+.connector:hover { box-shadow: var(--elev-2); transform: translateY(-2px); }
+
+.connector { display: flex; flex-direction: column; align-items: flex-start; }
+
+.connector h3 {
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+.connector p {
+  margin-top: 10px;
+  color: var(--caption);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+/* What each mode reaches, per evidence source. The point of the modes section
+   rather than decoration: what a mode cannot reach decides which rules can run,
+   and a client choosing between a service principal and a solution file is
+   choosing how much of their estate gets read. */
+.reach-list {
+  width: 100%;
+  margin: 16px 0 0;
+  padding: 14px 0 0;
+  border-top: 1px solid var(--border);
+  list-style: none;
+}
+
+.reach-list li {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 5px 0;
+  font-size: 13px;
+}
+
+.reach-name { color: var(--caption); }
+
+/* A word, weighted, rather than a coloured dot. Three levels is few enough to
+   read and a dot needs a legend, which is a legend nobody reads. */
+.reach {
+  flex: none;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+
+/* Not the brand turquoise and light blue themselves. Both are bright accents
+   built for a dark ground, and at twelve pixels on a white card they fail
+   contrast badly: #00d5d0 on white is about 1.9 to 1. These are the same hues
+   taken down far enough to read, and the dark theme below puts the bright
+   originals back where they belong. */
+.reach--full { color: #00706e; }
+.reach--partial { color: #0b6f96; }
+
+/* Deliberately the quietest of the three. "None" is the honest answer rather
+   than an alarming one, and a red pill next to the offline mode would read as a
+   warning against the mode that gets past a security review in week one. */
+.reach--none { color: var(--caption); opacity: .75; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .reach--full { color: var(--cap-turquoise-600); }
+  :root:not([data-theme="light"]) .reach--partial { color: var(--cap-lightblue-300); }
+}
+
+:root[data-theme="dark"] .reach--full { color: var(--cap-turquoise-600); }
+:root[data-theme="dark"] .reach--partial { color: var(--cap-lightblue-300); }
+
+/* How many checks sit in a category. Pushed to the bottom of the tile so the
+   numbers line up across a row whatever length the description ran to. */
+.rule-count {
+  margin-top: auto;
+  padding-top: 14px;
+  color: var(--text-high);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.connector-note {
+  max-width: 72ch;
+  margin-top: clamp(28px, 3vw, 38px);
+  color: var(--caption);
+  font-size: 14px;
+}
+
+/* ================================================================== on ink ==
+   Cards on a dark band. The card is a white panel by default, which is right on a
+   pale section and wrong on this one: four white blocks on navy read as holes cut
+   out of the page rather than as raised surfaces. On ink they are a lift of the
+   band itself. */
+
+section.on-ink .card {
+  background: rgba(255, 255, 255, .055);
+  border-color: rgba(255, 255, 255, .14);
+  box-shadow: none;
+}
+
+section.on-ink .card:hover {
+  background: rgba(255, 255, 255, .085);
+  box-shadow: none;
+}
+
+section.on-ink .card p { color: var(--on-dark-mid); }
+
+/* The counterweight to a section about models: the line they are not allowed to
+   cross. Set apart from the cards because it is the more important half. */
+.stop-line {
+  max-width: 74ch;
+  margin-top: clamp(36px, 4vw, 52px);
+  padding-top: clamp(28px, 3vw, 36px);
+  border-top: 1px solid rgba(255, 255, 255, .18);
+}
+
+.stop-line h3 { font-size: clamp(20px, 2vw, 26px); }
+.stop-line p { margin-top: 14px; color: var(--on-dark-mid); }
+
+/* ====================================================================== dark ==
+   Same two settings as the product. Every rule above reads a semantic token, so
+   this is a redefinition of the token layer rather than a second stylesheet.
+
+   Written twice deliberately: the media query answers to the operating system
+   for anyone who has never chosen, and the attribute overrules the machine for
+   anyone who has. Scoping the media query to :not([data-theme="light"]) is what
+   lets somebody on a dark machine choose light and keep it.
+
+   --surface-ink goes deeper rather than staying put. The whole page is dark, so
+   a band at the old value would be indistinguishable from the page around it and
+   the rhythm of the layout would disappear. */
+
+:root { color-scheme: light; --cap-blue-500: #006ec8; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --surface: #0d1428;
+    --surface-card: #151d35;
+    --surface-tint: #111a33;
+    --surface-ink: #070c1b;
+    --surface-drawer: rgba(7, 12, 27, .97);
+    --border: #2a3559;
+    --caption: #8c99b5;
+    --text-high: #e8edf6;
+    --text-mid: #b3bed4;
+    --elev-1: 0 1px 2px rgba(0, 0, 0, .5);
+    --elev-2: 0 2px 8px rgba(0, 0, 0, .55);
+    --elev-3: 0 12px 40px rgba(0, 0, 0, .6);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface: #0d1428;
+  --surface-card: #151d35;
+  --surface-tint: #111a33;
+  --surface-ink: #070c1b;
+  --surface-drawer: rgba(7, 12, 27, .97);
+  --border: #2a3559;
+  --caption: #8c99b5;
+  --text-high: #e8edf6;
+  --text-mid: #b3bed4;
+  --elev-1: 0 1px 2px rgba(0, 0, 0, .5);
+  --elev-2: 0 2px 8px rgba(0, 0, 0, .55);
+  --elev-3: 0 12px 40px rgba(0, 0, 0, .6);
+}
+
+/* Three things the token layer cannot reach. Brand blue at #0058ab does not carry
+   enough contrast on a dark surface, so a filled button moves one step up the
+   ramp. The report pages keep a white mount in both themes, because a scan of a
+   printed page floating on a dark card reads as a rendering fault. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .button--primary { background: var(--cap-blue-500); }
+  :root:not([data-theme="light"]) .lang-picker button[aria-pressed="true"] { background: var(--cap-blue-500); border-color: var(--cap-blue-500); }
+  :root:not([data-theme="light"]) .flip-track img { background: #ffffff; }
+}
+
+:root[data-theme="dark"] .button--primary { background: var(--cap-blue-500); }
+:root[data-theme="dark"] .lang-picker button[aria-pressed="true"] { background: var(--cap-blue-500); border-color: var(--cap-blue-500); }
+:root[data-theme="dark"] .flip-track img { background: #ffffff; }
+
+/* ============================================================ header utility ==
+   The controls Capgemini puts at the top right of its own header: the language
+   the site is being read in, and the light and dark switch, sitting beside the
+   sign-in button rather than inside the navigation. */
+
+.utility { display: flex; align-items: center; gap: 12px; }
+
+/* Every control in the header bar is the same height: the language pill, the light
+   and dark switch and the sign-in button. They were 39px, 32px and 48px, which is
+   the sort of thing nobody itemises and everybody notices. 38px is Capgemini's own
+   button height, so the row agrees with their site as well as with itself. */
+.lang-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, .08);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 300;
+  letter-spacing: .0105em;
+  cursor: pointer;
+  transition: background .2s var(--ease-out), border-color .2s var(--ease-out);
+}
+
+.lang-button:hover { background: rgba(255, 255, 255, .16); border-color: rgba(255, 255, 255, .4); }
+.lang-button svg { display: block; flex: 0 0 auto; }
+.lang-button .lang-code { font-weight: 500; letter-spacing: .06em; text-transform: uppercase; }
+
+.theme-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 68px;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, .08);
+  color: #fff;
+  cursor: pointer;
+}
+
+.theme-toggle:hover { background: rgba(255, 255, 255, .16); }
+
+.theme-toggle .icon {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  opacity: .6;
+  transition: opacity .25s var(--ease-out);
+}
+
+.theme-toggle[aria-checked="false"] .icon.sun,
+.theme-toggle[aria-checked="true"] .icon.moon { opacity: 1; }
+
+.theme-toggle .ball {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--cap-lightblue-600);
+  transition: transform .28s var(--ease-out);
+}
+
+.theme-toggle[aria-checked="true"] .ball { transform: translateX(30px); }
+
+/* ========================================================== language chooser ==
+   Capgemini uses a panel rather than a dropdown: what you are reading now at the
+   top, marked and filled with brand blue, then one row per alternative. A round
+   badge carries the code rather than a flag, because a flag names a country and
+   these name languages, and there is no flag for English that is not an argument
+   with somebody.
+
+   Each row is a link to that language's own copy of this page, so the choice is
+   a URL rather than a setting. It survives being shared, a crawler can read it,
+   and it needs nothing stored in the browser. */
+
+.lang-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: none;
+  background: rgba(3, 7, 18, .6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.lang-menu.is-open { display: block; }
+
+.lang-menu-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: min(380px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  background: var(--surface-ink);
+  box-shadow: var(--elev-3);
+}
+
+.lang-menu-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 16px 18px 24px;
+  color: var(--on-dark-high);
+  font-size: 16px;
+  font-weight: 300;
+}
+
+.lang-menu-close {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--on-dark-high);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.lang-menu-close:hover { color: var(--cap-lightblue-300); }
+
+.lang-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 15px 24px;
+  border-top: 1px solid rgba(255, 255, 255, .1);
+  color: var(--on-dark-high);
+  font-size: 16px;
+  font-weight: 300;
+  text-decoration: none;
+}
+
+.lang-option:hover { background: rgba(255, 255, 255, .07); }
+
+.lang-option[aria-current="true"] {
+  background: var(--cap-blue-600);
+  border-top-color: transparent;
+}
+
+.lang-option .badge {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, .35);
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.lang-option .tick { margin-left: auto; font-size: 15px; }
+
+/* ============================================================== drawer floor ==
+   The bottom bar of Capgemini's own mobile menu: language on the left, light and
+   dark on the right, on a band a shade darker than the drawer. Putting the two
+   settings here rather than among the links is what keeps the list of links a
+   list of links. */
+
+.drawer-links { display: flex; flex-direction: column; }
+
+.drawer-floor {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: auto calc(var(--pad-x) * -1) -40px;
+  padding: 16px var(--pad-x);
+  background: rgba(0, 0, 0, .32);
+}
+
+.drawer-floor .lang-button {
+  padding-left: 0;
+  border-color: transparent;
+  background: transparent;
+}
+
+.drawer-floor .lang-button:hover { background: transparent; color: var(--cap-lightblue-300); }
+
+/* The utility controls move into the drawer at the width the navigation does,
+   which is the whole point of putting them in its floor. */
+@media (max-width: 1199px) {
+  .topbar .utility { display: none; }
+}
+
+/* The band where the bar fits but only just: the wordmark carries the brand on its own and
+   the navigation closes up. Measured against German, which has the longest labels of the six
+   and is therefore the one that decides.
+
+   The upper bound is 1520 rather than 1440 because seven items in German land exactly on the
+   minimum gap at 1440, and exactly is not a margin. Adding a navigation item means checking
+   this number again at /de/. */
+@media (min-width: 1200px) and (max-width: 1520px) {
+  .brand span { display: none; }
+  .topbar nav { gap: 18px; }
+  .topbar nav a { font-size: 13px; }
+  .utility { gap: 10px; }
+}

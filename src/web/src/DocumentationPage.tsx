@@ -11,12 +11,14 @@ import { useLanguage, useT } from './i18n';
  * have, and stay that way for everybody after them.
  */
 const guides = [
-  ['03-installation.md', 'docs.installation', 'docs.installation-summary'],
-  ['05-connecting-a-source-system.md', 'docs.connecting-a-source', 'docs.connecting-a-source-summary'],
-  ['06-canonical-configuration-model.md', 'docs.canonical-model', 'docs.canonical-model-summary'],
-  ['07-the-dynamics-365-target.md', 'docs.the-target', 'docs.the-target-summary'],
-  ['08-running-a-migration.md', 'docs.running-a-migration', 'docs.running-a-migration-summary'],
-  ['09-estimating-a-migration.md', 'docs.estimating', 'docs.estimating-summary']
+  ['10-what-this-is.md', 'docs.what-this-is', 'docs.what-this-is-summary'],
+  ['20-getting-access.md', 'docs.getting-access', 'docs.getting-access-summary'],
+  ['30-connecting-an-environment.md', 'docs.connecting', 'docs.connecting-summary'],
+  ['40-running-an-analysis.md', 'docs.running', 'docs.running-summary'],
+  ['50-reading-the-findings.md', 'docs.findings', 'docs.findings-summary'],
+  ['60-estimates-and-the-backlog.md', 'docs.estimates', 'docs.estimates-summary'],
+  ['70-reports-and-exports.md', 'docs.reports', 'docs.reports-summary'],
+  ['80-languages-and-settings.md', 'docs.languages', 'docs.languages-summary']
 ] as const;
 
 /**

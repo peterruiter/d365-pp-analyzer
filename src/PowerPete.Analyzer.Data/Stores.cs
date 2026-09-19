@@ -108,20 +108,27 @@ public sealed class WorkspaceStore(string connectionString)
         await using var connection = Connect();
 
         // A global administrator sees everything. Everybody else sees exactly the engagements
-        // they hold a row for, filtered in the query rather than in code, so a screen that
-        // forgets to filter cannot leak one.
+        // in the access they were handed, filtered in the query rather than in code, so a
+        // screen that forgets to filter cannot leak one.
+        //
+        // Filtered on the identifiers rather than by joining EngagementAccess again, because
+        // not every grant is a row: the demonstration engagement is granted to everybody
+        // admitted, in one place, and a join here would be a second answer to who may see
+        // what. Reading it from the same dictionary Holds() reads means the list and the
+        // endpoints cannot disagree.
+        if (!access.IsGlobalAdmin && access.Roles.Count == 0) return [];
+
         var sql = access.IsGlobalAdmin
             ? "SELECT * FROM ops.Engagement ORDER BY CreatedUtc DESC;"
             : """
               SELECT e.* FROM ops.Engagement e
-              INNER JOIN ops.EngagementAccess a ON a.EngagementId = e.EngagementId
-              WHERE a.UserId = @userId
+              WHERE e.EngagementId IN @engagementIds
               ORDER BY e.CreatedUtc DESC;
               """;
 
         var rows = await connection.QueryAsync<Engagement>(new CommandDefinition(
             sql,
-            new { userId = access.Roles.Count == 0 ? null : (string?)null },
+            new { engagementIds = access.Roles.Keys.ToArray() },
             cancellationToken: cancellationToken));
 
         return [.. rows];

@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="{{htmlLang}}">
+<head>
+<title>{{meta.title}}</title>
+<meta name="description" content="{{meta.description}}">
+<meta property="og:title" content="{{meta.title}}">
+<meta property="og:description" content="{{meta.ogDescription}}">
+<meta property="og:type" content="website">
+{{> _head}}
+</head>
+<body>
+
+{{> _header}}
+
+<main>
+
+  <!-- One column rather than the split the sibling products use. Those carry a
+       screenshot of themselves beside the headline; this one has no screenshots yet,
+       and an invented picture of a product is worse than none. The hero keeps its
+       full height and its gradients, so the page still opens the same way. -->
+  <section class="hero">
+    <div class="shell">
+      <p class="eyebrow">{{hero.eyebrow}}</p>
+      <h1>{{hero.headline}}</h1>
+      <p class="lede">{{hero.lede}}</p>
+      <div class="actions">
+        <a class="button button--primary" href="/account/signin">{{hero.primary}} <span aria-hidden="true">&rarr;</span></a>
+        <a class="button button--ghost" href="#what">{{hero.secondary}}</a>
+      </div>
+    </div>
+    <span class="scroll-cue">{{hero.scroll}}</span>
+  </section>
+
+  <!-- What it does. Three cards, because the product is three moves: read an estate,
+       say what is debt, say what it costs. -->
+  <section id="what">
+    <div class="shell">
+      <div class="section-head reveal">
+        <p class="eyebrow">{{what.eyebrow}}</p>
+        <h2>{{what.heading}}</h2>
+        <p>{{what.lede}}</p>
+      </div>
+
+      <div class="grid grid--3">
+        <article class="card reveal">
+          <h3>{{what.card1.title}}</h3>
+          <p>{{what.card1.body}}</p>
+        </article>
+        <article class="card reveal">
+          <h3>{{what.card2.title}}</h3>
+          <p>{{what.card2.body}}</p>
+        </article>
+        <article class="card reveal">
+          <h3>{{what.card3.title}}</h3>
+          <p>{{what.card3.body}}</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- The ways in, and what each one gives up. Rendered from the extraction sources
+       contract, so this page and the report cannot disagree about what a mode reaches. -->
+  <section id="modes" class="on-tint">
+    <div class="shell">
+      <div class="section-head reveal">
+        <p class="eyebrow">{{modes.eyebrow}}</p>
+        <h2>{{modes.heading}}</h2>
+        <p>{{modes.lede}}</p>
+      </div>
+
+      {{modes}}
+
+      <p class="connector-note reveal">{{modes.note}}</p>
+    </div>
+  </section>
+
+  <!-- The part that makes it worth trusting: it says what it could not read. -->
+  <section id="honesty" class="on-ink">
+    <div class="shell">
+      <div class="lede-block reveal">
+        <p class="eyebrow">{{honesty.eyebrow}}</p>
+        <h2>{{honesty.heading}}</h2>
+        <p>{{honesty.body1}}</p>
+        <p>{{honesty.body2}}</p>
+      </div>
+    </div>
+
+    <div class="shell">
+      <div class="grid grid--4">
+        <article class="stat reveal"><strong>{{stat.rules}}</strong><span>{{honesty.stat1.label}}</span></article>
+        <article class="stat reveal"><strong>{{stat.componentTypes}}</strong><span>{{honesty.stat2.label}}</span></article>
+        <article class="stat reveal"><strong>{{stat.domains}}</strong><span>{{honesty.stat3.label}}</span></article>
+        <article class="stat reveal"><strong>{{stat.languages}}</strong><span>{{honesty.stat4.label}}</span></article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Nothing is written to a client's environment. This is the section a change
+       board reads before letting it near anything. -->
+  <section id="safety">
+    <div class="shell">
+      <div class="lede-block reveal">
+        <p class="eyebrow">{{safety.eyebrow}}</p>
+        <h2>{{safety.heading}}</h2>
+        <p>{{safety.body1}}</p>
+        <p>{{safety.body2}}</p>
+      </div>
+    </div>
+
+    <div class="shell">
+      <div class="grid grid--4">
+        <article class="card reveal">
+          <h3>{{safety.card1.title}}</h3>
+          <p>{{safety.card1.body}}</p>
+        </article>
+        <article class="card reveal">
+          <h3>{{safety.card2.title}}</h3>
+          <p>{{safety.card2.body}}</p>
+        </article>
+        <article class="card reveal">
+          <h3>{{safety.card3.title}}</h3>
+          <p>{{safety.card3.body}}</p>
+        </article>
+        <article class="card reveal">
+          <h3>{{safety.card4.title}}</h3>
+          <p>{{safety.card4.body}}</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- What leaves the product. -->
+  <section id="output" class="on-tint">
+    <div class="shell">
+      <div class="section-head reveal">
+        <p class="eyebrow">{{output.eyebrow}}</p>
+        <h2>{{output.heading}}</h2>
+        <p>{{output.lede}}</p>
+      </div>
+
+      <div class="grid grid--3">
+        <article class="card reveal">
+          <h3>{{output.card1.title}}</h3>
+          <p>{{output.card1.body}}</p>
+        </article>
+        <article class="card reveal">
+          <h3>{{output.card2.title}}</h3>
+          <p>{{output.card2.body}}</p>
+        </article>
+        <article class="card reveal">
+          <h3>{{output.card3.title}}</h3>
+          <p>{{output.card3.body}}</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- What it checks for, counted from the catalogue rather than written here. -->
+  <section id="rules">
+    <div class="shell">
+      <div class="section-head reveal">
+        <p class="eyebrow">{{rules.eyebrow}}</p>
+        <h2>{{rules.heading}}</h2>
+        <p>{{rules.lede}}</p>
+      </div>
+
+      {{categories}}
+
+      <p class="connector-note reveal">{{rules.note}}</p>
+    </div>
+  </section>
+
+  <!-- Six languages, and the page you are reading is one of them. -->
+  <section id="languages">
+    <div class="shell">
+      <div class="section-head reveal">
+        <p class="eyebrow">{{languages.eyebrow}}</p>
+        <h2>{{languages.heading}}</h2>
+        <p>{{languages.body1}}</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- What it will not do. Last, because a page that only claims is a brochure. -->
+  <section id="limits" class="on-tint">
+    <div class="shell">
+      <div class="section-head reveal">
+        <p class="eyebrow">{{limits.eyebrow}}</p>
+        <h2>{{limits.heading}}</h2>
+        <p>{{limits.lede}}</p>
+      </div>
+
+      <div class="grid grid--3">
+        <article class="card reveal">
+          <h3>{{limits.card1.title}}</h3>
+          <p>{{limits.card1.body}}</p>
+        </article>
+        <article class="card reveal">
+          <h3>{{limits.card2.title}}</h3>
+          <p>{{limits.card2.body}}</p>
+        </article>
+        <article class="card reveal">
+          <h3>{{limits.card3.title}}</h3>
+          <p>{{limits.card3.body}}</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="closing">
+    <div class="shell">
+      <h2 class="reveal">{{closing.heading}}</h2>
+      <p class="reveal">{{closing.body}}</p>
+      <div class="actions reveal">
+        <a class="button button--primary" href="/account/signin">{{hero.primary}} <span aria-hidden="true">&rarr;</span></a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+{{> _footer}}
+</body>
+</html>
