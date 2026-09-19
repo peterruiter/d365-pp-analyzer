@@ -308,9 +308,13 @@ public sealed partial class HardCodedEnvironmentValueHandler : IRuleHandler
     {
         ArgumentNullException.ThrowIfNull(context);
 
+        // Code components too. A PCF bundle is somebody's JavaScript shipped into the
+        // estate, and an endpoint hard coded into one travels between environments exactly
+        // the way a hard coded endpoint in a web resource does.
         var searchable = context.OfType("cloudFlow")
             .Concat(context.OfType("jsWebResource"))
-            .Concat(context.OfType("canvasApp"));
+            .Concat(context.OfType("canvasApp"))
+            .Concat(context.OfType("pcfControl"));
 
         foreach (var component in searchable)
         {

@@ -2,6 +2,7 @@ namespace PowerPete.Analyzer.Extraction;
 
 using System.IO.Compression;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using PowerPete.Analyzer.Domain;
 
@@ -110,16 +111,18 @@ public sealed class SolutionZipReader
         var solution = ReadManifest(manifest);
         var root = Load(customisations);
 
-        Attempt(reads, "table", () => ReadEntities(root, solution, components, links));
-        Attempt(reads, "classicWorkflowBackground", () => ReadWorkflows(archive, root, solution, components, links, unresolved));
-        Attempt(reads, "jsWebResource", () => ReadWebResources(archive, root, solution, components));
-        Attempt(reads, "connectionReference", () => ReadConnectionReferences(root, solution, components));
-        Attempt(reads, "environmentVariable", () => ReadEnvironmentVariables(archive, root, solution, components));
-        Attempt(reads, "securityRole", () => ReadRoles(root, solution, components));
-        Attempt(reads, "pluginAssembly", () => ReadPluginAssemblies(root, solution, components));
-        Attempt(reads, "canvasApp", () => ReadCanvasApps(root, solution, components));
-        Attempt(reads, "choice", () => ReadGlobalChoices(root, solution, components));
-        Attempt(reads, "customApi", () => ReadCustomApis(archive, solution, components));
+        Attempt(reads, components, "table", () => ReadEntities(root, solution, components, links));
+        Attempt(reads, components, "cloudFlow", () => ReadWorkflows(archive, root, solution, components, links, unresolved));
+        Attempt(reads, components, "jsWebResource", () => ReadWebResources(archive, root, solution, components));
+        Attempt(reads, components, "connectionReference", () => ReadConnectionReferences(root, solution, components));
+        Attempt(reads, components, "environmentVariable", () => ReadEnvironmentVariables(archive, root, solution, components));
+        Attempt(reads, components, "securityRole", () => ReadRoles(root, solution, components));
+        Attempt(reads, components, "pluginAssembly", () => ReadPluginAssemblies(root, solution, components));
+        Attempt(reads, components, "canvasApp", () => ReadCanvasApps(root, solution, components));
+        Attempt(reads, components, "choice", () => ReadGlobalChoices(root, solution, components));
+        Attempt(reads, components, "customApi", () => ReadCustomApis(archive, solution, components));
+        Attempt(reads, components, "pcfControl", () => ReadCustomControls(archive, root, solution, components));
+        Attempt(reads, components, "modelDrivenApp", () => ReadApps(root, solution, components));
 
         // Everything this mode cannot see, said out loud. A section of a report that is empty
         // because nobody could read it has to look different from one that is empty because
@@ -129,26 +132,93 @@ public sealed class SolutionZipReader
         reads.Add(new EntityRead("dataflow", false, null,
             "Dataflows do not travel in a solution. They are invisible to an offline read, which is itself one of the findings about them."));
 
+        // A solution that yields nothing is a fault until proven otherwise.
+        //
+        // Every read above can succeed and return zero, and ten zeroes sum to a clean empty
+        // estate, which is the most damaging thing this product can report. It happened on
+        // the first real export it was pointed at: a solution holding one PCF control came
+        // back with no components and no failures, because nothing read CustomControls.
+        //
+        // A solution file always contains something, so nothing found means this reader
+        // cannot see what is in it rather than that there is nothing there. Said as a failed
+        // read so the report carries it into the not assessed section instead of printing a
+        // zero next to a client's name.
+        if (components.Count == 0)
+        {
+            reads.Add(new EntityRead("solution", false, null,
+                "This solution file was read and produced no components at all. A solution always contains "
+                + "something, so this means the reader does not understand what is in this one rather than "
+                + "that the solution is empty. Nothing about this estate is reported as assessed."));
+        }
+
         return new Result(components, links, unresolved, [solution], reads);
     }
 
     /// <summary>
-    /// Runs one read and records what happened, whichever it was.
+    /// Runs one read and records what it actually produced, whichever way it went.
     /// </summary>
     /// <remarks>
     /// The whole reason this wrapper exists. A read that throws must not take the run with it
     /// and must not vanish: twenty-three reads each failing separately, summed, look exactly
     /// like an estate with nothing in it, and that report would be believed.
+    ///
+    /// The counts are taken from the components the read added rather than from a number the
+    /// read kept for itself, and they are recorded per component type. Those two things used
+    /// to be the same number and they are not: reading the entities of a real export
+    /// reported "table: 284" for a solution holding ten tables, because the same pass also
+    /// produces the columns, the views and the forms. A coverage section built on that
+    /// overstates what was read by a factor of twenty-eight, in a product whose entire
+    /// argument is that it does not overstate what it read.
+    ///
+    /// The label is only used when a read produced nothing, so a read that came back empty
+    /// still says which component type came back empty.
     /// </remarks>
-    private static void Attempt(List<EntityRead> reads, string componentTypeId, Func<int> read)
+    private static void Attempt(
+        List<EntityRead> reads,
+        List<DiscoveredComponent> components,
+        string componentTypeId,
+        Func<int> read)
     {
+        var before = components.Count;
+
         try
         {
-            reads.Add(new EntityRead(componentTypeId, true, read(), null));
+            read();
         }
         catch (Exception exception) when (exception is System.Xml.XmlException or JsonException or InvalidDataException or IOException)
         {
             reads.Add(new EntityRead(componentTypeId, false, null, exception.Message));
+            return;
+        }
+
+        var produced = components
+            .Skip(before)
+            .GroupBy(component => component.TypeId, StringComparer.Ordinal)
+            .ToList();
+
+        if (produced.Count == 0)
+        {
+            reads.Add(new EntityRead(componentTypeId, true, 0, null));
+            return;
+        }
+
+        foreach (var group in produced)
+        {
+            // Summed rather than replaced. Two reads can legitimately produce the same type,
+            // and the second one overwriting the first would report the smaller number.
+            var existing = reads.FindIndex(entry => entry.ComponentTypeId == group.Key && entry.Succeeded);
+
+            if (existing >= 0)
+            {
+                reads[existing] = reads[existing] with
+                {
+                    RecordCount = (reads[existing].RecordCount ?? 0) + group.Count()
+                };
+
+                continue;
+            }
+
+            reads.Add(new EntityRead(group.Key, true, group.Count(), null));
         }
     }
 
@@ -734,6 +804,258 @@ public sealed class SolutionZipReader
                     ["appVersion"] = Value(app, "AppVersion")
                 });
 
+            count++;
+        }
+
+        return count;
+    }
+
+    /// <summary>
+    /// Code components, from the control manifest each one ships with.
+    /// </summary>
+    /// <remarks>
+    /// Nothing read these, which is how a solution containing exactly one PCF control came
+    /// back as an estate with nothing in it. The manifest is the only place the version and
+    /// the API version live, and both matter: a control built against an old API version is
+    /// the kind of thing that stops working on a platform update nobody scheduled.
+    ///
+    /// Third party is inferred from the namespace rather than declared. A control whose
+    /// namespace is not the solution's publisher prefix came from somewhere else, and
+    /// somebody else's control is somebody else's to fix.
+    /// </remarks>
+    /// <param name="archive">The solution file.</param>
+    /// <param name="root">customizations.xml.</param>
+    /// <param name="solution">Which solution.</param>
+    /// <param name="components">Where to put them.</param>
+    private static int ReadCustomControls(
+        ZipArchive archive,
+        XElement root,
+        SolutionHeader solution,
+        List<DiscoveredComponent> components)
+    {
+        var count = 0;
+
+        foreach (var control in root.Descendants(None + "CustomControl"))
+        {
+            var name = Value(control, "Name");
+            if (string.IsNullOrWhiteSpace(name)) continue;
+
+            var attributes = new Dictionary<string, object?>
+            {
+                ["isThirdParty"] = solution.PublisherPrefix is { Length: > 0 } prefix
+                    && !name.StartsWith(prefix + "_", StringComparison.OrdinalIgnoreCase)
+            };
+
+            // The manifest carries the version and what the control is allowed to reach. It
+            // sits beside the bundle rather than in customizations.xml, and a control whose
+            // manifest is missing is still a control.
+            var manifestPath = Value(control, "FileName")?.TrimStart('/');
+
+            if (manifestPath is not null && archive.GetEntry(manifestPath) is { } entry)
+            {
+                var manifest = Load(entry).Descendants(None + "control").FirstOrDefault();
+
+                if (manifest is not null)
+                {
+                    attributes["version"] = manifest.Attribute("version")?.Value;
+                    attributes["manifestVersion"] = manifest.Attribute("api-version")?.Value;
+                    attributes["description"] = manifest.Attribute("description-key")?.Value;
+
+                    // Declared in the manifest, which is the only place it is declared. A
+                    // control reaching the Web API is doing more than rendering a field.
+                    attributes["usesWebApi"] = manifest.Descendants(None + "uses-feature")
+                        .Any(feature => feature.Attribute("name")?.Value == "WebAPI");
+
+                    attributes["usesReactPlatformLibrary"] = manifest.Descendants(None + "platform-library")
+                        .Any(library => library.Attribute("name")?.Value == "React");
+
+                    attributes["controlType"] = manifest.Attribute("control-type")?.Value;
+
+                    // Which pac built it, if it says. Not judged against a current version,
+                    // because "current" moves and a rule that bakes today's number in starts
+                    // lying the month after it ships. Carried into the inventory so somebody
+                    // reading the report can see a control last built two years ago sitting
+                    // next to one built last week, and draw their own conclusion.
+                    attributes["builtBy"] = manifest.Descendants(None + "built-by")
+                        .FirstOrDefault() is { } builtBy
+                            ? $"{builtBy.Attribute("name")?.Value} {builtBy.Attribute("version")?.Value}".Trim()
+                            : null;
+
+                    attributes["declaresExternalService"] = manifest.Descendants(None + "external-service-usage")
+                        .FirstOrDefault()?.Attribute("enabled")?.Value == "true";
+
+                    attributes["resourceCount"] = manifest.Descendants(None + "resources")
+                        .FirstOrDefault()?.Elements().Count() ?? 0;
+
+                    // The bundle, which is the only place the rest of the answer lives. A
+                    // manifest says what a control is allowed to do; the bundle says what it
+                    // costs to load and how it was built.
+                    ReadBundle(archive, manifestPath, manifest, attributes);
+                }
+            }
+
+            Add(components, "pcfControl", null, name, name, solution, attributes);
+
+            count++;
+        }
+
+        return count;
+    }
+
+    /// <summary>
+    /// What a code component's bundle says about how it was built and what it costs.
+    /// </summary>
+    /// <remarks>
+    /// Everything here is read off the file rather than judged. Size is size. Minified is a
+    /// question about line lengths. React bundled inside a standard control is a string
+    /// search for markers no minifier renames, because they are in string literals that
+    /// React itself reads at run time.
+    ///
+    /// Nothing tries to measure complexity from minified code. A cyclomatic count over a
+    /// webpack bundle measures the bundler, and a number that looks like an opinion about
+    /// somebody's code had better not be one.
+    ///
+    /// The content is kept so the rules that look for hard coded endpoints and secrets can
+    /// see it, which is the same treatment a web resource gets. Only the first stretch of
+    /// it: the patterns are near the top in practice, and holding a two megabyte bundle in
+    /// memory for every control in an estate is how a run of a large solution runs out of it.
+    /// </remarks>
+    /// <param name="archive">The solution file.</param>
+    /// <param name="manifestPath">Where the manifest was, which is where the bundle sits beside it.</param>
+    /// <param name="manifest">The parsed manifest, for the resource paths it declares.</param>
+    /// <param name="attributes">What to fill in.</param>
+    private static void ReadBundle(
+        ZipArchive archive,
+        string manifestPath,
+        XElement manifest,
+        Dictionary<string, object?> attributes)
+    {
+        var folder = manifestPath.Contains('/', StringComparison.Ordinal)
+            ? manifestPath[..manifestPath.LastIndexOf('/')]
+            : string.Empty;
+
+        var total = 0L;
+        string? code = null;
+
+        foreach (var resource in manifest.Descendants(None + "code"))
+        {
+            var path = resource.Attribute("path")?.Value;
+            if (string.IsNullOrWhiteSpace(path)) continue;
+
+            var entry = archive.GetEntry($"{folder}/{path}".TrimStart('/'));
+            if (entry is null) continue;
+
+            total += entry.Length;
+
+            // The first bundle only. A control with several is unusual and the first is the
+            // one that loads.
+            code ??= ReadText(entry, 200_000);
+        }
+
+        attributes["sizeBytes"] = total;
+
+        if (code is null) return;
+
+        attributes["content"] = code;
+
+        // Minified output is one enormous line. Source is not. Averaged rather than taking
+        // the longest line, because a single long string literal in otherwise readable code
+        // would make source look minified.
+        var lines = code.Split('\n');
+        var average = lines.Length == 0 ? 0 : code.Length / lines.Length;
+
+        attributes["isMinified"] = average > 200;
+
+        // Markers React reads at run time, so a minifier leaves them alone. Checked only
+        // where the manifest has not declared the platform library, because a virtual
+        // control legitimately references React without shipping it.
+        var declared = attributes.TryGetValue("usesReactPlatformLibrary", out var platform) && platform is true;
+
+        attributes["bundlesOwnReact"] = !declared
+            && (code.Contains("react.development", StringComparison.Ordinal)
+                || code.Contains("react.production.min", StringComparison.Ordinal)
+                || code.Contains("__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED", StringComparison.Ordinal));
+
+        attributes["hasDebugCode"] =
+            Regex.IsMatch(code, @"(^|[;{}\s])debugger\s*[;}]")
+            || code.Contains("console.log(", StringComparison.Ordinal)
+            || code.Contains("sourceMappingURL", StringComparison.Ordinal);
+
+        // What the control does once it is running, which is the half of the question the
+        // manifest cannot answer.
+        //
+        // These three survive minification and the rest of the bundle does not. A minifier
+        // renames everything it owns and nothing it does not: setInterval is a browser
+        // global, innerHTML is a DOM property, and webAPI is a property of an object the
+        // platform hands in. All three are looked up by name at run time, so the name in the
+        // bundle is the name in the source, and counting them is counting rather than
+        // guessing. Anything the developer named themselves is now a single letter, which is
+        // exactly why nothing here tries to say whether the code is well written.
+        attributes["timerCount"] = Regex.Count(code, @"\bsetInterval\s*\(");
+
+        attributes["innerHtmlCount"] = Regex.Count(code, @"\.innerHTML\s*=[^=]");
+
+        attributes["callsWebApi"] = Regex.IsMatch(code, @"\.webAPI\b");
+    }
+
+    /// <summary>The first stretch of a file, as text.</summary>
+    /// <param name="entry">The file.</param>
+    /// <param name="limit">How much of it to take.</param>
+    private static string ReadText(ZipArchiveEntry entry, int limit)
+    {
+        using var stream = entry.Open();
+        using var reader = new StreamReader(stream);
+
+        var buffer = new char[limit];
+        var read = reader.ReadBlock(buffer, 0, limit);
+
+        return new string(buffer, 0, read);
+    }
+
+    /// <summary>
+    /// The model driven apps in the solution, and their sitemaps.
+    /// </summary>
+    /// <remarks>
+    /// An app is what a user actually opens, so a report that lists four hundred components
+    /// and no apps has described a database rather than a system. Read from the manifest
+    /// because the offline mode has nothing else; the component count and the publish date
+    /// need a live connection and are not guessed here.
+    /// </remarks>
+    /// <param name="root">customizations.xml.</param>
+    /// <param name="solution">Which solution.</param>
+    /// <param name="components">Where to put them.</param>
+    private static int ReadApps(XElement root, SolutionHeader solution, List<DiscoveredComponent> components)
+    {
+        var count = 0;
+
+        foreach (var app in root.Descendants(None + "AppModule"))
+        {
+            var name = Value(app, "UniqueName") ?? Value(app, "Name");
+            if (string.IsNullOrWhiteSpace(name)) continue;
+
+            Add(components, "modelDrivenApp", Value(app, "AppModuleId"),
+                Value(app, "Name") ?? name, name, solution,
+                new Dictionary<string, object?>
+                {
+                    ["description"] = Value(app, "Description"),
+
+                    // Lower case, as the export writes it. Reading "Statecode" found
+                    // nothing and every app looked stateless.
+                    ["statecode"] = Value(app, "statecode")
+                });
+
+            count++;
+        }
+
+        // AppModuleSiteMap rather than the SiteMap element nested inside it. The unique name
+        // is on the wrapper, so reading the inner element found a node with no name on it and
+        // skipped every sitemap in the file.
+        foreach (var map in root.Descendants(None + "AppModuleSiteMap"))
+        {
+            var name = Value(map, "SiteMapUniqueName");
+            if (string.IsNullOrWhiteSpace(name)) continue;
+
+            Add(components, "siteMap", null, name, name, solution, new Dictionary<string, object?>());
             count++;
         }
 

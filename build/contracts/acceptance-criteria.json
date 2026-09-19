@@ -2,14 +2,12 @@
   "contract": "acceptance-criteria",
   "version": "1.0.0",
   "description": "One acceptance criterion per rule that produces a work item. Written per rule rather than generated per finding, and substituted with the component at publish time. Every rule in the catalogue with a work item type other than 'none' needs an entry here and the contract integrity check fails when one is missing.",
-
   "rules": {
     "shape": "Given, when, then, plus an explicit test requirement. The test requirement is separate because 'the flow now has error handling' is a state and 'a deliberate failure reaches the notification channel' is a test, and only the second one catches a handler wired to nothing.",
     "noBoilerplate": "A criterion saying 'the finding is resolved' is worse than none. It teaches a team that these work items are generated noise, and after the third one they close the rest without reading them.",
     "substitution": "{componentName}, {componentType}, {solutionName}, {tableName}, {evidenceValue} and {count} are replaced at publish time. A placeholder with nothing behind it is dropped with its sentence rather than published as a brace.",
     "theTestIsTheHardPart": "Most of these findings sit in code nobody has ever tested. The test requirement is usually the larger half of the estimate and is written first for that reason."
   },
-
   "criteria": {
     "lifecycle.dialogPresent": {
       "given": "The dialog {componentName} in solution {solutionName}",
@@ -53,7 +51,6 @@
       "then": "The destination tables hold the same data after a full cycle, and the new implementation exists in source control",
       "testRequirement": "Run both against the same source for one full cycle and compare row counts and a sample of values. Also confirm the Dataverse capacity consumption after the change, because that was half the reason for the finding."
     },
-
     "architecture.logicSpread": {
       "given": "The table {tableName}, with logic in {count} different places",
       "when": "The execution order on create and on update has been mapped and the consolidation agreed in that map has been done",
@@ -72,7 +69,6 @@
       "then": "The architecture documentation names the service, its owner, its repository and what happens when it is unavailable",
       "testRequirement": "Confirm the recorded owner acknowledges it. An owner written down without being told is a name, not an owner."
     },
-
     "quality.flowNoErrorHandling": {
       "given": "The flow {componentName} in solution {solutionName}",
       "when": "An action inside it fails",
@@ -115,7 +111,6 @@
       "then": "Every form still behaves as it did, and the onload payload is smaller",
       "testRequirement": "Measure form load before and after, and exercise each form. A library removed from a form where a handler still references it fails at the point the user clicks something, not at load."
     },
-
     "alm.unmanagedInProduction": {
       "given": "Unmanaged customisations in the production environment {evidenceValue}",
       "when": "A development environment is the source of truth and a pipeline promotes managed solutions into production",
@@ -152,7 +147,6 @@
       "then": "An import into an environment where the pipeline has not set it leaves the variable visibly empty",
       "testRequirement": "Import into a clean environment and confirm the dependent component fails or warns rather than silently using the development value."
     },
-
     "governance.orphanedColumn": {
       "given": "{count} custom columns on {tableName} with no form, view, flow or plugin reference",
       "when": "Each has been checked for integration traffic and a decision recorded",
@@ -183,7 +177,6 @@
       "then": "The component runs on credentials that do not belong to one person, and its run history continues uninterrupted",
       "testRequirement": "Confirm the connections it uses were also reassigned. Changing the owner without changing the connections leaves it running on the departed person's authentication until that expires."
     },
-
     "performance.plugSyncSlow": {
       "given": "The synchronous step {componentName}, averaging {evidenceValue} milliseconds",
       "when": "Work that does not need to be in the transaction has moved out of it",
@@ -202,7 +195,6 @@
       "then": "The table opens on a smaller default view and the wide view is still reachable",
       "testRequirement": "Confirm nothing depends on the default view's column set: an export, a template or a script reading the grid. Trimming a default view is the kind of change that breaks something a fortnight later."
     },
-
     "operability.noFailureAlerting": {
       "given": "The analysed solutions, with no component reporting a failure to a person",
       "when": "A failure path exists that reaches an agreed channel",
@@ -215,7 +207,6 @@
       "then": "A change made in the source environment reaches the others through a pipeline, and the divergence that existed has been reconciled and recorded",
       "testRequirement": "Before anything else, produce a written comparison of what differs between the environments. Picking a source without knowing what the others have that it does not is how a fortnight of somebody's undocumented work disappears."
     },
-
     "quality.namingInconsistent": {
       "given": "Solution {solutionName}, using {count} naming conventions for {componentType}",
       "when": "A convention has been agreed and written where a new developer will find it",
@@ -227,6 +218,48 @@
       "when": "A description has been written saying what the component is for and who asked for it",
       "then": "Somebody who has never seen the solution can tell what each one does from its description alone",
       "testRequirement": "Have somebody outside the team read ten of them and say what each component does. A description repeating the display name passes every automated check and helps nobody."
+    },
+    "performance.pcfBundleSize": {
+      "given": "The code component {componentName}, whose bundle is {sizeBytes} bytes",
+      "when": "The bundle has been reduced, or the component replaced by something lighter",
+      "then": "The form renders the same thing and downloads measurably less to do it",
+      "testRequirement": "Measure the form load with the network throttled and the cache cold, before and after. A warm cache hides exactly the cost this is about."
+    },
+    "modernisation.pcfBundlesOwnReact": {
+      "given": "The standard control {componentName}, bundling its own copy of React",
+      "when": "It has been converted to a virtual control using the platform React library",
+      "then": "It behaves as before and no longer ships a second React onto the form",
+      "testRequirement": "Exercise every state of the control, not only the default one. Virtual controls render through the host, and a control that mutated the DOM directly will have a state where it stops doing so."
+    },
+    "quality.pcfNotMinified": {
+      "given": "The code component {componentName}, shipped as unminified source",
+      "when": "The solution carries a production build of it",
+      "then": "The control behaves identically and the bundle is a fraction of the size",
+      "testRequirement": "Confirm which build produced the deployed bundle, not only that a smaller one exists. The finding is usually that nobody knows."
+    },
+    "quality.pcfDebugCodeShipped": {
+      "given": "The code component {componentName}, shipping debug code",
+      "when": "The production build strips it",
+      "then": "The control behaves identically with developer tools open and closed",
+      "testRequirement": "Open the browser developer tools and use the control. A debugger statement does nothing at all until somebody does that, which is why it survives testing."
+    },
+    "performance.pcfPollingTimer": {
+      "given": "The code component {componentName}, which starts {timerCount} timer(s) when it loads",
+      "when": "Each timer has been justified, or replaced, and every one that remains is cleared in destroy",
+      "then": "Closing the form stops all work the control was doing, and no timer outlives it",
+      "testRequirement": "Open the form, close it, and watch for the timer firing afterwards. Leave a form open for an hour and check memory. Thirty seconds of testing is exactly the interval in which this behaves perfectly."
+    },
+    "security.pcfInnerHtml": {
+      "given": "The code component {componentName}, which assigns to innerHTML in {innerHtmlCount} place(s)",
+      "when": "Every assignment carrying record data has been changed to escape it",
+      "then": "The control renders identically and record data can no longer become markup",
+      "testRequirement": "Put a script tag in one of the fields the control reads and open the form. Test the fields it reads indirectly too, not only the ones it is bound to."
+    },
+    "quality.pcfUndeclaredWebApi": {
+      "given": "The code component {componentName}, calling the Web API without declaring the feature",
+      "when": "The manifest declares WebAPI feature usage and the rebuilt control is deployed",
+      "then": "Every path through the control that calls the Web API completes instead of throwing",
+      "testRequirement": "Exercise the paths that actually make the call, not the form load. The control loads fine today, which is the whole problem."
     }
   }
 }

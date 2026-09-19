@@ -596,7 +596,8 @@
       "appliesTo": [
         "cloudFlow",
         "canvasApp",
-        "pluginAssembly"
+        "pluginAssembly",
+        "pcfControl"
       ],
       "evidence": [
         "solutionZip"
@@ -713,7 +714,8 @@
         "cloudFlow",
         "canvasApp",
         "customConnector",
-        "jsWebResource"
+        "jsWebResource",
+        "pcfControl"
       ],
       "evidence": [
         "solutionZip"
@@ -939,6 +941,160 @@
       "roadmap": {
         "row": "process",
         "column": "architecture",
+        "band": "unclutter"
+      }
+    },
+    {
+      "id": "performance.pcfBundleSize",
+      "name": "Code component with a heavy bundle",
+      "category": "performance",
+      "severity": "medium",
+      "appliesTo": [
+        "pcfControl"
+      ],
+      "evidence": [
+        "solutionZip"
+      ],
+      "detection": "A code component whose bundle is over five hundred kilobytes.",
+      "why": "The bundle is downloaded and parsed before the field it renders appears. A heavy one is paid for on every form load by every user, and it is the kind of cost that never shows up in a test with one record and a warm cache.",
+      "recommendation": "Find what is in it before deciding. The usual answer is a charting or date library bundled whole for one function, or React shipped inside a standard control that could be a virtual one.",
+      "workItemType": "task",
+      "estimateBand": "medium",
+      "roadmap": {
+        "row": "business",
+        "column": "technology",
+        "band": "accelerate"
+      }
+    },
+    {
+      "id": "modernisation.pcfBundlesOwnReact",
+      "name": "Code component shipping its own React",
+      "category": "modernisation",
+      "severity": "low",
+      "appliesTo": [
+        "pcfControl"
+      ],
+      "evidence": [
+        "solutionZip"
+      ],
+      "detection": "A standard control whose bundle contains React, where the manifest does not declare the React platform library.",
+      "why": "A virtual control borrows the host’s React instead of bundling a second copy. Two copies of React on one form is the single largest avoidable payload in most code components, and the platform has supported the alternative since 2023.",
+      "recommendation": "Convert to a virtual control: declare the platform library and return the element rather than rendering into the container. It is usually an afternoon and it is not always worth it, so check the bundle size first and leave a small control alone.",
+      "workItemType": "task",
+      "estimateBand": "medium",
+      "roadmap": {
+        "row": "business",
+        "column": "technology",
+        "band": "accelerate"
+      }
+    },
+    {
+      "id": "quality.pcfNotMinified",
+      "name": "Code component shipped unminified",
+      "category": "quality",
+      "severity": "low",
+      "appliesTo": [
+        "pcfControl"
+      ],
+      "evidence": [
+        "solutionZip"
+      ],
+      "detection": "A bundle whose average line length reads as source rather than as build output.",
+      "why": "It means the control was built in development configuration and shipped that way. The payload is several times what it needs to be, and the build that produced it is not the build somebody thinks is running.",
+      "recommendation": "Build it for production and ship that. If nobody knows which build produced what is deployed, that is the finding rather than the size.",
+      "workItemType": "task",
+      "estimateBand": "trivial",
+      "roadmap": {
+        "row": "process",
+        "column": "technology",
+        "band": "unclutter"
+      }
+    },
+    {
+      "id": "quality.pcfDebugCodeShipped",
+      "name": "Debug code left in a code component",
+      "category": "quality",
+      "severity": "low",
+      "appliesTo": [
+        "pcfControl"
+      ],
+      "evidence": [
+        "solutionZip"
+      ],
+      "detection": "A bundle containing a debugger statement, or console output, or a source map reference pointing at files that are not in the solution.",
+      "why": "A debugger statement stops a user’s browser if their developer tools happen to be open. The rest is noise, but it is noise that says the build pipeline does not distinguish development from production.",
+      "recommendation": "Strip it in the production build rather than by hand. A rule that depends on somebody remembering is a rule that fails on a Friday.",
+      "workItemType": "task",
+      "estimateBand": "trivial",
+      "roadmap": {
+        "row": "process",
+        "column": "technology",
+        "band": "unclutter"
+      }
+    },
+    {
+      "id": "performance.pcfPollingTimer",
+      "name": "Code component polling on a timer",
+      "category": "performance",
+      "severity": "medium",
+      "appliesTo": [
+        "pcfControl"
+      ],
+      "evidence": [
+        "solutionZip"
+      ],
+      "detection": "A bundle calling setInterval. The name is a browser global, so a minifier leaves it intact and the count is exact rather than inferred.",
+      "why": "A timer started when the control loads keeps running for as long as the form is open, whether or not anybody is looking at it, on every form the control sits on and for every user at once. It is the one cost in a code component that does not end when the page finishes loading, and the one least likely to show up in testing, because a test opens a form for thirty seconds and a user leaves it open all day.",
+      "recommendation": "Read what the timer does before deciding anything. A control whose entire purpose is elapsed time needs one and should keep it; a control polling Dataverse for changes usually wants a subscription or a refresh on focus instead. Either way it must be cleared in destroy, and a timer that is not is a leak that survives the form closing.",
+      "workItemType": "task",
+      "estimateBand": "small",
+      "roadmap": {
+        "row": "business",
+        "column": "technology",
+        "band": "accelerate"
+      }
+    },
+    {
+      "id": "security.pcfInnerHtml",
+      "name": "Code component writing HTML directly",
+      "category": "security",
+      "severity": "low",
+      "appliesTo": [
+        "pcfControl"
+      ],
+      "evidence": [
+        "solutionZip"
+      ],
+      "detection": "A bundle assigning to innerHTML. A DOM property name, so it survives minification unchanged.",
+      "why": "Whatever reaches that assignment is parsed as markup. Where any part of it comes from a record, a user who can type into that field decides what runs, and the field does not have to belong to the form the control is on. This is a surface rather than a proven hole, which is why it is low: the code may well be building markup from constants it wrote itself.",
+      "recommendation": "Check where the strings come from. Anything derived from record data wants textContent, or createElement, or a framework that escapes for you. Constant markup assigned once at setup is not worth touching.",
+      "workItemType": "task",
+      "estimateBand": "small",
+      "roadmap": {
+        "row": "process",
+        "column": "technology",
+        "band": "unclutter"
+      }
+    },
+    {
+      "id": "quality.pcfUndeclaredWebApi",
+      "name": "Code component using the Web API without declaring it",
+      "category": "quality",
+      "severity": "high",
+      "appliesTo": [
+        "pcfControl"
+      ],
+      "evidence": [
+        "solutionZip"
+      ],
+      "detection": "A bundle referencing context.webAPI where the manifest declares no WebAPI feature usage.",
+      "why": "The platform only hands a control the features its manifest asked for. A control that reaches for the Web API without declaring it gets undefined and throws at the point of use, which is not when the form loads but whenever the user first does the thing that calls it. That is why this survives a smoke test and fails in front of somebody.",
+      "recommendation": "Add the feature usage to the manifest and rebuild. It is a one line change. The reason to treat it as high is not the size of the fix but that the control is shipped and the failure is waiting for a user rather than a tester.",
+      "workItemType": "bug",
+      "estimateBand": "trivial",
+      "roadmap": {
+        "row": "process",
+        "column": "technology",
         "band": "unclutter"
       }
     }

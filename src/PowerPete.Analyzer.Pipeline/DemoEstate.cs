@@ -51,7 +51,7 @@ public static class DemoEstate
     /// demonstration that gains whatever a later release added and one frozen at whatever it
     /// looked like the first time the container started.
     /// </remarks>
-    public const int SeedVersion = 1;
+    public const int SeedVersion = 2;
 
     /// <summary>What it is called.</summary>
     public const string Name = "Demonstration estate";
@@ -794,9 +794,49 @@ public static class DemoEstate
             Add("htmlWebResource", "nwu_help_panel.html", "nwu_help_panel.html", MainSolution, false,
                 ("description", (string?)null));
 
+            // Three code components, because one cannot show what the reader now sees.
+            //
+            // The bundle facts are the half of a control the manifest cannot answer, and a
+            // demonstration estate that shows only manifests demonstrates the half that was
+            // already working. These three are the three kinds that turn up in real estates:
+            // one built properly, one carrying a library it did not need, and one shipped in
+            // a hurry. Between them they trip every code component rule in the catalogue,
+            // which is deliberate, and the first one trips none of them, which matters more:
+            // a report where every control has a finding against it reads as a tool that
+            // cannot tell good work from bad.
             Add("pcfControl", "NorthwindMeterGauge", "nwu_MeterGauge", MainSolution, false,
-                ("isThirdParty", false), ("version", "1.3.0"), ("manifestVersion", "1"),
-                ("usesReactPlatformLibrary", false), ("description", (string?)null));
+                ("isThirdParty", false), ("version", "1.3.0"), ("manifestVersion", "1.3.4"),
+                ("controlType", "virtual"), ("builtBy", "pac 1.34.6"),
+                ("usesReactPlatformLibrary", true), ("sizeBytes", 84_320L),
+                ("isMinified", true), ("bundlesOwnReact", false), ("hasDebugCode", false),
+                ("timerCount", 0), ("innerHtmlCount", 0),
+                ("usesWebApi", true), ("callsWebApi", true),
+                ("declaresExternalService", false), ("resourceCount", 2),
+                ("description", (string?)null));
+
+            Add("pcfControl", "Outage map viewer", "nwu_OutageMap", FieldSolution, false,
+                ("isThirdParty", true), ("version", "4.2.1"), ("manifestVersion", "1.3.0"),
+                ("controlType", "standard"), ("builtBy", "pac 1.21.4"),
+                ("usesReactPlatformLibrary", false), ("sizeBytes", 1_482_640L),
+                ("isMinified", true), ("bundlesOwnReact", true), ("hasDebugCode", false),
+                ("timerCount", 0), ("innerHtmlCount", 6),
+                ("usesWebApi", true), ("callsWebApi", true),
+                ("declaresExternalService", true), ("resourceCount", 4),
+                ("description", (string?)null));
+
+            Add("pcfControl", "Crew presence tile", "nwu_CrewPresence", FieldSolution, false,
+                ("isThirdParty", false), ("version", "0.9.2"), ("manifestVersion", "1.3.0"),
+                ("controlType", "standard"), ("builtBy", "pac 1.28.2"),
+                ("usesReactPlatformLibrary", false), ("sizeBytes", 246_180L),
+                ("isMinified", false), ("bundlesOwnReact", false), ("hasDebugCode", true),
+                ("timerCount", 3), ("innerHtmlCount", 14),
+
+                // Declares nothing and calls it anyway, which is the one defect here rather
+                // than a cost or a question. It works until somebody opens the tab that
+                // loads the queue.
+                ("usesWebApi", false), ("callsWebApi", true),
+                ("declaresExternalService", false), ("resourceCount", 2),
+                ("description", (string?)null));
         }
 
         private void Integration()

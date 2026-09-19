@@ -653,7 +653,19 @@
         "isThirdParty",
         "version",
         "manifestVersion",
-        "usesReactPlatformLibrary"
+        "usesReactPlatformLibrary",
+        "controlType",
+        "sizeBytes",
+        "isMinified",
+        "bundlesOwnReact",
+        "hasDebugCode",
+        "usesWebApi",
+        "declaresExternalService",
+        "resourceCount",
+        "timerCount",
+        "innerHtmlCount",
+        "callsWebApi",
+        "builtBy"
       ]
     },
     {
@@ -1154,6 +1166,25 @@
           }
         ],
         "note": "Every RDL report is a design decision rather than a conversion. Rated flat rather than measured."
+      },
+      {
+        "componentType": "pcfControl",
+        "measure": "sizeBytes",
+        "bands": [
+          {
+            "upTo": 102400,
+            "level": "simple"
+          },
+          {
+            "upTo": 524288,
+            "level": "medium"
+          },
+          {
+            "upTo": null,
+            "level": "complex"
+          }
+        ],
+        "note": "The bundle stands in for what is inside it, and it is what an offline read can see. A virtual control reusing the host React is a fraction of the size of a standard one that ships its own copy, so the same code rates differently depending on a choice made in the manifest. That is the point rather than a flaw: the bundle is what the browser downloads."
       }
     ],
     "default": "simple",

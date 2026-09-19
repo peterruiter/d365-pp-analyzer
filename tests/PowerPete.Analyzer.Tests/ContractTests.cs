@@ -312,4 +312,55 @@ public class DataLayerTests
         offenders.Should().BeEmpty(
             "a starred select into a record fails to materialise the moment the table gains a column");
     }
+
+    /// <summary>The localisation resources, beside the contracts.</summary>
+    private static string Resources()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+
+        while (directory is not null && !Directory.Exists(Path.Combine(directory.FullName, "src")))
+        {
+            directory = directory.Parent;
+        }
+
+        return Path.Combine(
+            directory!.FullName, "src", "PowerPete.Analyzer.Domain", "Localization", "Resources");
+    }
+
+    [Fact]
+    public void Every_rule_is_translated_into_every_language()
+    {
+        // A rule with no localisation does not fail, warn, or look wrong in a test. It
+        // renders its own key: the report says "finding.performance.pcfBundleSize.name"
+        // where the finding's name should be, in a document with a client's name on it.
+        //
+        // Seven rules shipped that way, in all six languages, and nothing noticed, because
+        // every other guard in this codebase is about the rule catalogue and the catalogue
+        // was complete. The bundles are hand written and the catalogue is not, so the two
+        // drift apart in exactly one direction and only this checks it.
+        //
+        // English included rather than treated as the source. It is the fallback for every
+        // other language, so a key missing there is the one case where there is nothing left
+        // to fall back to.
+        var rules = Contracts.Read("rule-catalogue").Array("rules").Select(rule => rule.Str("id")).ToList();
+        var missing = new List<string>();
+
+        foreach (var language in Contracts.Read("locales").Array("locales").Select(locale => locale.Str("code")))
+        {
+            var path = Path.Combine(Resources(), $"finding.{language}.json");
+
+            File.Exists(path).Should().BeTrue($"the finding bundle for {language} has to exist");
+
+            var bundle = JsonDocument.Parse(File.ReadAllText(path)).RootElement;
+
+            missing.AddRange(
+                from rule in rules
+                from part in new[] { "name", "why", "recommendation" }
+                where !bundle.TryGetProperty($"finding.{rule}.{part}", out _)
+                select $"{language}: finding.{rule}.{part}");
+        }
+
+        missing.Should().BeEmpty(
+            "an untranslated rule prints its own resource key into a client's report");
+    }
 }

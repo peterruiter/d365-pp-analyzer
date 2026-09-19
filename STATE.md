@@ -485,17 +485,89 @@ did not exist.
 - **Everything the checker, metadata and runtime carry.** 17 of 37 rules could not run, named,
   with what each needed.
 
-### The read summary labels a pass, not a type
+### The read summary labelled a pass, not a type — fixed
 
-`Reads:` prints `table 284` and `classicWorkflowBackground 1` because each label names the read
-pass rather than what came out of it. The 284 is ten tables plus their columns, forms and
-views, and the workflow pass covers dialogs, business rules and cloud flows too. The components
-underneath are typed correctly and every rule keys off those, so nothing downstream is wrong.
-A consultant reading that list would still draw the wrong conclusion from it.
+`Reads:` printed `table 284` for a solution holding ten tables, because each label named the
+read pass rather than what came out of it. The 284 was ten tables plus their columns, forms
+and views. The components underneath were typed correctly and every rule keyed off those, so
+nothing downstream was wrong; a consultant reading that list would still have drawn the wrong
+conclusion, from a coverage section, in a product whose argument is that it does not overstate
+what it read.
+
+`Attempt` now counts the components a pass actually added, grouped by their type, and sums
+where two passes produce the same one. A pass that produces nothing still records its own
+label so an empty read is visible rather than absent.
 
 The same conflation is in the command line's ratio line, which prints `5 % of 344 components`.
 The denominator of the ratio is 22, not 344: configuration is counted and shown separately and
 `RatioDefinition` says so. The sentence should say what the number is a share of.
+
+## The second real export, and what a bundle can honestly be asked
+
+`PresenceHub`, one PCF control, exported from the same environment. It came back reporting an
+estate with **nothing in it**: no components, no failures, no findings. Nothing had ever read
+`CustomControls`, and a solution that holds only code components therefore read as empty.
+
+That is the most damaging thing this product can produce, so the guard is now structural. A
+read producing zero components records a **failed** `solution` read saying the reader does not
+understand this file, rather than letting ten honest zeroes sum into a clean bill. Model driven
+apps and sitemaps are read now too, from `AppModule` and `AppModuleSiteMap`; reading the nested
+`SiteMap` element found a node with no unique name on it and skipped every sitemap in the file,
+and `Statecode` capitalised found nothing and made every app look stateless.
+
+### What a minified bundle can be asked, and what it cannot
+
+The control reads, and the harder question was what to say about the code in it. The answer
+this product gives is deliberately narrow.
+
+**Nothing here measures complexity from the bundle.** A cyclomatic count over webpack output
+measures the bundler, not the developer, and a number that looks like an opinion about
+somebody's code had better be one. Everything the developer named is now a single letter.
+
+What survives minification is what the browser looks up by name at run time, and that is
+exactly the set worth asking about: `setInterval` is a browser global, `innerHTML` is a DOM
+property, `webAPI` is a property of an object the platform hands in. None of the three can be
+renamed, so counting them is counting rather than inferring. Size is size, and minification is
+a question about average line length.
+
+Seven rules come out of that, in three kinds:
+
+| Kind | Rules |
+|---|---|
+| A cost | `performance.pcfBundleSize`, `performance.pcfPollingTimer` |
+| A question about the build | `quality.pcfNotMinified`, `quality.pcfDebugCodeShipped`, `modernisation.pcfBundlesOwnReact` |
+| A defect | `quality.pcfUndeclaredWebApi`, and `security.pcfInnerHtml` as a surface rather than a hole |
+
+Only the last kind asserts anything is wrong. A timer is reported as a question, because a
+control whose purpose is elapsed time needs one; `innerHTML` is low, because telling a real
+finding from constant markup takes the source and a bundle does not have it.
+
+The tooling version is carried into the inventory and **not** judged against a current one. A
+rule that bakes today's `pac` version in starts lying the month after it ships.
+
+### The rules were right to stay silent, which is why nothing caught the real gap
+
+`PresenceHub` is 63KB, minified, ships no React and carries no debug code, so the first four
+rules correctly found nothing. What that exposed is that a well built control produced total
+silence, which does not answer the question a client asks. The timer and `innerHTML` rules
+exist because of that: the control starts four timers and writes markup in twenty-three
+places, and those are the two sentences worth saying about it.
+
+### Seven rules shipped untranslated in all six languages
+
+They rendered their own resource keys. Nothing caught it, because every other guard here is
+about the rule catalogue and the catalogue was complete — the bundles are hand written and the
+catalogue is generated, so the two drift apart in exactly one direction.
+`Every_rule_is_translated_into_every_language` now reads both and fails on the difference,
+English included, since it is the fallback and has nothing to fall back to. It was confirmed
+to fail on a removed key before being kept.
+
+### The demonstration estate carries three controls now, not one
+
+One built properly, one carrying a library it did not need, one shipped in a hurry. Between
+them they trip all seven rules, and the first trips none of them, which matters more: a report
+where every control has a finding against it reads as a tool that cannot tell good work from
+bad. `DemoEstate.SeedVersion` is 2, so deployed demonstrations rebuild.
 
 ## What the API port left behind
 
@@ -596,7 +668,7 @@ The build gates, for reference:
 2. `./build/Test-Generators.ps1` — generates into a throwaway folder and checks the output.
    Passes.
 3. `./build/Invoke-CodeGen.ps1` — generates and builds. Twelve of twelve, no warnings.
-4. `dotnet test` — 97 tests, all passing.
+4. `dotnet test` — 98 tests, all passing.
 5. `./build/New-SampleSolution.ps1` then `analyse samples/SampleSolution.zip` — sixteen
    planted defects, twelve found and four correctly not assessed.
 
