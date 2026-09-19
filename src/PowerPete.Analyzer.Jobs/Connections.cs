@@ -354,15 +354,15 @@ public sealed class StageServicesFactory(
                         var client = await connections.ForDataverseAsync(source, token).ConfigureAwait(false);
                         var probe = await new DataverseReader(client).TestAsync(token).ConfigureAwait(false);
 
-                        // Runtime is claimed only where the connection actually reaches it.
-                        // A service principal without the trace privilege authenticates
-                        // perfectly and cannot read a flow run, and the eight rules that need
-                        // one have to report as not assessed rather than as clean.
+                        // Only what the probe actually proved. WhoAmI establishes that the
+                        // credential works and that the identity has a user in the
+                        // environment; it says nothing about whether that user may read run
+                        // history, so runtime is not claimed here for any mode. The extract
+                        // stage attempts it and records what happened, which is the only
+                        // honest source for that answer.
                         var reaches = probe.Succeeded
                             ? new List<EvidenceSource> { EvidenceSource.Metadata, EvidenceSource.Checker }
-                            : [];
-
-                        if (probe.Succeeded && source.Mode == "delegated") reaches.Add(EvidenceSource.Runtime);
+                            : new List<EvidenceSource>();
 
                         checks.Add(new ConnectionCheck(
                             source.Name, source.Mode, probe.Succeeded, probe.Identity, probe.Message, reaches));

@@ -30,10 +30,10 @@ about each other. What that cost is recorded under "what the API port left behin
 | Layer | State |
 |---|---|
 | Contracts | 9, cross checked, consistent |
-| Database | 3 migrations, 20 tables, never applied |
+| Database | 6 migrations, applied to Azure SQL |
 | Domain model | Complete |
 | Offline extraction | Solution zip reader, 9 component families |
-| Live extraction | Reader written. Flow run history deliberately not |
+| Live extraction | Reader written, including cloud flow run history |
 | Reference resolver | Complete |
 | Rule handlers | **37 of 37** |
 | Power Apps checker client | Complete |
@@ -42,8 +42,8 @@ about each other. What that cost is recorded under "what the API port left behin
 | Report model | Contract, plus the PDF and workbook renderers |
 | Estimator | Complete, with guards and provenance |
 | Backlog and DevOps publisher | Complete |
-| Tests | **84, all passing** |
-| Infrastructure | Ported from the migrator, never deployed |
+| Tests | **97, all passing** |
+| Infrastructure | Deployed to Sweden Central, with storage for uploads |
 | Pipeline orchestrator | Runner, 8 stages, worker loop, credential plumbing |
 | Data layer | Stores written, schema never applied |
 | Command line | `analyse` (with `--xlsx`, `--pdf`), `rules`, `components`. `work` not wired |
@@ -541,8 +541,6 @@ None of this fails a build and all of it fails a screen.
 
 ## What is not built at all
 
-- **Flow run history.** Needs the Power Automate management API, a second token and separate
-  consent. Until then eight rules report as not assessed, correctly.
 
 ### Built since, and what is left of each
 
@@ -560,6 +558,11 @@ None of this fails a build and all of it fails a screen.
   worker stores back what it is given.
 - **The demonstration engagement.** Seeds on startup against a stamped version, 369
   components and 99 findings, produced by running the real engine over a synthetic estate.
+- **Flow run history.** Read from Dataverse's own flowrun table, which removed the need for
+  the Power Automate management API, a second token and a separate consent entirely. The
+  claim that run history was not in Dataverse had stopped being true. What is still not
+  available anywhere in Dataverse is plug-in step execution timing, so
+  performance.plugSyncSlow remains not assessed and says so.
 - **The connect and selectSolutions stages.** Both implemented and in the pipeline in the
   order the contract declares. Connect authenticates every source without reading anything
   and records the identity; selectSolutions asks the environment what it has, which is what
@@ -572,18 +575,20 @@ None of this fails a build and all of it fails a screen.
 
 ## The thing that most needs doing next
 
-**Run it against a real export.** The sample solution proves the readers and the rules agree
-with a file this repository wrote. It cannot prove they agree with one Dynamics wrote, and the
-category numbers, the isolation codes, the web resource types and the connection reference
-element names all still come from documentation.
+**Run it against a real client export, and sign in to a real environment.** Everything below
+the sign-in page has now been exercised except that. The sample solution proves the readers
+and the rules agree with a file this repository wrote; it cannot prove they agree with one
+Dynamics wrote, and the category numbers, the isolation codes, the web resource types and
+the connection reference element names all still come from documentation rather than from a
+file somebody exported.
 
-In this order:
+Two specific things nobody has yet checked against a real environment:
 
-1. Export a solution carrying a plugin assembly outside the sandbox and run the reader at it.
-   That is the last of the codes a file can settle.
-2. Apply the migrations to a real Azure SQL instance and prove the constraints fire,
-   particularly the two on `stg.EntityRead` and the rationale checks.
-3. Decide which side moves on the API and web route mismatch below. It fails a screen today.
+1. A plug-in assembly registered outside the sandbox, read from a genuine export. That is
+   the last of the codes a file can settle.
+2. The flowrun read. Its shape comes from documentation, and the reader refuses the whole
+   read on a status it does not recognise rather than counting it as a success, so the
+   failure mode is a rule reporting as not assessed. That is safe and it is not proof.
 
 The build gates, for reference:
 
@@ -591,7 +596,7 @@ The build gates, for reference:
 2. `./build/Test-Generators.ps1` — generates into a throwaway folder and checks the output.
    Passes.
 3. `./build/Invoke-CodeGen.ps1` — generates and builds. Twelve of twelve, no warnings.
-4. `dotnet test` — 56 tests, all passing.
+4. `dotnet test` — 97 tests, all passing.
 5. `./build/New-SampleSolution.ps1` then `analyse samples/SampleSolution.zip` — sixteen
    planted defects, twelve found and four correctly not assessed.
 

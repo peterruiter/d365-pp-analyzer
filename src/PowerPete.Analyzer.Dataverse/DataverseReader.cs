@@ -182,8 +182,8 @@ public sealed class DataverseReader(HttpClient client)
         else
         {
             reads.Add(new EntityRead("flowRun", false, null,
-                "Runtime evidence was not requested, or this connection does not hold the privilege to read it. " +
-                "Every rule that needs run history is reported as not assessed."));
+                "Runtime evidence was not requested on this run, so cloud flow run history was not read. " +
+                "Every rule that needs it is reported as not assessed rather than as passing."));
         }
 
         return new Result(components, links, reads, identity);
@@ -617,22 +617,183 @@ public sealed class DataverseReader(HttpClient client)
     }
 
     /// <summary>
-    /// Flow run statistics, which are not in Dataverse's own tables.
+    /// How often each cloud flow ran in the last thirty days, and how often it failed.
     /// </summary>
     /// <remarks>
-    /// Deliberately left unimplemented rather than faked. Run history lives behind the Power
-    /// Automate management API, not the Dataverse Web API, and it needs its own token and its
-    /// own consent. Returning zeros here would make every flow look like it never fails.
+    /// Read from Dataverse's own flowrun table rather than from the Power Automate
+    /// management API. This used to throw on the grounds that run history was not in
+    /// Dataverse, which stopped being true: solution-aware cloud flows write a row per run,
+    /// and reading it needs no second token and no separate consent.
+    ///
+    /// Two things make this safe to get wrong. The read is wrapped by <see cref="Attempt"/>,
+    /// so an environment without the table, or without the privilege, records a failed read
+    /// and every rule needing run history reports as not assessed, which is exactly what
+    /// happened before this existed. And the status is classified from its label rather than
+    /// its number, strictly: a status this code does not recognise fails the whole read
+    /// instead of being counted as a success.
+    ///
+    /// That last part is the difference between useful and dangerous. Quietly treating an
+    /// unrecognised status as "not a failure" would report a flow that fails every night as
+    /// running perfectly, and a critical severity rule would go silent on the one estate
+    /// that needed it.
+    ///
+    /// Only the flows that actually have rows are touched. A flow with no runs in the window
+    /// is left alone rather than being stamped with a zero: the table does not retain runs
+    /// forever, and "no runs in the last thirty days" and "no rows retained" are different
+    /// statements that would both read as a dormant flow.
     /// </remarks>
-    private static Task<int> ReadFlowRunStatisticsAsync(List<DiscoveredComponent> components, CancellationToken cancellationToken)
+    /// <param name="components">Everything read so far, including the cloud flows to attach to.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    private async Task<int> ReadFlowRunStatisticsAsync(
+        List<DiscoveredComponent> components,
+        CancellationToken cancellationToken)
     {
-        _ = components;
-        _ = cancellationToken;
+        // By index, because the statistics are merged into the component by replacing it.
+        // DiscoveredComponent is a record with a read only attribute dictionary, and casting
+        // that back to the concrete type it happened to be built from would work today and
+        // break the moment somebody hands one in from somewhere else.
+        var flows = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
-        throw new HttpRequestException(
-            "Flow run history is not in the Dataverse Web API. It needs the Power Automate management API, " +
-            "a separate token and separate consent, and this reader does not have them yet. Every rule that " +
-            "depends on run history is reported as not assessed rather than as passing.");
+        for (var index = 0; index < components.Count; index++)
+        {
+            if (components[index] is { TypeId: "cloudFlow", PlatformId: { } id }) flows[id] = index;
+        }
+
+        if (flows.Count == 0) return 0;
+
+        var since = DateTime.UtcNow.AddDays(-30).ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
+
+        var tally = new Dictionary<string, FlowTally>(StringComparer.OrdinalIgnoreCase);
+
+        await foreach (var run in PageAsync(
+            "flowruns?$select=starttime,endtime,status,errormessage,_workflow_value" +
+            $"&$filter=starttime ge {since}",
+            cancellationToken).ConfigureAwait(false))
+        {
+            var workflow = Str(run, "_workflow_value");
+            if (workflow is null || !flows.ContainsKey(workflow)) continue;
+
+            // The label rather than the number. An option set's integers are not a contract
+            // and this code has no environment to check them against.
+            var label = Str(run, "status@OData.Community.Display.V1.FormattedValue")
+                ?? throw new HttpRequestException(
+                    "A flow run came back with no readable status, so the failure rate cannot be counted. "
+                    + "Every rule needing run history is reported as not assessed rather than as passing.");
+
+            var failed = label switch
+            {
+                "Succeeded" => false,
+                "Failed" => true,
+
+                // Neither. A run still going, or one somebody stopped, is not evidence about
+                // whether the flow works and must not move the rate in either direction.
+                "Running" or "Cancelled" or "Cancelling" or "Waiting" or "Paused" => (bool?)null,
+
+                _ => throw new HttpRequestException(
+                    $"A flow run came back with the status '{label}', which this reader does not know how to "
+                    + "classify. Counting it as a success would report a failing flow as healthy, so the whole "
+                    + "read is refused and every rule needing run history is reported as not assessed.")
+            };
+
+            if (!tally.TryGetValue(workflow, out var current))
+            {
+                current = new FlowTally();
+                tally[workflow] = current;
+            }
+
+            if (failed is null)
+            {
+                current.Unfinished++;
+                continue;
+            }
+
+            current.Finished++;
+            if (failed.Value) current.Failed++;
+
+            if (failed.Value && Str(run, "errormessage") is { Length: > 0 } message)
+            {
+                current.LastFailure = message;
+            }
+
+            if (Duration(run) is { } duration)
+            {
+                current.TotalMilliseconds += duration;
+                current.Timed++;
+            }
+        }
+
+        foreach (var (workflow, counts) in tally)
+        {
+            var index = flows[workflow];
+            var flow = components[index];
+
+            // Merged into the component the extraction already produced. The attributes
+            // dictionary is what every rule reads, and a second collection keyed on the same
+            // flow would be a second answer to the same question.
+            var attributes = new Dictionary<string, object?>(flow.Attributes, StringComparer.Ordinal);
+
+            attributes["runCount30d"] = counts.Finished;
+            attributes["failureCount30d"] = counts.Failed;
+
+            attributes["failureRate30d"] = counts.Finished == 0
+                ? 0m
+                : Math.Round((decimal)counts.Failed / counts.Finished, 3);
+
+            if (counts.Timed > 0)
+            {
+                attributes["averageDurationMs"] = (int)(counts.TotalMilliseconds / counts.Timed);
+            }
+
+            if (counts.LastFailure is not null) attributes["lastFailureMessage"] = counts.LastFailure;
+
+            components[index] = flow with { Attributes = attributes };
+        }
+
+        return tally.Count;
+    }
+
+    /// <summary>How long one run took, where both ends of it were recorded.</summary>
+    /// <param name="run">The run.</param>
+    private static double? Duration(JsonElement run)
+    {
+        if (!DateTimeOffset.TryParse(Str(run, "starttime"), CultureInfo.InvariantCulture,
+                DateTimeStyles.AdjustToUniversal, out var start))
+        {
+            return null;
+        }
+
+        if (!DateTimeOffset.TryParse(Str(run, "endtime"), CultureInfo.InvariantCulture,
+                DateTimeStyles.AdjustToUniversal, out var end))
+        {
+            // Still running, or the end was never written. Not a duration.
+            return null;
+        }
+
+        var elapsed = (end - start).TotalMilliseconds;
+
+        return elapsed >= 0 ? elapsed : null;
+    }
+
+    /// <summary>What one flow's runs added up to.</summary>
+    private sealed class FlowTally
+    {
+        /// <summary>Runs that reached an end, which is the denominator of the rate.</summary>
+        public int Finished { get; set; }
+
+        /// <summary>Runs still going or cancelled, counted and deliberately not in the rate.</summary>
+        public int Unfinished { get; set; }
+
+        /// <summary>How many of the finished ones failed.</summary>
+        public int Failed { get; set; }
+
+        /// <summary>Runs with both ends recorded, so an average means something.</summary>
+        public int Timed { get; set; }
+
+        /// <summary>The sum of those durations.</summary>
+        public double TotalMilliseconds { get; set; }
+
+        /// <summary>The most recent failure's message, which is what a consultant reads first.</summary>
+        public string? LastFailure { get; set; }
     }
 
     private static DiscoveredComponent Component(
