@@ -6,9 +6,9 @@ the work.
 
 **Version:** 1.0.0
 **Last updated:** 2026-09-18
-**Current block:** it is deployed and serving, and it produces its documents. Both renderers
-have run for the first time. Nobody has signed in yet, so everything past the sign-in page,
-including the database half of the export path, is built and untested against a real session.
+**Current block:** it is deployed and serving, in six languages, with a public site in front
+of it. Nobody has signed in yet, so everything past the sign-in page, including the database
+half of the export path, is built and untested against a real session.
 
 ---
 
@@ -213,6 +213,52 @@ wrong.
 The first of the two is the more expensive: it was wrong on every estate rather than on some
 of them, and a clean flow is exactly what a client wants to hear.
 
+## Languages, and the public site
+
+Four namespaces are complete in all six languages: **ui at 306 keys, finding at 111, inventory
+at 59 and report at 41.** Every rule's name, why it matters and recommended approach is
+translated, keyed on the rule id rather than on its English text, so correcting a sentence in
+the catalogue does not silently orphan five translations of it.
+
+`Localiser` carries the English into every lookup. A key nobody has translated renders in
+English, which is a document somebody can still hand over; a key nobody has written at all is a
+compile error rather than a blank line on page four.
+
+`analyse --language nl` renders both documents in Dutch, which is where a translation gets
+checked before anybody sends it to a client.
+
+**The translations are drafted, not natively reviewed.** They are consistent and the
+terminology is deliberate, and none has been read by somebody who speaks the language.
+
+**`backlog` is the one namespace still empty.** It is declared in `locales.json` and the
+backlog builder writes its work item titles and acceptance criteria in English from
+`acceptance-criteria.json`. A team picking up the backlog in Rotterdam still reads English.
+
+### What the microsite is
+
+`src/microsite`, built by `build.mjs` into the web root: English at `/` and every other
+language in a folder of its own. Everything countable on the page is read from
+`build/contracts` at build time, so the rule count, the component type count and the reach
+matrix are the product's own numbers. A marketing page that keeps its own copy eventually
+promises a client something the product does not do.
+
+### Three defects this found, none findable by reading
+
+- **The bundles resolve by walking up from the binary.** `AppContext.BaseDirectory` is
+  `bin/Debug` on a developer's machine and `/app` in the container, so the first version wrote
+  every document in English locally while working in production, which is the worst way round
+  for a defect about languages.
+- **Rule text was looked up in the `inventory` namespace rather than `finding`**, so the
+  chrome translated and the content did not.
+- **Static files must run before routing.** `MapFallbackToFile` registers an endpoint matching
+  the root, and once routing has selected an endpoint the static file middleware declines to
+  serve. The microsite was in the image, reachable at `/index.html`, and invisible at `/`. The
+  fallback's pattern excludes file-like paths, which is why the explicit paths worked and hid
+  it. `app.UseRouting()` is now called explicitly, after the static files.
+
+`check-vocabulary` checks every namespace against its own English, in both directions, and
+refuses a translation whose placeholders do not match.
+
 ## The exports
 
 Both documents are produced from any run that reached scoring:
@@ -377,9 +423,9 @@ pills, which is the one thing on that page a consultant reads at a glance.
 **The translations are drafted, not natively reviewed.** They are consistent and the terminology
 is deliberate, and none of them has been read by somebody who speaks the language.
 
-**Only the `ui` namespace has bundles, in any language including English.** `report`, `finding`,
-`backlog` and `inventory` are declared in `locales.json` and empty, and the report a client reads
-comes from `report` and `finding`. The interface is six languages; the deliverables are not.
+**`backlog` is the one namespace still empty.** The other four are complete in six languages
+and the documents are written in the reader's language. Work item titles and acceptance
+criteria are still English.
 
 The web application fetches every language but English from `/api/locales/{code}/{ns}` and that
 endpoint did not exist, so the bundles could never have reached a browser. English is imported at
@@ -500,7 +546,6 @@ None of this fails a build and all of it fails a screen.
   consent. Until then eight rules report as not assessed, correctly.
 - **The demonstration engagement.** No `ops.DemoSeed` table, no seeder, no constants. Until it
   exists, everybody admitted sees an empty product on their first sign in.
-- **The microsite.** Not started.
 
 ## The thing that most needs doing next
 
