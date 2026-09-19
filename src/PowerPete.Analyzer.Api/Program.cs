@@ -86,6 +86,28 @@ builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
+// The PDF licence, registered from configuration at startup.
+//
+// The renderer registers it itself, but only from the SYNCFUSION_LICENSE environment
+// variable, which is right for a local run and wrong here: the deployment supplies it as
+// Syncfusion__LicenseKey, because that is where Key Vault and the container app put a
+// setting. So the key was present, the health check said so, and every PDF download failed
+// with "no licence key is configured" anyway.
+//
+// Registering here rather than teaching the Export library about ASP.NET configuration. It
+// has no dependency on the web stack and should not gain one to read a string.
+if (builder.Configuration["Syncfusion:LicenseKey"] is { Length: > 0 } syncfusionKey)
+{
+    try
+    {
+        SyncfusionLicence.Register(syncfusionKey, force: true);
+    }
+    catch (InvalidOperationException exception)
+    {
+        app.Logger.LogError(exception, "The Syncfusion licence key was rejected. The PDF report will not render.");
+    }
+}
+
 // The demonstration engagement, rebuilt whenever its seed version has moved.
 //
 // Before the pipeline rather than inside a hosted service, so a deployment that cannot write
@@ -1179,8 +1201,33 @@ app.MapGet("/api/system/health", async (HttpContext context) =>
     if (!access.IsGlobalAdmin) return Results.Forbid();
 
     var health = context.RequestServices.GetRequiredService<SystemHealth>();
+    var checks = await health.RunAsync(context.RequestAborted);
 
-    return Results.Ok(await health.RunAsync(context.RequestAborted));
+    // Shaped here rather than returned raw, for two reasons the screen could not survive.
+    //
+    // The screen reads { checks, checkedUtc } and this returned the bare array, so it read
+    // checks off an array, got undefined, called filter on it and threw during render. React
+    // unmounts the tree when a render throws, so the whole tab went blank rather than showing
+    // an error: the one page somebody opens when something is already wrong.
+    //
+    // And the state is an enum. Without a string converter it serialises as 0, 1, 2, and the
+    // screen calls toLowerCase on it, which throws the same way. Converted here rather than
+    // by registering a global converter, because that would quietly change the shape of every
+    // other endpoint in this file.
+    return Results.Ok(new
+    {
+        checks = checks.Select(check => new
+        {
+            check.Id,
+            check.Name,
+            check.Group,
+            state = check.State.ToString(),
+            check.Detail,
+            check.Remediation,
+            check.Command
+        }).ToList(),
+        checkedUtc = DateTime.UtcNow
+    });
 }).RequireAuthorization();
 
 app.MapPut("/api/system/settings/syncfusion", async (HttpContext context, SetSyncfusionKey request) =>

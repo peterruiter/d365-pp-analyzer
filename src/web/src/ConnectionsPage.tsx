@@ -79,12 +79,7 @@ export function ConnectionsPage({ engagementId }: { engagementId: string }) {
           </div>
         </div>
 
-        {/*
-          Scrolled rather than squeezed. There is a column per evidence source and the
-          contract decides how many, so the table has no width the layout can rely on. It
-          was running off the side of the panel with the last sources unreachable.
-        */}
-        <div className="wizard-body table-scroll">
+        <div className="wizard-body">
           <table className="findings-table">
             <thead>
               <tr>
@@ -97,7 +92,7 @@ export function ConnectionsPage({ engagementId }: { engagementId: string }) {
             <tbody>
               {modes.map((mode) => (
                 <tr key={mode.id}>
-                  <th scope="row">
+                  <th scope="row" className="reach-mode">
                     <strong>{mode.name}</strong>
                     <span className="hint">{mode.summary}</span>
                   </th>

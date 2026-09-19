@@ -82,7 +82,11 @@ export function FindingsPage({ engagementId }: { engagementId: string }) {
   if (!data) return <p className="lede">{t('findings.loading')}</p>;
 
   return (
-    <div className="workspace">
+    // Not "workspace". That is the shell's own class and it is display:flex, so every
+    // section on this page became a column in a row: the filters, the table and the
+    // not-assessed block sat side by side, and the last of them was squeezed into a
+    // eight-character-wide strip of text down the right hand edge.
+    <div className="findings-page">
       {/*
         The caveats sit above the findings, not below them. Somebody who reads a short list
         without knowing a third of the checks never ran concludes the estate is clean, and this

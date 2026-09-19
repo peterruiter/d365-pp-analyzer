@@ -971,11 +971,14 @@
 .filters select { min-height: 34px; padding: 6px 8px; border: 1px solid var(--cp-border); border-radius: 6px; background: var(--cp-surface); color: var(--cp-text); font: inherit; font-size: 14px; font-weight: 400; text-transform: none; letter-spacing: 0; }
 .filter-count { margin-left: auto; color: var(--cp-text-soft); font-size: 12px; }
 
-/* A table whose column count comes from a contract cannot be relied on to fit. Scrolling
-   the table keeps the panel intact and keeps the far columns reachable, which beats
-   shrinking the type until the near ones are unreadable too. */
-.table-scroll { overflow-x: auto; }
-.table-scroll > .findings-table { min-width: 620px; }
+/* The reach table fits rather than scrolls.
+   .findings-table shouts its headers, which is right for a column heading and wrong for a
+   row that carries a mode's name and a sentence about it. The row header opts out of the
+   uppercase and the letter spacing, takes most of the width, and wraps. The reach columns
+   are narrow because they hold one word each. */
+.reach-mode { width: 55%; text-transform: none; letter-spacing: normal; white-space: normal; }
+.reach-mode strong { display: block; color: var(--brand-ink); font-size: 14px; font-weight: 600; }
+.reach-mode .hint { display: block; margin-top: 4px; font-weight: 400; line-height: 1.45; text-transform: none; letter-spacing: normal; }
 
 .findings-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .findings-table th { padding: 10px 23px; border-bottom: 1px solid var(--cp-border); color: var(--cp-text-muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-align: left; text-transform: uppercase; }
@@ -996,6 +999,26 @@
 
 .tag-warning { background: rgba(190, 77, 0, .12); color: var(--cp-terracotta, #BE4D00); }
 
+/* The findings page stacks. Every section on it is full width and reads top to bottom:
+   the caveats, the filters, the table, and the list of what could not be checked. */
+.findings-page { display: grid; gap: 22px; }
+.findings-page > .findings-table { margin: 0; }
+
+/* The filters are a row of controls, not a row of columns. */
+.filters { display: flex; flex-wrap: wrap; align-items: end; gap: 18px; padding: 16px 20px; background: var(--cp-surface); border: 1px solid var(--cp-border); }
+.filters label { display: grid; gap: 6px; color: var(--brand-ink); font-size: 12px; font-weight: 700; }
+.filters select { min-width: 190px; min-height: 34px; padding: 6px 8px; border: 1px solid var(--cp-border); border-radius: 6px; background: var(--cp-surface); color: var(--cp-text); font: inherit; font-size: 14px; }
+.filter-count { margin-left: auto; color: var(--cp-text-soft); font-size: 12px; }
+
+/* What could not be checked. Its own panel, because it is the counterweight to every
+   number above it and a reader who misses it draws the wrong conclusion from all of them. */
+.not-assessed { padding: 20px 22px; background: var(--cp-surface); border: 1px solid var(--cp-border); border-left: 4px solid var(--brand-orange); }
+.not-assessed h2 { margin: 0; color: var(--brand-ink); font-size: 18px; font-weight: 600; }
+.not-assessed p { margin: 8px 0 0; max-width: 78ch; font-size: 13px; line-height: 1.6; }
+.not-assessed ul { margin: 14px 0 0; padding-left: 20px; display: grid; gap: 7px; }
+.not-assessed li { font-size: 13px; line-height: 1.55; }
+.not-assessed code { color: var(--cp-accent); font-size: 12px; }
+
 .detail-row td { background: var(--cp-surface-soft); }
 .finding-detail { display: grid; gap: 4px; padding: 6px 0 10px; }
 .finding-detail h3 { margin: 12px 0 2px; color: var(--cp-accent); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
@@ -1007,12 +1030,14 @@
 .finding-detail dt { color: var(--cp-text-muted); font-size: 12px; }
 .finding-detail dd { margin: 0; font-size: 12px; word-break: break-word; }
 
-.not-assessed { padding: 18px 23px 22px; border-top: 1px solid var(--cp-border); }
-
 .override-form { display: grid; gap: 12px; margin-top: 14px; padding: 16px 18px; background: var(--cp-surface); border: 1px solid var(--cp-border); border-left: 3px solid var(--cp-accent); }
 .override-form .field-row { display: flex; flex-wrap: wrap; gap: 12px; }
 .override-form .field-row > label { flex: 1 1 140px; }
 .override-form label.full { display: block; width: 100%; }
+.override-form label { display: grid; gap: 6px; color: var(--brand-ink); font-size: 12px; font-weight: 700; }
+.override-form input, .override-form textarea { width: 100%; min-height: 34px; padding: 6px 8px; border: 1px solid var(--cp-border); border-radius: 6px; background: var(--cp-surface); color: var(--cp-text); font: inherit; font-size: 14px; font-weight: 400; }
+.override-form textarea { min-height: 76px; resize: vertical; }
+.override-form .primary-button { justify-self: start; }
 
 /* ------------------------------------------------------------- connections --
    The connection list and the monogram beside each one. The mark is drawn from
@@ -1027,3 +1052,86 @@
 .connection-item-body strong { color: var(--brand-ink); font-size: 13px; }
 .connection-item-body .hint { color: var(--cp-text-soft); font-size: 11px; line-height: 1.5; }
 .connection-item .tag { margin: 0; flex: 0 0 auto; }
+
+/* ---------------------------------------------------------------- backlog --
+   The tree the builder produced: an epic per category, a feature per rule that
+   needs one, a story per finding worth naming, and the trivia batched.
+
+   Built on details and summary rather than on state. The browser already knows
+   how to open and close a disclosure, keyboard users already know how to work
+   one, and the browser's own find-in-page opens them, which matters on a
+   backlog somebody is searching for one component name. */
+
+.backlog-tree { display: grid; gap: 10px; padding: 4px 23px 8px; }
+
+.backlog-item { border: 1px solid var(--cp-border); background: var(--cp-surface); }
+.backlog-item[open] { border-color: var(--cp-border-strong); }
+
+/* Depth by weight of the left edge rather than by indentation. Three levels of
+   indent on a phone leaves the third with no width to render in. */
+.backlog-item.depth-0 { border-left: 4px solid var(--brand-blue); }
+.backlog-item.depth-1 { border-left: 4px solid var(--cp-accent); }
+.backlog-item.depth-2 { border-left: 4px solid var(--cp-border-strong); }
+
+.backlog-item > summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 13px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.backlog-item > summary::-webkit-details-marker { display: none; }
+
+/* The disclosure triangle, drawn rather than inherited, so it turns with the
+   state and sits where the text starts. */
+.backlog-item > summary::before {
+  content: '';
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--cp-text-soft);
+  border-bottom: 2px solid var(--cp-text-soft);
+  transform: rotate(-45deg);
+  transition: transform .18s ease;
+}
+
+.backlog-item[open] > summary::before { transform: rotate(45deg); }
+.backlog-item > summary:hover { background: var(--cp-surface-soft); }
+
+.backlog-title { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-width: 0; }
+.backlog-title strong { color: var(--brand-ink); font-size: 14px; font-weight: 600; line-height: 1.4; }
+
+.backlog-numbers { display: flex; flex: none; align-items: center; gap: 12px; }
+.backlog-numbers .hint { font-size: 11px; }
+.backlog-hours { color: var(--cp-text-muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.backlog-body { padding: 0 16px 16px 30px; }
+.backlog-children { display: grid; gap: 8px; margin-top: 14px; }
+
+/* The acceptance criteria, as the clauses they are rather than as the markup
+   they are stored in. Given, When, Then and the test each get their own line. */
+.criteria { max-width: 88ch; }
+.criteria .eyebrow { margin: 0 0 8px; }
+.criteria-list { display: grid; gap: 7px; margin: 0 0 4px; }
+.criteria-list > div { display: grid; grid-template-columns: minmax(58px, auto) minmax(0, 1fr); gap: 12px; }
+.criteria-list dt { color: var(--cp-accent); font-size: 12px; font-weight: 700; }
+.criteria-list dd { margin: 0; font-size: 13px; line-height: 1.6; }
+.criteria-test { margin: 0; max-width: 78ch; color: var(--cp-text-muted); font-size: 13px; line-height: 1.6; }
+
+/* The work item type, coloured the way the tree is, so a story reads as a story
+   wherever it has been dragged to. */
+.tag.type-epic { background: var(--brand-cloud); color: var(--brand-blue); }
+.tag.type-feature { background: var(--cp-surface-soft); color: var(--cp-accent); }
+.tag.type-story { background: var(--cp-surface-soft); color: var(--cp-text-muted); }
+.tag.type-task { background: var(--cp-surface-soft); color: var(--cp-text-soft); }
+
+@media (max-width: 680px) {
+  .backlog-tree { padding-left: 14px; padding-right: 14px; }
+  .backlog-item > summary { flex-wrap: wrap; gap: 8px; }
+  .backlog-numbers { width: 100%; padding-left: 23px; }
+  .backlog-body { padding-left: 16px; }
+  .criteria-list > div { grid-template-columns: 1fr; gap: 2px; }
+}
