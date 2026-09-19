@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -96,18 +97,44 @@ builder.Services.AddSingleton(provider => new InteractiveSignIn(
 // Entra sign-in, cookie session. The product knows who somebody is from their token and what
 // they may do from a row in the database, and the two are deliberately separate: anybody in
 // the tenant can sign in, only an admitted person sees an engagement.
-builder.Services
-    .AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
-    .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"));
+//
+// Configured or not, the same way the sibling products decide it: a tenant and a client id
+// present means sign in against Entra, absent means this is somebody's laptop. Every
+// deployment of this product sets both, from Key Vault, so the local path cannot engage in a
+// container without somebody changing the pipeline that publishes one.
+var entraSection = builder.Configuration.GetSection("AzureAd");
 
-builder.Services.ConfigureApplicationCookie(options =>
+var entraConfigured = !string.IsNullOrWhiteSpace(entraSection["TenantId"])
+    && !string.IsNullOrWhiteSpace(entraSection["ClientId"]);
+
+if (entraConfigured)
 {
-    options.Cookie.HttpOnly = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-    options.Cookie.SameSite = SameSiteMode.Lax;
-    options.ExpireTimeSpan = TimeSpan.FromHours(8);
-    options.SlidingExpiration = true;
-});
+    builder.Services
+        .AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
+        .AddMicrosoftIdentityWebApp(entraSection);
+
+    builder.Services.ConfigureApplicationCookie(options =>
+    {
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.SlidingExpiration = true;
+    });
+}
+else
+{
+    // A scheme rather than an exemption. Every endpoint keeps its RequireAuthorization and
+    // the whole authorisation pipeline still runs; what changes is only where the identity
+    // came from. Removing the checks for a local run would mean the local run exercises a
+    // different product from the deployed one, which is how a permissions bug ships.
+    builder.Services
+        .AddSingleton(new LocalSignInHandler.Identity(
+            initialAdmin ?? "local@localhost",
+            "Local development"))
+        .AddAuthentication(LocalSignInHandler.SchemeName)
+        .AddScheme<AuthenticationSchemeOptions, LocalSignInHandler>(LocalSignInHandler.SchemeName, null);
+}
 
 builder.Services.AddAuthorization();
 builder.Services.AddHealthChecks();
@@ -277,12 +304,22 @@ app.MapGet("/account/signin", (HttpContext context) =>
         ? requested
         : "/app/";
 
-    return Results.Challenge(new() { RedirectUri = target });
+    // Nothing to challenge against on a local run: the request already arrived
+    // authenticated, and challenging a scheme that is not registered answers 401 to
+    // somebody who is signed in, which is a confusing way to say "you already are".
+    return entraConfigured
+        ? Results.Challenge(new() { RedirectUri = target })
+        : Results.Redirect(target);
 });
 
 // Out to the microsite, which is the only page a signed out person can read.
-app.MapGet("/account/signout", () => Results.SignOut(new() { RedirectUri = "/" },
-    [CookieAuthenticationDefaults.AuthenticationScheme, OpenIdConnectDefaults.AuthenticationScheme]));
+app.MapGet("/account/signout", () => entraConfigured
+    ? Results.SignOut(new() { RedirectUri = "/" },
+        [CookieAuthenticationDefaults.AuthenticationScheme, OpenIdConnectDefaults.AuthenticationScheme])
+
+    // Signing out of a local run would mean signing out of nothing, and naming the cookie
+    // scheme here would throw because it was never registered.
+    : Results.Redirect("/"));
 
 // --------------------------------------------------------------- engagements --
 app.MapGet("/api/engagements", async (HttpContext context, WorkspaceStore store) =>
