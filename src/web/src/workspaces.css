@@ -270,6 +270,13 @@
 .field-label .hint { display: block; margin-top: 3px; color: var(--cp-text-soft); font-size: 11px; font-weight: 400; line-height: 1.5; }
 .field-label .hint.warning { color: var(--cp-terracotta, #BE4D00); }
 .field-label.has-problem input, .field-label.has-problem select { border-color: var(--cp-danger); }
+
+/* A tick and its caption on one line, with the explanation under both. Every other
+   field label stacks its caption above its control, which is right for a text box and
+   wrong for a checkbox: it puts the box on a line of its own with nothing beside it. */
+.field-label.checkbox { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px; }
+.field-label.checkbox input { width: 15px; height: 15px; margin: 0; accent-color: var(--brand-blue); }
+.field-label.checkbox .hint { grid-column: 1 / -1; margin-top: 0; }
 .field-problem { display: block; margin-top: 3px; color: var(--cp-danger); font-size: 11px; font-weight: 400; }
 .check-list { display: grid; gap: 2px; margin: 8px 0 0; padding: 0; list-style: none; }
 .check-list.compact { margin: 0 0 4px; padding: 0 0 8px; }
