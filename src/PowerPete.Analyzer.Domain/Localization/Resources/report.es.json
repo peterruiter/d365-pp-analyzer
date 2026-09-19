@@ -67,5 +67,7 @@
   "report.componentsRead": "Componentes leídos",
   "report.estimatedEffort": "Esfuerzo estimado",
   "report.aRange": "un rango, no un presupuesto",
-  "report.checksThatCouldNotRun": "comprobaciones que no pudieron ejecutarse"
+  "report.checksThatCouldNotRun": "comprobaciones que no pudieron ejecutarse",
+  "report.whatThisSays": "Lo que dice este informe",
+  "report.theWorstOfIt": "Lo peor"
 }

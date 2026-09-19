@@ -413,6 +413,82 @@ public sealed partial class AssessmentReportPdf
                 }
             },
             gap: 12f);
+
+        CoverStatement(flow, model);
+    }
+
+    /// <summary>
+    /// What the report says, and the worst of what it found, under the figures.
+    /// </summary>
+    /// <remarks>
+    /// The cover used to stop after the four figures and leave most of the page white,
+    /// which reads as a document somebody abandoned rather than as a cover. The sibling
+    /// reports carry their argument on page one and so does this one now.
+    ///
+    /// The paragraph is the consultant's, where there is one. Falling back to the
+    /// generated sentence rather than to a prompt is deliberate: a prompt is the right
+    /// thing on the page that asks for it and the wrong thing on a cover a client is
+    /// forwarded, where it reads as an unfinished draft.
+    /// </remarks>
+    /// <param name="flow">The cover.</param>
+    /// <param name="model">What to write.</param>
+    private static void CoverStatement(Flow flow, Model model)
+    {
+        flow.Text(model.Text["report.whatThisSays", "What this report says"].ToUpperInvariant(),
+            new TextStyle { Size = 8, Bold = true, Colour = CapgeminiBrand.Muted, LetterSpacing = 0.5f },
+            paddingTop: 26f);
+
+        var written = model.Written.TryGetValue("managementSummary", out var paragraph)
+            && !string.IsNullOrWhiteSpace(paragraph)
+                ? paragraph
+                : null;
+
+        // The first paragraph only. The rest of it is on the management summary page and a
+        // cover that reprints the whole thing gives a reader no reason to turn over.
+        var opening = written?.Split(["\n\n"], StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()
+            ?? string.Create(Culture,
+                $"{model.Score.ComponentsTotal} components across {model.SolutionNames.Count} solution(s), "
+                + $"{model.Findings.Count} findings, and {model.Score.NotAssessed.Count} checks that could not run. "
+                + $"Nothing in this document was written by hand: every finding below came from a rule with its "
+                + $"detection, its reasoning and its estimate declared in a catalogue.");
+
+        flow.Text(opening, new TextStyle { Size = 10, LineHeight = 1.5f }, paddingTop: 8f);
+
+        var worst = model.Findings
+            .Where(entry => entry.Finding.Severity <= Severity.High)
+            .OrderBy(entry => entry.Finding.Severity)
+            .ThenByDescending(entry => entry.Estimate.HighHours)
+            .Take(6)
+            .ToList();
+
+        if (worst.Count == 0) return;
+
+        flow.Text(model.Text["report.theWorstOfIt", "The worst of it"].ToUpperInvariant(),
+            new TextStyle { Size = 8, Bold = true, Colour = CapgeminiBrand.Muted, LetterSpacing = 0.5f },
+            paddingTop: 22f);
+
+        flow.Table(table =>
+        {
+            table.Columns(1, 4, 3, 2);
+            table.Header(
+                [
+                    model.Text["report.severity", "Severity"],
+                    model.Text["report.finding", "Finding"],
+                    model.Text["report.component", "Component"],
+                    model.Text["report.hours", "Hours"]
+                ],
+                [false, false, false, true]);
+
+            foreach (var entry in worst)
+            {
+                table.Cell(entry.Finding.Severity.ToString(), colour: SeverityColour(entry.Finding.Severity));
+                table.Cell(RuleName(model, entry.Finding));
+                table.Cell(entry.Finding.ComponentName ?? model.Text["report.solutionWide", "solution wide"]);
+                table.Cell(
+                    string.Create(Culture, $"{entry.Estimate.LowHours:0.#}–{entry.Estimate.HighHours:0.#}"),
+                    right: true);
+            }
+        });
     }
 
     private static void Heading(Flow flow, string text)

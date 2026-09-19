@@ -67,5 +67,7 @@
   "report.componentsRead": "Composants lus",
   "report.estimatedEffort": "Effort estimé",
   "report.aRange": "une fourchette, pas un devis",
-  "report.checksThatCouldNotRun": "contrôles qui n ont pas pu s exécuter"
+  "report.checksThatCouldNotRun": "contrôles qui n ont pas pu s exécuter",
+  "report.whatThisSays": "Ce que dit ce rapport",
+  "report.theWorstOfIt": "Le pire"
 }

@@ -67,5 +67,7 @@
   "report.componentsRead": "Componenten gelezen",
   "report.estimatedEffort": "Geschatte inspanning",
   "report.aRange": "een bandbreedte, geen offerte",
-  "report.checksThatCouldNotRun": "controles die niet konden draaien"
+  "report.checksThatCouldNotRun": "controles die niet konden draaien",
+  "report.whatThisSays": "Wat dit rapport zegt",
+  "report.theWorstOfIt": "Het ergste ervan"
 }

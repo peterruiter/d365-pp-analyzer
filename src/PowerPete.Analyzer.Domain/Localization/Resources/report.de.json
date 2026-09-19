@@ -67,5 +67,7 @@
   "report.componentsRead": "Gelesene Komponenten",
   "report.estimatedEffort": "Geschätzter Aufwand",
   "report.aRange": "eine Spanne, kein Angebot",
-  "report.checksThatCouldNotRun": "Prüfungen, die nicht laufen konnten"
+  "report.checksThatCouldNotRun": "Prüfungen, die nicht laufen konnten",
+  "report.whatThisSays": "Was dieser Bericht sagt",
+  "report.theWorstOfIt": "Das Schlimmste davon"
 }

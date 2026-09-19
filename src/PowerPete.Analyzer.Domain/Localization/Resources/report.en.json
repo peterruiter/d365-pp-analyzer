@@ -67,5 +67,7 @@
   "report.componentsRead": "Components read",
   "report.estimatedEffort": "Estimated effort",
   "report.aRange": "a range, not a quotation",
-  "report.checksThatCouldNotRun": "checks that could not run"
+  "report.checksThatCouldNotRun": "checks that could not run",
+  "report.whatThisSays": "What this report says",
+  "report.theWorstOfIt": "The worst of it"
 }
