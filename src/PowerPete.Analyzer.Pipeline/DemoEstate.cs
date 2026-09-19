@@ -51,7 +51,7 @@ public static class DemoEstate
     /// demonstration that gains whatever a later release added and one frozen at whatever it
     /// looked like the first time the container started.
     /// </remarks>
-    public const int SeedVersion = 3;
+    public const int SeedVersion = 4;
 
     /// <summary>What it is called.</summary>
     public const string Name = "Demonstration estate";
@@ -105,6 +105,107 @@ public static class DemoEstate
         IReadOnlyList<RoadmapItem> Roadmap,
         IReadOnlyList<BacklogItem> Backlog,
         string BacklogHash);
+
+    /// <summary>
+    /// The scores a consultant would have brought out of a workshop.
+    /// </summary>
+    /// <remarks>
+    /// The one part of this demonstration that is not produced by running the product, and
+    /// it cannot be: the functional maturity section has no automated input by design,
+    /// because a readiness score generated from metadata reads exactly like one produced
+    /// from twenty interviews and is worth nothing. The contract says so, and the report
+    /// prints the prompt wherever nobody has written an answer.
+    ///
+    /// Which left the demonstration showing an empty radar and five empty boxes, so the
+    /// half of the report a client actually reads was the half nobody could see. These are
+    /// therefore invented, like the rest of the estate, and shaped like what a real
+    /// engagement produces: an organisation that has built a lot and governed little,
+    /// strong where the business asked for something directly and weak underneath.
+    ///
+    /// Two axes are deliberately unscored. An axis nobody asked about has to draw as a
+    /// spoke with no point on it, because nought means the capability is absent and not
+    /// having looked is a different statement. A demonstration where every axis happened to
+    /// be scored would never show that difference.
+    /// </remarks>
+    public static IReadOnlyList<(string Axis, decimal? Score, string? Evidence)> Maturity { get; } =
+    [
+        ("campaignManagement", 2.0m, "Campaigns run out of a marketing tool whose owner nobody in the workshop could name."),
+        ("leadManagement", 2.5m, "Leads arrive by mail and are keyed in. The team described this as temporary in 2019."),
+        ("customerFeedbackLoops", 1.5m, "Surveys are sent. Nobody could say what happens to the answers."),
+        ("pipelineManagement", 3.0m, "Consistent and used, though the stages were last reviewed three years ago."),
+        ("salesTeamManagement", 3.5m, "Clear ownership, and a manager who reviews it weekly."),
+        ("onboarding", 2.0m, "Documented for the last intake and not since."),
+        ("customerSegmentation", null, "Not covered. Nobody in the room owns it."),
+        ("serviceRequestManagement", 4.0m, "The strongest thing in the estate. Well modelled, well used, and the team knows why."),
+        ("omnichannel", 3.0m, "Voice and mail are joined. Chat is a separate queue with a separate rota."),
+        ("contactCentre", 3.5m, "Mature, and the source of most of the customisation this report found."),
+        ("customerSatisfaction", 2.5m, "Measured per channel, never aggregated."),
+        ("selfService", 1.5m, "A portal exists. Deflection has not been measured since it launched."),
+        ("customer360", 2.0m, "Four systems hold an address. Three of them disagree."),
+        ("biAndAnalytics", 2.5m, "Good operational reporting, no single view above it."),
+        ("businessAdoption", 3.0m, "High where the business asked for it, low where IT delivered it unasked."),
+        ("dataQuality", null, "Not covered. The workshop ran out of time, which is itself worth reporting.")
+    ];
+
+    /// <summary>
+    /// The paragraphs a consultant would have written over the generated numbers.
+    /// </summary>
+    /// <remarks>
+    /// Same reasoning as the scores. A hybrid section prints generated numbers with a
+    /// written paragraph over them, and with nothing written the demonstration showed the
+    /// numbers and a prompt, which demonstrates the prompt rather than the product.
+    /// </remarks>
+    public static IReadOnlyDictionary<string, string> Narrative { get; } =
+        new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["managementSummary"] =
+                "Northwind has built a great deal on Dataverse and governed almost none of it. That is not a "
+                + "criticism of the people who built it: every one of the things this report calls debt was the "
+                + "fastest correct answer at the time, and the estate works. What changed is the volume. Twelve "
+                + "custom tables, four solutions and an unmanaged production environment were manageable when "
+                + "two people knew all of it, and both of those people have moved on.\n\n"
+                + "The one thing to fix first is the unmanaged solution in production. Everything else here can "
+                + "be scheduled; that one removes the ability to schedule anything, because there is currently "
+                + "no path from a change to production that anybody can describe or reverse.",
+
+            ["delivery"] =
+                "There is no deployment pipeline. Changes are made in the production environment and exported "
+                + "afterwards if somebody remembers, which the team described without embarrassment because it "
+                + "has always been that way and has not yet caused a visible failure.\n\n"
+                + "The development environment is a copy taken in 2023 and has drifted far enough that the team "
+                + "no longer trusts it for testing. In practice production is the test environment, and the "
+                + "reason nothing has broken badly is that the two people who understood the dependencies were "
+                + "careful. They have both left.",
+
+            ["functionalMaturity"] =
+                "Scored with the service lead, the CRM product owner and two agents, over a half day. The "
+                + "pattern is consistent and unsurprising: the capabilities the business asked for directly are "
+                + "the mature ones, and everything underneath them is weaker than the people using it realise.\n\n"
+                + "Service request management at four is genuine and worth protecting. Customer 360 at two is "
+                + "the constraint behind most of the frustration reported elsewhere in the workshop, and it will "
+                + "not improve as a side effect of anything else on the roadmap.\n\n"
+                + "Two axes are not scored. Customer segmentation had no owner in the room, and data quality was "
+                + "not reached. Neither is nought, and neither should be read as one.",
+
+            ["readiness"] =
+                "The organisation is readier than it thinks for the technical work and less ready than it thinks "
+                + "for the governance that has to come with it. Nobody objected to managed solutions or a "
+                + "deployment pipeline; several people assumed somebody else was already doing it.\n\n"
+                + "The real risk is capacity rather than willingness. The two people who could do this work are "
+                + "the same two who keep the current estate running, and no plan that assumes otherwise will "
+                + "survive its first month.",
+
+            ["scenarios"] =
+                "The client is choosing between two things, and described them in these words.\n\n"
+                + "Stabilise first. Managed solutions, a pipeline, and a development environment that can be "
+                + "trusted, before any new capability. It gives them a platform they can change safely. It needs "
+                + "a quarter with no new features, which the business has not yet agreed to. The worry is that "
+                + "the quarter gets cut in half and they are left with a pipeline nobody finished.\n\n"
+                + "Build the self service portal. It gives them the deflection the service director has been "
+                + "asked for. It needs the same two people. The worry, which the service lead raised himself, "
+                + "is that it adds a third front end to a customer record that three systems already disagree "
+                + "about."
+        };
 
     /// <summary>
     /// Builds the estate and runs the product over it.

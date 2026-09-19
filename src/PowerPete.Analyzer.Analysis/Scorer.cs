@@ -5,6 +5,7 @@ using PowerPete.Analyzer.Domain;
 /// <summary>The numbers on the front page of a report.</summary>
 /// <param name="ComponentsTotal">Everything found.</param>
 /// <param name="ByCraft">Counts per craft level, including the ones outside the ratio.</param>
+/// <param name="CountedByCraft">Counts per craft level for the components inside the ratio, and only those.</param>
 /// <param name="ByDomain">Counts per domain.</param>
 /// <param name="ByLifecycle">Counts per lifecycle state.</param>
 /// <param name="LowCodeShare">Low code as a share of the counted components, or null when nothing counts.</param>
@@ -21,6 +22,7 @@ using PowerPete.Analyzer.Domain;
 public sealed record RunScore(
     int ComponentsTotal,
     IReadOnlyDictionary<string, int> ByCraft,
+    IReadOnlyDictionary<string, int> CountedByCraft,
     IReadOnlyDictionary<string, int> ByDomain,
     IReadOnlyDictionary<string, int> ByLifecycle,
     decimal? LowCodeShare,
@@ -94,6 +96,19 @@ public sealed class Scorer
         var lowCode = counted.Count(pair => pair.Type!.Craft == Craft.LowCode);
         var share = counted.Count == 0 ? (decimal?)null : Math.Round((decimal)lowCode / counted.Count, 3);
 
+        // The same grouping as ByCraft, over the components the ratio is actually taken
+        // across.
+        //
+        // These two have to be separate and they were not. ByCraft counts everything typed
+        // and the share is taken over the counted subset, so anything drawing a chart from
+        // ByCraft and labelling it with the share puts two different denominators in one
+        // graphic. The report did exactly that: a donut whose slices said 56 percent with
+        // 66 percent written in the middle of it, because twelve pro code components that
+        // do not count toward the ratio were in the slices and not in the number.
+        var countedByCraft = counted
+            .GroupBy(pair => pair.Type!.Craft.ToString())
+            .ToDictionary(group => Camel(group.Key), group => group.Count(), StringComparer.Ordinal);
+
         var debtByDomain = findings
             .Where(entry => entry.Finding.Rule is not null)
             .GroupBy(entry => DomainOf(components, entry.Finding))
@@ -105,6 +120,7 @@ public sealed class Scorer
         return new RunScore(
             components.Count,
             byCraft,
+            countedByCraft,
             typed.GroupBy(pair => pair.Type!.Domain).ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal),
             typed.GroupBy(pair => Camel(pair.Type!.Lifecycle.ToString())).ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal),
             share,

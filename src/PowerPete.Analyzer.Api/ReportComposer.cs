@@ -200,6 +200,13 @@ public sealed class ReportComposer(AnalysisStore analysis, WorkspaceStore worksp
         return new RunScore(
             row.ComponentsTotal,
             Read<Dictionary<string, int>>(breakdown, "byCraft") ?? new Dictionary<string, int>(),
+
+            // Empty rather than falling back to byCraft. A run stored before this existed
+            // has no counted breakdown, and byCraft is the wrong denominator: putting it
+            // here would redraw the donut this field was added to fix. This path already
+            // passes null for the share, so the whole ratio section is degraded together
+            // and says so, which is the honest shape for a run nobody can recompute.
+            Read<Dictionary<string, int>>(breakdown, "countedByCraft") ?? new Dictionary<string, int>(),
             Read<Dictionary<string, int>>(breakdown, "byDomain") ?? new Dictionary<string, int>(),
             Read<Dictionary<string, int>>(breakdown, "byLifecycle") ?? new Dictionary<string, int>(),
             null,

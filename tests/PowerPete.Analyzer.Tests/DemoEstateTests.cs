@@ -23,6 +23,35 @@ public class DemoEstateTests
     private static readonly DemoEstate.Result Estate = DemoEstate.Build();
 
     [Fact]
+    public void The_low_code_donut_agrees_with_the_number_written_in_it()
+    {
+        // A picture that disagrees with its own caption. The report drew the ratio as a
+        // donut whose slices came from ByCraft and whose centre came from LowCodeShare,
+        // and those have different denominators: ByCraft counts every typed component and
+        // the share is taken over the ones that count toward the ratio. Twelve pro code
+        // components sat in the slices and not in the number, so the demonstration report
+        // showed a circle reading 56 percent with 66 percent printed in the middle of it.
+        //
+        // Nothing failed. It rendered, it looked right, and it was going on a public
+        // website before somebody read the legend.
+        var counted = Estate.Score.CountedByCraft.Values.Sum();
+
+        counted.Should().BeGreaterThan(0, "the demonstration estate has components that count toward the ratio");
+
+        var fromSlices = Math.Round(
+            (decimal)Estate.Score.CountedByCraft.GetValueOrDefault("lowCode") / counted, 3);
+
+        fromSlices.Should().Be(
+            Estate.Score.LowCodeShare,
+            "the slices of the donut and the figure in the centre of it have to be the same number");
+
+        // The other half of the same mistake: anything outside the ratio must not be in
+        // the breakdown the circle is drawn from.
+        Estate.Score.CountedByCraft.Keys.Should().NotContain(
+            "config", "configuration is counted separately and never inside the ratio");
+    }
+
+    [Fact]
     public void Builds_an_estate_large_enough_to_demonstrate()
     {
         Estate.Components.Should().HaveCountGreaterThan(300,

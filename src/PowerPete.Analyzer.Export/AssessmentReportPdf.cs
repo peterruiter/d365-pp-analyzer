@@ -298,14 +298,17 @@ public sealed partial class AssessmentReportPdf
         flow.Text(model.Score.RatioDefinition,
             new TextStyle { Size = 9, Colour = CapgeminiBrand.Muted }, paddingTop: 6f);
 
-        // Only the three crafts that count toward the ratio. Configuration and content are
-        // in the table below and never in the circle, which is the whole argument of the
-        // ratio definition printed above it.
+        // CountedByCraft, not ByCraft. Configuration and content are in the table below and
+        // never in the circle, which is the whole argument of the ratio definition printed
+        // above it -- but ByCraft also carries the pro code components that do not count
+        // toward the ratio, and drawing those inside a circle labelled with the ratio makes
+        // the picture disagree with the number in the middle of it. It did: 56 percent of
+        // slices around 66 percent of text.
         DonutChart(flow,
             [
-                (model.Text["report.lowCode", "Low code"], model.Score.ByCraft.GetValueOrDefault("lowCode")),
-                (model.Text["report.proCode", "Pro code"], model.Score.ByCraft.GetValueOrDefault("proCode")),
-                (model.Text["report.external", "External"], model.Score.ByCraft.GetValueOrDefault("external"))
+                (model.Text["report.lowCode", "Low code"], model.Score.CountedByCraft.GetValueOrDefault("lowCode")),
+                (model.Text["report.proCode", "Pro code"], model.Score.CountedByCraft.GetValueOrDefault("proCode")),
+                (model.Text["report.external", "External"], model.Score.CountedByCraft.GetValueOrDefault("external"))
             ],
             model.Score.LowCodeShare is { } share ? share.ToString("P0", Culture) : "—",
             model.Text["report.lowCode", "Low code"]);
