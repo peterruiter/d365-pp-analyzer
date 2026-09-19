@@ -187,7 +187,11 @@
       "attributes": [
         "relationshipType",
         "cascadeConfiguration",
-        "isCustom"
+        "isCustom",
+        "cascadeDelete",
+        "isHierarchical",
+        "referencingTable",
+        "referencedTable"
       ]
     },
     {
@@ -679,7 +683,13 @@
       ],
       "countsTowardRatio": true,
       "lifecycleVerification": "inferred",
-      "lifecycleNote": "Ribbon XML specifically. Modern commanding with Power Fx is where this went, and RibbonDiffXml remains supported. Counted as pro code because in practice it is XML plus JavaScript, and nobody who cannot write JavaScript has ever edited it successfully."
+      "lifecycleNote": "Ribbon XML specifically. Modern commanding with Power Fx is where this went, and RibbonDiffXml remains supported. Counted as pro code because in practice it is XML plus JavaScript, and nobody who cannot write JavaScript has ever edited it successfully.",
+      "attributes": [
+        "customActionCount",
+        "commandCount",
+        "usesJavaScript",
+        "ownerTable"
+      ]
     },
     {
       "id": "siteMap",

@@ -363,4 +363,83 @@ public class DataLayerTests
         missing.Should().BeEmpty(
             "an untranslated rule prints its own resource key into a client's report");
     }
+
+    /// <summary>
+    /// Component types the contract says travel in a solution file, that the offline reader
+    /// has no reader for, each with the reason it is still on this list.
+    /// </summary>
+    /// <remarks>
+    /// Named rather than counted, so that adding one is a decision somebody makes rather
+    /// than a silence nobody notices. Every entry here is a section of an offline report
+    /// that is empty because nothing looked, and the difference between that and a section
+    /// empty because there was nothing to find is the entire argument of this product.
+    /// </remarks>
+    private static readonly Dictionary<string, string> UnreadFromSolutionZip = new(StringComparer.Ordinal)
+    {
+        ["chart"] = "No export to hand contains a SavedQueryVisualization. A reader written against "
+            + "documentation alone would be the third one this repository got wrong that way.",
+        ["dashboard"] = "Same: none of the nine real exports carries one.",
+        ["report"] = "Same. RDL reports are rare in the estates seen so far and lifecycle.rdlReport "
+            + "has therefore never fired against a real file.",
+        ["emailTemplate"] = "Same.",
+        ["customPage"] = "Travels as a canvas app inside the solution and is not distinguished from "
+            + "one yet. The canvas reader finds it; it is typed as canvasApp.",
+        ["customWorkflowActivity"] = "Lives inside a plug-in assembly. The assembly is read; the "
+            + "activities within it need the assembly's types, which an offline read does not have.",
+        ["customConnector"] = "Needs a connection. Declared for solutionZip in the contract because "
+            + "the definition can travel, but no export to hand carries one.",
+        ["copilotStudioAgent"] = "Needs a connection in practice. The bot content in a solution is "
+            + "opaque to this reader."
+    };
+
+    [Fact]
+    public void Every_type_a_solution_file_can_carry_is_read_or_named()
+    {
+        // The defect that keeps recurring, and the only one that is invisible by
+        // construction. A component type declared with solutionZip evidence and no reader
+        // does not throw, does not warn and does not appear in the not assessed list: the
+        // report simply has nothing where it should be, and reads as a clean estate.
+        //
+        // It has now happened three times. pcfControl, which made a solution holding one
+        // code component read as an estate with nothing in it. relationship, which hid two
+        // hundred and forty-six components across nine real exports. serviceEndpoint, which
+        // was worse than hiding a finding: the alerting rule checks for endpoints and found
+        // none, so a solution that has one reported a High that was not true.
+        //
+        // The check is over the reader's source text rather than over a run, because no
+        // single file contains every type and a run can only prove the types that file has.
+        // A type the reader never names cannot possibly be produced by it.
+        var source = File.ReadAllText(Path.Combine(
+            Solution(), "PowerPete.Analyzer.Extraction", "SolutionZipReader.cs"));
+
+        var unread = Contracts.Read("component-model").Array("componentTypes")
+            .Where(type => type.Array("evidence").Any(e => e.GetString() == "solutionZip"))
+            .Select(type => type.Str("id"))
+            .Where(id => !source.Contains($"\"{id}\"", StringComparison.Ordinal))
+            .ToList();
+
+        unread.Should().BeSubsetOf(
+            UnreadFromSolutionZip.Keys,
+            "a type the reader never names is a section of the report that is silently empty. "
+            + "Either read it, or add it to UnreadFromSolutionZip with the reason");
+
+        // The other direction. A type that gained a reader and stayed on the list makes the
+        // list a lie, and the list is the thing that is supposed to be trustworthy.
+        UnreadFromSolutionZip.Keys.Should().BeSubsetOf(
+            unread,
+            "this type is read now, so remove it from UnreadFromSolutionZip");
+    }
+
+    /// <summary>The src folder.</summary>
+    private static string Solution()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+
+        while (directory is not null && !Directory.Exists(Path.Combine(directory.FullName, "src")))
+        {
+            directory = directory.Parent;
+        }
+
+        return Path.Combine(directory!.FullName, "src");
+    }
 }

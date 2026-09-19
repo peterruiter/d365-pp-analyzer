@@ -668,9 +668,67 @@ The build gates, for reference:
 2. `./build/Test-Generators.ps1` — generates into a throwaway folder and checks the output.
    Passes.
 3. `./build/Invoke-CodeGen.ps1` — generates and builds. Twelve of twelve, no warnings.
-4. `dotnet test` — 98 tests, all passing.
+4. `dotnet test` — 99 tests, all passing.
 5. `./build/New-SampleSolution.ps1` then `analyse samples/SampleSolution.zip` — sixteen
    planted defects, twelve found and four correctly not assessed.
+
+## Nine real exports at once, and the third instance of the same defect
+
+`PresenceHub` was not a one-off. Exporting nine solutions from `powerpete.crm4.dynamics.com`
+and sweeping all of them together found the same defect twice more, and it is now clear it is
+a *class* rather than three accidents.
+
+The shape is always identical: a component type declared in the contract with `solutionZip`
+evidence that no reader ever produces. It does not throw, does not warn, and does not reach
+the not assessed list. The report simply has nothing where that type belongs, and reads as a
+clean estate.
+
+| Type | What was missing | How it was found |
+|---|---|---|
+| `pcfControl` | A solution holding one code component read as an estate with nothing in it | One export |
+| `relationship` | 246 components across nine exports | The sweep |
+| `serviceEndpoint` | One webhook to a Logic App | The sweep |
+| `publisher` | One per solution, and the prefix every other judgement keys off | The sweep |
+
+### The endpoint was worse than a hidden finding
+
+`operability.noFailureAlerting` already checked `endpoints > 0` before firing. The handler was
+written expecting a reader that did not exist, so from a solution file the count was always
+zero and the rule fired on an estate that **does** have an endpoint. That was a High reported
+against a client that was not true.
+
+A missing reader does not only hide findings. It manufactures them, and the manufactured one
+looks exactly like a real one.
+
+`architecture.externalLogicInvisible` was also declared `metadata` only, although it needs
+nothing a file cannot supply. It is `solutionZip` now and reports the webhook, with the host
+alone: the full URL of a Logic App trigger carries its shared access signature in the query
+string, and a report is a document that gets mailed around.
+
+### Reading everything would have been worse than reading nothing
+
+There are 32 `RibbonDiffXml` elements across the nine exports. Every single one is empty
+scaffolding — `<CustomActions />` with no children — because the export writes it for each
+table whether or not anybody touched the ribbon.
+
+`commandBar` is pro code and counts toward the low code ratio, the most quoted number this
+product produces. A reader that counted elements would have reported 32 pro code components
+in an estate that has none. `ReadCommandBars` counts only ribbons with a `CustomAction` or a
+`CommandDefinition` in them, so the type stays correctly absent here and appears the moment a
+client actually has one. Wrong in the direction that looks like work is the worse failure.
+
+### Eight types are still unread, and they are named now
+
+`chart`, `dashboard`, `report`, `emailTemplate`, `customPage`, `customWorkflowActivity`,
+`customConnector` and `copilotStudioAgent`. None of the nine exports contains one, so a reader
+for them could only be written against documentation, and this repository has already been
+wrong three times doing exactly that.
+
+`Every_type_a_solution_file_can_carry_is_read_or_named` holds that list with a reason per
+entry and fails in both directions: a newly declared type with no reader fails until somebody
+writes one or records why not, and a type that gains a reader fails until it leaves the list.
+That is the guard that was missing for all three of the defects above. It was confirmed to
+fail on a removed entry before being kept.
 
 ## What was ported rather than invented
 

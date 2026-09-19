@@ -331,9 +331,10 @@
         "customConnector"
       ],
       "evidence": [
+        "solutionZip",
         "metadata"
       ],
-      "detection": "A service endpoint or custom connector pointing at a host outside the Dataverse and Microsoft 365 domains.",
+      "detection": "A service endpoint or custom connector pointing at a host outside the Dataverse and Microsoft 365 domains. Service endpoints travel in a solution file and are read from one; custom connectors need a connection, so an offline read sees the endpoints and says so rather than claiming to have seen everything external.",
       "why": "A solution can look clean while most of its behaviour sits in an Azure Function nobody in the room has seen. This finding puts a floor under how much of that there is.",
       "recommendation": "Name an owner and a repository for each one. The report cannot tell you what is behind the URL.",
       "workItemType": "task",

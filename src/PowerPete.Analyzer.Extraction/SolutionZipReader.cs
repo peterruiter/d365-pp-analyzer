@@ -30,6 +30,17 @@ public sealed class SolutionZipReader
     private static readonly XNamespace None = XNamespace.None;
 
     /// <summary>
+    /// The cascade behaviours worth carrying off a relationship.
+    /// </summary>
+    /// <remarks>
+    /// Delete first because it is the one that loses data. The others matter together: a
+    /// relationship cascading reparent and share as well as delete was configured by
+    /// somebody on purpose, and one cascading only delete usually was not.
+    /// </remarks>
+    private static readonly string[] CascadeBehaviours =
+        ["CascadeDelete", "CascadeAssign", "CascadeReparent", "CascadeShare", "CascadeUnshare"];
+
+    /// <summary>
     /// Workflow categories, as they appear in customizations.xml.
     /// </summary>
     /// <remarks>
@@ -123,6 +134,10 @@ public sealed class SolutionZipReader
         Attempt(reads, components, "customApi", () => ReadCustomApis(archive, solution, components));
         Attempt(reads, components, "pcfControl", () => ReadCustomControls(archive, root, solution, components));
         Attempt(reads, components, "modelDrivenApp", () => ReadApps(root, solution, components));
+        Attempt(reads, components, "relationship", () => ReadRelationships(root, solution, components, links));
+        Attempt(reads, components, "serviceEndpoint", () => ReadServiceEndpoints(root, solution, components));
+        Attempt(reads, components, "commandBar", () => ReadCommandBars(root, solution, components));
+        Attempt(reads, components, "publisher", () => ReadPublisher(solution, components));
 
         // Everything this mode cannot see, said out loud. A section of a report that is empty
         // because nobody could read it has to look different from one that is empty because
@@ -808,6 +823,279 @@ public sealed class SolutionZipReader
         }
 
         return count;
+    }
+
+    /// <summary>
+    /// Relationships between tables, and what each one does on delete.
+    /// </summary>
+    /// <remarks>
+    /// Two hundred and forty-six of these across nine real exports, and nothing had ever
+    /// read one. A declared component type with <c>solutionZip</c> in its evidence that no
+    /// reader produced: the same defect as the code components, found the same way, and
+    /// larger. A data model assessment that lists the tables and none of the relationships
+    /// between them has described a spreadsheet.
+    ///
+    /// The cascade behaviours are the part worth carrying. <c>CascadeDelete</c> of
+    /// <c>Cascade</c> on a relationship somebody added without thinking is how deleting one
+    /// parent row removes ten thousand children, and it is invisible in every screen a
+    /// functional consultant looks at.
+    ///
+    /// System relationships are read too, and marked. The owning business unit relationship
+    /// on a custom table is not somebody's decision and should not be counted as one, but
+    /// leaving it out entirely would misstate what the model actually contains.
+    /// </remarks>
+    /// <param name="root">customizations.xml.</param>
+    /// <param name="solution">Which solution.</param>
+    /// <param name="components">Where to put them.</param>
+    /// <param name="links">Where to record which tables each one joins.</param>
+    private static int ReadRelationships(
+        XElement root,
+        SolutionHeader solution,
+        List<DiscoveredComponent> components,
+        List<ComponentLink> links)
+    {
+        var count = 0;
+
+        foreach (var relationship in root.Descendants(None + "EntityRelationship"))
+        {
+            var name = relationship.Attribute("Name")?.Value;
+            if (string.IsNullOrWhiteSpace(name)) continue;
+
+            var referencing = Value(relationship, "ReferencingEntityName");
+            var referenced = Value(relationship, "ReferencedEntityName");
+
+            // Every cascade in one place, because the interesting ones are interesting
+            // together. Delete alone does not say whether somebody configured this
+            // deliberately; delete plus reparent plus share usually does.
+            var cascades = CascadeBehaviours
+                .Select(cascade => (Name: cascade, Value: Value(relationship, cascade)))
+                .Where(cascade => cascade.Value is { Length: > 0 })
+                .ToList();
+
+            var key = Add(components, "relationship", null, name, name, solution, new Dictionary<string, object?>
+            {
+                ["relationshipType"] = Value(relationship, "EntityRelationshipType"),
+
+                ["cascadeConfiguration"] = string.Join(
+                    ", ", cascades.Select(cascade => $"{cascade.Name}={cascade.Value}")),
+
+                ["cascadeDelete"] = Value(relationship, "CascadeDelete"),
+
+                // Not the IsCustomizable flag, which is about whether it may be changed
+                // rather than whether somebody made it. A relationship introduced by the
+                // solution's own publisher prefix is one somebody in this engagement built.
+                ["isCustom"] = solution.PublisherPrefix is { Length: > 0 } prefix
+                    && (referencing?.StartsWith(prefix + "_", StringComparison.OrdinalIgnoreCase) == true
+                        || referenced?.StartsWith(prefix + "_", StringComparison.OrdinalIgnoreCase) == true),
+
+                ["isHierarchical"] = Value(relationship, "IsHierarchical") == "1",
+                ["referencingTable"] = referencing,
+                ["referencedTable"] = referenced,
+                ["description"] = (string?)null
+            });
+
+            // The join, so a table's neighbours can be walked rather than inferred from
+            // names. Unresolved on purpose when the other end is outside the solution: a
+            // relationship to Account in a solution that does not carry Account is normal.
+            foreach (var table in new[] { referencing, referenced }.Where(t => t is { Length: > 0 }))
+            {
+                links.Add(new ComponentLink(
+                    key,
+                    StableKeys.ForComponent("table", null, table!),
+                    "relatesTo"));
+            }
+
+            count++;
+        }
+
+        return count;
+    }
+
+    /// <summary>
+    /// Endpoints that carry work out of the platform.
+    /// </summary>
+    /// <remarks>
+    /// One in nine real exports, and it was invisible. A webhook pointing at a Logic App is
+    /// the clearest proof this reader ever gets that logic left Dataverse, and
+    /// <c>architecture.externalLogicInvisible</c> exists to report exactly that. The rule
+    /// had a handler, the type was declared, and no reader connected them, so the rule could
+    /// not fire from a solution file no matter what the file contained.
+    ///
+    /// The codes are from the ServiceEndpoint table reference rather than from memory. A
+    /// wrong one does not throw: it labels a webhook as a Service Bus queue, and the report
+    /// then tells a client to check infrastructure they do not have.
+    /// </remarks>
+    /// <param name="root">customizations.xml.</param>
+    /// <param name="solution">Which solution.</param>
+    /// <param name="components">Where to put them.</param>
+    private static int ReadServiceEndpoints(XElement root, SolutionHeader solution, List<DiscoveredComponent> components)
+    {
+        var count = 0;
+
+        foreach (var endpoint in root.Descendants(None + "ServiceEndpoint"))
+        {
+            var name = endpoint.Attribute("Name")?.Value ?? Value(endpoint, "Name");
+            if (string.IsNullOrWhiteSpace(name)) continue;
+
+            Add(components, "serviceEndpoint", endpoint.Attribute("ServiceEndpointId")?.Value,
+                name, name, solution, new Dictionary<string, object?>
+                {
+                    ["contract"] = Contract(Value(endpoint, "Contract")),
+                    ["messageFormat"] = MessageFormat(Value(endpoint, "MessageFormat")),
+                    ["authType"] = AuthType(Value(endpoint, "AuthType")),
+
+                    // The host only. The full URL of a Logic App trigger carries its shared
+                    // access signature in the query string, and a report is a document that
+                    // gets mailed around.
+                    ["url"] = Host(Value(endpoint, "Url")),
+                    ["description"] = Value(endpoint, "Description")
+                });
+
+            count++;
+        }
+
+        return count;
+    }
+
+    /// <summary>The endpoint contract, from the ServiceEndpoint table reference.</summary>
+    /// <param name="code">The raw value.</param>
+    private static string? Contract(string? code) => code switch
+    {
+        "1" => "oneWay",
+        "2" => "queue",
+        "3" => "rest",
+        "4" => "twoWay",
+        "5" => "topic",
+        "6" => "queuePersistent",
+        "7" => "eventHub",
+        "8" => "webhook",
+        "9" => "eventGrid",
+        "10" => "managedDataLake",
+        "11" => "containerStorage",
+        null or "" => null,
+
+        // Named rather than guessed. An unmapped code is a platform that gained a contract
+        // type since this was written, and saying so is better than calling it a webhook.
+        _ => $"unmapped({code})"
+    };
+
+    /// <summary>The message format, from the ServiceEndpoint table reference.</summary>
+    /// <param name="code">The raw value.</param>
+    private static string? MessageFormat(string? code) => code switch
+    {
+        "1" => "binaryXml",
+        "2" => "json",
+        "3" => "textXml",
+        null or "" => null,
+        _ => $"unmapped({code})"
+    };
+
+    /// <summary>How the endpoint authenticates, from the ServiceEndpoint table reference.</summary>
+    /// <param name="code">The raw value.</param>
+    private static string? AuthType(string? code) => code switch
+    {
+        "0" => "notSpecified",
+        "1" => "acs",
+        "2" => "sasKey",
+        "3" => "sasToken",
+        "4" => "webhookKey",
+        "5" => "httpHeader",
+        "6" => "httpQueryString",
+        "7" => "connectionString",
+        "8" => "accessKey",
+        "9" => "managedIdentity",
+        null or "" => null,
+        _ => $"unmapped({code})"
+    };
+
+    /// <summary>The host of a URL, without the path or the query string it carries.</summary>
+    /// <param name="url">The raw value.</param>
+    private static string? Host(string? url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var parsed) ? parsed.Host : url;
+
+    /// <summary>
+    /// Ribbon customisations that actually customise something.
+    /// </summary>
+    /// <remarks>
+    /// Thirty-two RibbonDiffXml elements across nine real exports and every one of them
+    /// empty: a <c>CustomActions</c> with no children, a <c>CommandDefinitions</c> with no
+    /// children. The export writes the scaffolding for every table whether or not anybody
+    /// touched the ribbon.
+    ///
+    /// So this counts the ones with content in them, and that is the whole point of the
+    /// method. A reader that counted elements would have reported thirty-two pro code
+    /// components in an estate that has none, and <c>commandBar</c> counts toward the low
+    /// code ratio, which is the most quoted number this product produces. Reading nothing
+    /// was wrong; reading all of it would have been worse, because it would have been wrong
+    /// in the direction that looks like work.
+    /// </remarks>
+    /// <param name="root">customizations.xml.</param>
+    /// <param name="solution">Which solution.</param>
+    /// <param name="components">Where to put them.</param>
+    private static int ReadCommandBars(XElement root, SolutionHeader solution, List<DiscoveredComponent> components)
+    {
+        var count = 0;
+
+        foreach (var ribbon in root.Descendants(None + "RibbonDiffXml"))
+        {
+            var actions = ribbon.Descendants(None + "CustomAction").ToList();
+            var commands = ribbon.Descendants(None + "CommandDefinition").ToList();
+
+            if (actions.Count == 0 && commands.Count == 0) continue;
+
+            // Named for what it hangs off, because a ribbon has no name of its own. The
+            // parent is the Entity element for a table ribbon and the document for the
+            // application ribbon.
+            var owner = ribbon.Ancestors(None + "Entity").FirstOrDefault() is { } entity
+                ? Value(entity, "Name") ?? "unknown"
+                : "application";
+
+            Add(components, "commandBar", null, $"{owner} ribbon", $"{owner}_ribbon", solution,
+                new Dictionary<string, object?>
+                {
+                    ["customActionCount"] = actions.Count,
+                    ["commandCount"] = commands.Count,
+
+                    // A command calling a function in a web resource is the JavaScript half
+                    // of the ribbon, and the half that breaks on a platform update.
+                    ["usesJavaScript"] = commands
+                        .Descendants(None + "JavaScriptFunction")
+                        .Any(),
+
+                    ["ownerTable"] = owner,
+                    ["description"] = (string?)null
+                });
+
+            count++;
+        }
+
+        return count;
+    }
+
+    /// <summary>
+    /// The publisher the solution was built under.
+    /// </summary>
+    /// <remarks>
+    /// One per solution, and it is the prefix everything else in this reader is judged
+    /// against: third party code components, custom relationships and the naming rules all
+    /// key off it. It was being parsed out of the manifest and used, and never recorded as a
+    /// component, so the one thing every other judgement depends on was the one thing the
+    /// inventory did not show.
+    /// </remarks>
+    /// <param name="solution">Which solution.</param>
+    /// <param name="components">Where to put it.</param>
+    private static int ReadPublisher(SolutionHeader solution, List<DiscoveredComponent> components)
+    {
+        if (solution.PublisherName is not { Length: > 0 } name) return 0;
+
+        Add(components, "publisher", null, name, name, solution, new Dictionary<string, object?>
+        {
+            ["prefix"] = solution.PublisherPrefix,
+            ["solutionCount"] = 1,
+            ["description"] = (string?)null
+        });
+
+        return 1;
     }
 
     /// <summary>
