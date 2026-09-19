@@ -38,17 +38,16 @@ public sealed class DemoSeeder(string connectionString)
         await using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
 
-        // Created here as well as in a migration, so a database whose migrations have not
-        // been applied yet repairs its demonstration rather than failing at startup.
-        await connection.ExecuteAsync(new CommandDefinition(
-            """
-            IF OBJECT_ID('ops.DemoSeed', 'U') IS NULL
-            CREATE TABLE ops.DemoSeed (
-                EngagementId UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_DemoSeed PRIMARY KEY,
-                SeedVersion  INT              NOT NULL,
-                AppliedUtc   DATETIME2(3)     NOT NULL);
-            """,
-            cancellationToken: cancellationToken)).ConfigureAwait(false);
+        // The stamp table is declared in a migration, like everything else. It was created
+        // here once, and on a deployment where the product's identity holds only read and
+        // write, as it should, CREATE TABLE is denied and the demonstration never appears.
+        // A seeder is not the place to discover that the schema is behind.
+        if (await connection.ExecuteScalarAsync<int?>(new CommandDefinition(
+            "SELECT 1 WHERE OBJECT_ID('ops.DemoSeed', 'U') IS NOT NULL;",
+            cancellationToken: cancellationToken)).ConfigureAwait(false) is null)
+        {
+            return false;
+        }
 
         // Joined to the engagement rather than read on its own. A stamp whose engagement
         // somebody has deleted is a stamp that would stop the demonstration ever coming back.
