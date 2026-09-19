@@ -106,6 +106,9 @@ public sealed class ReportComposer(AnalysisStore analysis, WorkspaceStore worksp
                 []))
             .ToList();
 
+        var written = (await analysis.GetNarrativeAsync(engagementId, cancellationToken).ConfigureAwait(false))
+            .ToDictionary(section => section.SectionId, section => section.Body, StringComparer.Ordinal);
+
         var name = engagement?.Name ?? "Engagement";
         var mode = run?.Mode ?? "assessment";
         var produced = run?.CompletedUtc ?? run?.CreatedUtc ?? DateTime.UtcNow;
@@ -121,11 +124,12 @@ public sealed class ReportComposer(AnalysisStore analysis, WorkspaceStore worksp
                 [.. solutions.Select(solution => solution.UniqueName)],
                 score, findings, customisation, roadmap,
 
-                // The written sections stay empty until there is somewhere to type them. The
-                // report prints its prompt where the text should be, which is correct and not
-                // finished, and is a great deal better than generating a readiness score from
-                // metadata and letting it read like one produced from twenty interviews.
-                new Dictionary<string, string>(StringComparer.Ordinal)));
+                // Read by engagement rather than by run. A workshop is about the client, so
+                // the written half survives every re-extraction of the generated half. Where
+                // a section has not been written the report still prints its prompt, which
+                // is a great deal better than generating a readiness score from metadata and
+                // letting it read like one produced from twenty interviews.
+                written));
     }
 
     private static T? Read<T>(JsonElement breakdown, string name) =>

@@ -942,6 +942,73 @@ app.MapPost("/api/engagements/{engagementId:guid}/connections",
         new { connection.ConnectionId, connection.Mode, connection.Name, connection.EnvironmentRole });
 }).RequireAuthorization();
 
+// ----------------------------------------------------------------- narrative --
+// The half of an assessment that comes from talking to people.
+//
+// Five sections of the report are written rather than generated. The list of which ones,
+// and the prompt for each, comes from report-model.json: the contract already describes the
+// report and a second copy here would drift the first time somebody added a section.
+app.MapGet("/api/report-sections", () =>
+{
+    var path = Path.Combine(AppContext.BaseDirectory, "build", "contracts", "report-model.json");
+
+    if (!File.Exists(path))
+    {
+        return Results.Problem(
+            "The report model contract is not in this image. The written sections are generated from it.",
+            statusCode: StatusCodes.Status500InternalServerError);
+    }
+
+    using var document = JsonDocument.Parse(File.ReadAllText(path));
+
+    // Materialised inside the using. A lazy sequence handed to the serialiser is enumerated
+    // after this method returns, by which time the document has been disposed.
+    var sections = document.RootElement.GetProperty("sections").EnumerateArray()
+        .Where(section => section.GetProperty("kind").GetString() is "written" or "hybrid")
+        .Select(section => new
+        {
+            id = section.GetProperty("id").GetString(),
+            name = section.GetProperty("name").GetString(),
+            kind = section.GetProperty("kind").GetString(),
+            prompt = section.TryGetProperty("prompt", out var prompt) ? prompt.GetString() : null,
+            context = section.TryGetProperty("content", out var content) ? content.GetString() : null
+        })
+        .ToList();
+
+    return Results.Ok(sections);
+}).RequireAuthorization();
+
+app.MapGet("/api/engagements/{engagementId:guid}/narrative",
+    async (HttpContext context, AnalysisStore analysis, Guid engagementId) =>
+{
+    if (await Denied(context, engagementId, EngagementRoles.Viewer) is { } denied) return denied;
+
+    var written = await analysis.GetNarrativeAsync(engagementId, context.RequestAborted);
+
+    return Results.Ok(written.Select(section => new
+    {
+        section.SectionId,
+        section.Body,
+        section.UpdatedUtc,
+        section.UpdatedByName
+    }));
+}).RequireAuthorization();
+
+app.MapPut("/api/engagements/{engagementId:guid}/narrative/{sectionId}",
+    async (HttpContext context, AnalysisStore analysis, Guid engagementId, string sectionId, WriteNarrative request) =>
+{
+    ArgumentNullException.ThrowIfNull(request);
+
+    // A contributor's act. Writing the management summary is doing the assessment, not
+    // reading it, and a viewer who can rewrite the conclusion is not a viewer.
+    if (await Denied(context, engagementId, EngagementRoles.Contributor) is { } denied) return denied;
+
+    await analysis.SaveNarrativeAsync(
+        engagementId, sectionId, request.Body, UserId(context.User), DisplayName(context.User), context.RequestAborted);
+
+    return Results.Ok(new { saved = !string.IsNullOrWhiteSpace(request.Body) });
+}).RequireAuthorization();
+
 // ------------------------------------------------------- interactive sign in --
 // Two endpoints and a round trip through Entra.
 //
@@ -1402,6 +1469,10 @@ app.MapPut("/api/system/settings/syncfusion", async (HttpContext context, SetSyn
 app.MapFallbackToFile("app/index.html");
 
 app.Run();
+
+/// <summary>One written section, on its way to being stored.</summary>
+/// <param name="Body">What the consultant wrote. Blank removes the section.</param>
+internal sealed record WriteNarrative(string? Body);
 
 /// <summary>A connection being added to an engagement.</summary>
 /// <param name="Mode">servicePrincipal, delegated, offlineZip or azureDevOps.</param>

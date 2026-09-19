@@ -541,9 +541,6 @@ None of this fails a build and all of it fails a screen.
 
 ## What is not built at all
 
-- **The consultant input screens.** The written report sections need somewhere to type: a web
-  screen per section plus a store. Until they exist the report prints the prompt where the
-  text should be, which is correct and not finished.
 - **The connect and selectSolutions stages.** Declared in the contract, not implemented. The
   connection test happens inside the extract stage today, which works and puts a failure one
   stage later than the contract says it should be.
@@ -564,6 +561,11 @@ None of this fails a build and all of it fails a screen.
   worker stores back what it is given.
 - **The demonstration engagement.** Seeds on startup against a stamped version, 369
   components and 99 findings, produced by running the real engine over a synthetic estate.
+- **The consultant input screens.** A Narrative workspace, generated from the report model
+  so the prompt somebody answers on the screen is the prompt the document prints where they
+  have not. Stored per engagement rather than per run, because a workshop is about the
+  client and survives every re-extraction. Three of the five sections were declared in the
+  contract and never emitted by the renderer at all; they are now.
 
 ## The thing that most needs doing next
 

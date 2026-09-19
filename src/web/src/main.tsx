@@ -12,6 +12,7 @@ import { RunsPage } from './RunsPage';
 import { ConnectionsPage } from './ConnectionsPage';
 import { FindingsPage } from './FindingsPage';
 import { BacklogPage } from './BacklogPage';
+import { NarrativePage } from './NarrativePage';
 import { ReportsPage } from './ReportsPage';
 import { AdministrationPage } from './AdministrationPage';
 import { DocumentationPage } from './DocumentationPage';
@@ -25,7 +26,7 @@ import type { Engagement } from './workspace';
 // That order was not obvious. An earlier arrangement put the plan before the target, and a
 // consultant opening the product for the first time met the thing that needs a Dynamics
 // environment before the screen where they would have connected one.
-const navigation = ['Overview', 'Connections', 'Runs', 'Findings', 'Backlog', 'Reports'];
+const navigation = ['Overview', 'Connections', 'Runs', 'Findings', 'Backlog', 'Narrative', 'Reports'];
 
 // Everything the address bar may name. The three below the navigation are reachable by
 // their own links rather than by the rail.
@@ -367,6 +368,7 @@ function App() {
             : activeView === 'Runs' ? <RunsPage engagementId={engagement.engagementId} />
             : activeView === 'Findings' ? <FindingsPage engagementId={engagement.engagementId} />
             : activeView === 'Backlog' ? <BacklogPage engagementId={engagement.engagementId} />
+            : activeView === 'Narrative' ? <NarrativePage engagementId={engagement.engagementId} />
             : activeView === 'Reports' ? <ReportsPage engagementId={engagement.engagementId} />
             : <OverviewPage
                 engagementId={engagement.engagementId}

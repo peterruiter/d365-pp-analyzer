@@ -573,6 +573,96 @@ public sealed class AnalysisStore(string connectionString)
         return [.. rows];
     }
 
+    /// <summary>One section of the report that a person wrote.</summary>
+    /// <param name="SectionId">Which section, from report-model.json.</param>
+    /// <param name="Body">What they wrote.</param>
+    /// <param name="UpdatedUtc">When.</param>
+    /// <param name="UpdatedByName">Who, by name rather than by sign-in.</param>
+    public sealed record NarrativeSection(string SectionId, string Body, DateTime UpdatedUtc, string UpdatedByName);
+
+    /// <summary>
+    /// Everything a consultant has written for one engagement.
+    /// </summary>
+    /// <remarks>
+    /// By engagement rather than by run. What somebody learned in a workshop is about the
+    /// client and outlives every re-extraction of their estate.
+    /// </remarks>
+    /// <param name="engagementId">Which engagement.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task<IReadOnlyList<NarrativeSection>> GetNarrativeAsync(
+        Guid engagementId,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        var rows = await connection.QueryAsync<NarrativeSection>(new CommandDefinition(
+            """
+            SELECT SectionId, Body, UpdatedUtc, UpdatedByName
+            FROM findings.ReportNarrative
+            WHERE EngagementId = @engagementId
+            ORDER BY SectionId;
+            """,
+            new { engagementId },
+            cancellationToken: cancellationToken));
+
+        return [.. rows];
+    }
+
+    /// <summary>
+    /// Writes one section, or removes it when the text is taken away.
+    /// </summary>
+    /// <remarks>
+    /// Blank deletes rather than storing whitespace. The report prints the prompt where a
+    /// section has not been written, and a row holding a space would print nothing at all,
+    /// which reads as a section somebody finished rather than one nobody started.
+    /// </remarks>
+    /// <param name="engagementId">Which engagement.</param>
+    /// <param name="sectionId">Which section.</param>
+    /// <param name="body">What they wrote, or blank to remove it.</param>
+    /// <param name="userId">Who.</param>
+    /// <param name="displayName">Their name, for the byline.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task SaveNarrativeAsync(
+        Guid engagementId,
+        string sectionId,
+        string? body,
+        string userId,
+        string displayName,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            await connection.ExecuteAsync(new CommandDefinition(
+                "DELETE FROM findings.ReportNarrative WHERE EngagementId = @engagementId AND SectionId = @sectionId;",
+                new { engagementId, sectionId },
+                cancellationToken: cancellationToken)).ConfigureAwait(false);
+
+            return;
+        }
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            MERGE findings.ReportNarrative AS target
+            USING (SELECT @engagementId AS EngagementId, @sectionId AS SectionId) AS source
+                ON target.EngagementId = source.EngagementId AND target.SectionId = source.SectionId
+            WHEN MATCHED THEN UPDATE SET
+                Body = @body, UpdatedUtc = SYSUTCDATETIME(), UpdatedBy = @userId, UpdatedByName = @displayName
+            WHEN NOT MATCHED THEN INSERT (EngagementId, SectionId, Body, UpdatedBy, UpdatedByName)
+                VALUES (@engagementId, @sectionId, @body, @userId, @displayName);
+            """,
+            new
+            {
+                engagementId,
+                sectionId,
+                body = body.Trim(),
+                userId = AccessStore.Normalise(userId),
+                displayName
+            },
+            cancellationToken: cancellationToken)).ConfigureAwait(false);
+    }
+
     /// <summary>
     /// Sets an override for this engagement.
     /// </summary>

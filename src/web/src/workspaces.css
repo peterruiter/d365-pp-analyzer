@@ -1209,3 +1209,58 @@
   .not-assessed { padding: 16px 14px; }
   .override-form .field-row > label { flex: 1 1 100%; }
 }
+
+/* -------------------------------------------------------------- narrative --
+   The half of an assessment that comes from talking to people. A panel per
+   section, its prompt above the box rather than in a tooltip, because the
+   prompt is the question the section answers and somebody is answering it
+   while they type. */
+
+.narrative-section .panel-heading { align-items: start; }
+.narrative-body { padding: 4px 23px 20px; }
+
+.narrative-prompt {
+  max-width: 78ch;
+  margin: 0 0 6px;
+  color: var(--brand-ink);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.narrative-body .hint { display: block; max-width: 78ch; margin-bottom: 12px; line-height: 1.55; }
+
+.narrative-input {
+  width: 100%;
+  min-height: 150px;
+  padding: 12px 14px;
+  border: 1px solid var(--cp-border);
+  border-radius: 6px;
+  background: var(--cp-surface);
+  color: var(--cp-text);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.narrative-input:focus {
+  border-color: var(--cp-accent);
+  outline: 2px solid var(--cp-accent-soft);
+  outline-offset: 1px;
+}
+
+.narrative-input[readonly] { background: var(--cp-surface-soft); color: var(--cp-text-muted); }
+
+.narrative-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+@media (max-width: 680px) {
+  .narrative-body { padding-left: 14px; padding-right: 14px; }
+  .narrative-foot .secondary-button { width: 100%; }
+}

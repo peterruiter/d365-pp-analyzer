@@ -103,11 +103,30 @@ public sealed partial class AssessmentReportPdf
         CraftAndComplexity(flow, model);
         Lifecycle(flow, model);
         Findings(flow, model);
+
+        // Delivery sits with the findings rather than at the back. The findings say what the
+        // estate looks like; only the team can say why, and the two read as one argument.
+        WrittenSection(flow, model, "delivery", model.Text["report.delivery", "Delivery and ALM"],
+            "Describe the deployment path from a developer's machine to production, in the words the team used. "
+            + "The findings tell you what the estate looks like; only they can tell you why.");
+
         Roadmap(flow, model);
         Backlog(flow, model);
         NotAssessed(flow, model);
+
+        // The three sections nothing in an estate can produce. They were declared in the
+        // report model and never emitted, so a consultant could write them and the document
+        // would not carry them.
+        WrittenSection(flow, model, "functionalMaturity", model.Text["report.functionalMaturity", "Functional maturity"],
+            "Score each capability nought to five from what you saw and heard. Say who told you, per axis.");
+
+        WrittenSection(flow, model, "readiness", model.Text["report.readiness", "Readiness for change"],
+            "Score from the interviews. If you did not interview anybody, leave this section out rather than "
+            + "filling it in from impressions.");
+
         WrittenSection(flow, model, "scenarios", model.Text["report.scenarios", "Scenarios"],
             "Name the scenarios the client is actually choosing between, in their words. For each: what it gives them, what it needs from them, and what worries you.");
+
         Method(flow, model);
 
         return surface.Save();
