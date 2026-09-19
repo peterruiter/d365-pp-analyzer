@@ -2,6 +2,7 @@ namespace PowerPete.Analyzer.Jobs;
 
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Azure.Core;
 using Azure.Identity;
 using Azure.Storage.Blobs;
@@ -34,7 +35,7 @@ public sealed class ConnectionFactory(ISecretStore secrets)
     /// <param name="EnvironmentUrl">Which environment.</param>
     /// <param name="Organisation">Which Azure DevOps organisation.</param>
     /// <param name="Project">Which project.</param>
-    /// <param name="BlobName">Which uploaded file, for the offline mode.</param>
+    /// <param name="BlobName">Which uploaded file, for the offline mode. Named uploadedFile in the settings, because that is what the extraction contract calls it and the contract names the fields the wizard collects.</param>
     /// <param name="CheckerGeography">Where the checker runs. Data residency, so never a silent default.</param>
     public sealed record Settings(
         string? TenantId,
@@ -42,8 +43,11 @@ public sealed class ConnectionFactory(ISecretStore secrets)
         string? EnvironmentUrl,
         string? Organisation,
         string? Project,
-        string? BlobName,
+        [property: JsonPropertyName("uploadedFile")] string? BlobName,
         string? CheckerGeography);
+
+    /// <summary>How a connection's settings are written and read. Both sides use this.</summary>
+    private static readonly JsonSerializerOptions SettingsJson = new(JsonSerializerDefaults.Web);
 
     /// <summary>Reads a connection's settings.</summary>
     /// <param name="connection">The connection.</param>
@@ -51,7 +55,11 @@ public sealed class ConnectionFactory(ISecretStore secrets)
     {
         ArgumentNullException.ThrowIfNull(connection);
 
-        return JsonSerializer.Deserialize<Settings>(connection.SettingsJson)
+        // Web defaults, so the camel case the wizard writes binds to the Pascal case this
+        // record declares. Without them every setting deserialised as null: a service
+        // principal connection had no environment URL and failed at the point of reading the
+        // estate, which reads as a permissions problem and is a serialiser setting.
+        return JsonSerializer.Deserialize<Settings>(connection.SettingsJson, SettingsJson)
             ?? new Settings(null, null, null, null, null, null, null);
     }
 

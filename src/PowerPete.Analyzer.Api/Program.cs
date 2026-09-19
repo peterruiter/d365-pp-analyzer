@@ -64,6 +64,14 @@ builder.Services.AddSingleton(SecretStore.For(keyVaultUri));
 builder.Services.AddSingleton<SystemHealth>();
 builder.Services.AddSingleton<ReportComposer>();
 
+// Where an uploaded solution file goes. Absent on a local run, which the endpoint reports
+// rather than throwing: everything except the offline mode works without it.
+var uploadContainer = builder.Configuration["Uploads:ContainerUri"]
+    ?? Environment.GetEnvironmentVariable("ANALYZER_UPLOAD_CONTAINER");
+
+builder.Services.AddSingleton(new SolutionUploads(
+    string.IsNullOrWhiteSpace(uploadContainer) ? null : new Uri(uploadContainer)));
+
 // ------------------------------------------------------------ authentication --
 // Entra sign-in, cookie session. The product knows who somebody is from their token and what
 // they may do from a row in the database, and the two are deliberately separate: anybody in
@@ -900,6 +908,49 @@ app.MapPost("/api/engagements/{engagementId:guid}/connections",
         $"/api/engagements/{engagementId}/connections",
         new { connection.ConnectionId, connection.Mode, connection.Name, connection.EnvironmentRole });
 }).RequireAuthorization();
+
+// ------------------------------------------------------------------- uploads --
+// An exported solution, on its way to becoming an offline connection.
+//
+// Separate from creating the connection, because a file upload and a form submission are
+// different shapes on the wire and pretending otherwise means a multipart body carrying a
+// hundred megabytes through the same code path that validates a tenant id. The wizard
+// uploads first, gets a blob name back, and saves that as a setting.
+app.MapPost("/api/engagements/{engagementId:guid}/uploads",
+    async (HttpContext context, SolutionUploads uploads, Guid engagementId) =>
+{
+    if (await Denied(context, engagementId, EngagementRoles.Contributor) is { } denied) return denied;
+
+    if (!uploads.IsConfigured)
+    {
+        return Results.Problem(
+            "This deployment has no upload container configured, so the offline mode cannot be used here.",
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+
+    if (!context.Request.HasFormContentType)
+    {
+        return Results.BadRequest(new { error = "Send the file as multipart form data." });
+    }
+
+    var form = await context.Request.ReadFormAsync(context.RequestAborted);
+    var file = form.Files["file"] ?? (form.Files.Count > 0 ? form.Files[0] : null);
+
+    if (file is null || file.Length == 0)
+    {
+        return Results.BadRequest(new { error = "No file arrived." });
+    }
+
+    await using var content = file.OpenReadStream();
+
+    var result = await uploads.StoreAsync(engagementId, content, file.FileName, context.RequestAborted);
+
+    if (result.Error is not null) return Results.BadRequest(new { error = result.Error });
+
+    // The blob name is what the connection stores and the worker opens. The browser never
+    // sees a URL to the container, because it has no business reaching it directly.
+    return Results.Ok(new { blobName = result.BlobName, bytes = result.Bytes, fileName = file.FileName });
+}).RequireAuthorization().DisableAntiforgery();
 
 // ----------------------------------------------------------------------- auth --
 // Anonymous on purpose: it is the first call the web application makes and it is what tells

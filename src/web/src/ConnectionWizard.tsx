@@ -51,6 +51,8 @@ export function ConnectionWizard({
   const [name, setName] = useState('');
   const [values, setValues] = useState<Record<string, string>>({});
   const [secret, setSecret] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [uploaded, setUploaded] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,6 +63,41 @@ export function ConnectionWizard({
     setModeId(id);
     setValues({});
     setStep('settings');
+  }
+
+  /**
+   * Sends the chosen file and keeps the blob name it comes back with.
+   *
+   * On choosing the file rather than on saving. A solution export is tens of megabytes and
+   * putting that behind the Save button means a long unexplained wait on the one press that
+   * is supposed to be instant, with nothing to show whether it is working.
+   */
+  async function upload(file: File) {
+    setUploading(true);
+    setError(null);
+
+    const body = new FormData();
+    body.append('file', file);
+
+    try {
+      const response = await fetch(`/api/engagements/${engagementId}/uploads`, { method: 'POST', body });
+      const payload = await response.json() as { blobName?: string; error?: string };
+
+      if (!response.ok || !payload.blobName) {
+        setError(payload.error ?? `${response.status} ${response.statusText}`);
+        setUploaded(null);
+      } else {
+        // The blob name is what the connection stores and the worker opens. The file itself
+        // never touches this form again.
+        setValues((current) => ({ ...current, uploadedFile: payload.blobName! }));
+        setUploaded(file.name);
+      }
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : String(failure));
+      setUploaded(null);
+    }
+
+    setUploading(false);
   }
 
   async function save() {
@@ -156,13 +193,42 @@ export function ConnectionWizard({
             {chosen.settings.map((setting) => (
               <label className="field-label" key={setting}>
                 {t('field.' + setting)}
-                <input
-                  type={fields[setting]?.type ?? 'text'}
-                  placeholder={fields[setting]?.placeholder}
-                  value={values[setting] ?? ''}
-                  onChange={(event) => setValues({ ...values, [setting]: event.target.value })}
-                />
-                <span className="hint">{t('field.' + setting + '.hint')}</span>
+
+                {setting === 'uploadedFile' ? (
+                  <>
+                    {/*
+                      A file input, because this setting is a file. It was a text box asking
+                      for a name, and typing a name into it produced a connection pointing at
+                      a blob nobody had uploaded.
+                    */}
+                    <input
+                      type="file"
+                      accept=".zip,application/zip"
+                      disabled={uploading}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (file) void upload(file);
+                      }}
+                    />
+                    <span className="hint">
+                      {uploading
+                        ? t('connections.uploading')
+                        : uploaded !== null
+                          ? t('connections.file-chosen', uploaded)
+                          : t('field.uploadedFile.hint')}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <input
+                      type={fields[setting]?.type ?? 'text'}
+                      placeholder={fields[setting]?.placeholder}
+                      value={values[setting] ?? ''}
+                      onChange={(event) => setValues({ ...values, [setting]: event.target.value })}
+                    />
+                    <span className="hint">{t('field.' + setting + '.hint')}</span>
+                  </>
+                )}
               </label>
             ))}
 
