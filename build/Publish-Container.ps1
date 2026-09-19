@@ -179,15 +179,65 @@ $image = "$loginServer/${repository}:$ImageTag"
 # Both apps, because they run the same image. Updating one and not the other is how an API
 # ends up offering a screen the worker's pipeline does not implement, with both version
 # numbers agreeing.
-foreach ($app in @(az containerapp list --resource-group $ResourceGroup --query '[].name' --output tsv))
+#
+# Which is exactly what the first version of this loop did. It threw on the first failure,
+# so a transient refusal from Azure on the second app left the first one updated, the
+# second one on the previous image, and a message naming neither. It happened, and the
+# only reason it was noticed is that somebody checked the tags by hand afterwards.
+#
+# So: each update is retried once, and whatever happens the script ends by reading back
+# what every app is actually running and saying so. A deployment that half worked has to
+# announce that it half worked.
+$apps = @(az containerapp list --resource-group $ResourceGroup --query '[].name' --output tsv)
+$failed = @()
+
+foreach ($app in $apps)
 {
     if (-not $PSCmdlet.ShouldProcess($app, "Update to $ImageTag")) { continue }
 
     Write-Host ''
     Write-Host "Updating $app"
+
     az containerapp update --name $app --resource-group $ResourceGroup --image $image --output none
 
-    if ($LASTEXITCODE -ne 0) { throw "Could not update '$app'." }
+    if ($LASTEXITCODE -ne 0)
+    {
+        # Once. A second refusal is a real one; the first is usually Azure being busy,
+        # and giving up on it leaves the deployment split for no reason.
+        Write-Host "    Refused. Trying $app once more."
+        Start-Sleep -Seconds 10
+
+        az containerapp update --name $app --resource-group $ResourceGroup --image $image --output none
+
+        if ($LASTEXITCODE -ne 0) { $failed += $app }
+    }
+}
+
+# Read back rather than trust the exit codes. An update can report success and leave the
+# app on its previous revision if the new one fails to start, and the tag is the only
+# thing that says which image is actually configured.
+Write-Host ''
+Write-Host 'What each app is running'
+
+$wrong = @()
+
+foreach ($app in $apps)
+{
+    $running = az containerapp show --name $app --resource-group $ResourceGroup `
+        --query 'properties.template.containers[0].image' --output tsv
+
+    $mark = if ($running -eq $image) { 'ok  ' } else { 'OLD ' }
+    Write-Host "    $mark $app  $running"
+
+    if ($running -ne $image) { $wrong += $app }
+}
+
+if ($wrong.Count -gt 0)
+{
+    Write-Host ''
+    throw ("These are not on $ImageTag and the deployment is split: $($wrong -join ', '). " +
+        "Rerun this script, or point them at the image by hand with: " +
+        "az containerapp update --name <app> --resource-group $ResourceGroup --image $image")
 }
 
 $url = az containerapp list --resource-group $ResourceGroup `
