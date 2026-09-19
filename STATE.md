@@ -670,7 +670,7 @@ The build gates, for reference:
 2. `./build/Test-Generators.ps1` — generates into a throwaway folder and checks the output.
    Passes.
 3. `./build/Invoke-CodeGen.ps1` — generates and builds. Twelve of twelve, no warnings.
-4. `dotnet test` — 107 tests, all passing.
+4. `dotnet test` — 120 tests, all passing.
 5. `./build/New-SampleSolution.ps1` then `analyse samples/SampleSolution.zip` — sixteen
    planted defects, twelve found and four correctly not assessed.
 
@@ -900,6 +900,22 @@ away:
   product writes rather than a general one.
 - **An API token is paired with the email it was issued to.** Neither works alone, so both
   are on the connection and the error says so, because "401" sends people to check the token.
+
+### Tested against a recorder rather than a site
+
+There is no Jira to point it at, so the round trip is not what is covered. What is, and is
+the part most likely to be wrong, is the request it builds: thirteen tests assert what goes
+on the wire through a fake handler.
+
+That is not a formality. Every decision they cover is made before anything is sent and every
+one fails in a way a smoke test would not catch. A missing label does not error; it creates
+a second copy of the entire backlog the next time somebody publishes.
+
+They found one immediately. The acceptance criteria are HTML and the test requirement is a
+plain sentence, and the block converter is a regex over block elements, which finds nothing
+in a plain sentence. So "How to prove it" was written as a heading and the text under it
+silently was not: an empty heading on every issue this would ever have created. Untagged
+text is now a paragraph.
 
 The direction of a connection was an equality check against `azureDevOps` in three places.
 It is one list now, which is what made adding the second target a contract entry and a

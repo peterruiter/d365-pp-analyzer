@@ -355,7 +355,22 @@ public sealed partial class JiraPublisher
     {
         if (string.IsNullOrWhiteSpace(html)) yield break;
 
-        foreach (Match match in BlockElement().Matches(html))
+        var matches = BlockElement().Matches(html);
+
+        // Not everything handed to this is markup. The acceptance criteria are HTML and the
+        // test requirement is a plain sentence, and a regex over block elements finds
+        // nothing in a plain sentence: the heading was written and the text under it
+        // silently was not, which is a worse page than no heading at all.
+        if (matches.Count == 0)
+        {
+            var plain = Text(html);
+
+            if (plain.Length > 0) yield return ("p", plain);
+
+            yield break;
+        }
+
+        foreach (Match match in matches)
         {
             yield return (match.Groups["tag"].Value.ToLowerInvariant(), Text(match.Groups["body"].Value));
         }
