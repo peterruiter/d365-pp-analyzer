@@ -253,6 +253,61 @@ public sealed class WorkspaceStore(string connectionString)
         return [.. rows];
     }
 
+    /// <summary>One connection, by its own identifier.</summary>
+    /// <remarks>
+    /// Carries the engagement, so a caller that was handed only a connection id can still
+    /// check what the reader is allowed to see before showing them anything.
+    /// </remarks>
+    /// <param name="connectionId">Which connection.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task<Connection?> GetConnectionAsync(Guid connectionId, CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        return await connection.QuerySingleOrDefaultAsync<Connection?>(new CommandDefinition(
+            """
+            SELECT ConnectionId, EngagementId, Mode, Name, EnvironmentRole, SettingsJson,
+                   SecretRef, SecretExpiresUtc, LastTestedUtc, LastTestSucceeded,
+                   LastTestIdentity, LastTestMessage, ReachJson
+            FROM ops.[Connection]
+            WHERE ConnectionId = @connectionId;
+            """,
+            new { connectionId },
+            cancellationToken: cancellationToken));
+    }
+
+    /// <summary>
+    /// Points a connection at a credential in the vault.
+    /// </summary>
+    /// <remarks>
+    /// Separate from creating the connection because an interactive sign-in cannot supply one
+    /// up front: the connection has to exist before the browser is sent to Entra, because the
+    /// round trip needs something to come back to.
+    /// </remarks>
+    /// <param name="connectionId">Which connection.</param>
+    /// <param name="secretRef">The vault prefix, never the secret.</param>
+    /// <param name="expiresUtc">When the credential stops working, where that is known.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task SetConnectionSecretAsync(
+        Guid connectionId,
+        string secretRef,
+        DateTime? expiresUtc,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            UPDATE ops.[Connection] SET
+                SecretRef = @secretRef,
+                SecretExpiresUtc = @expiresUtc,
+                UpdatedUtc = SYSUTCDATETIME()
+            WHERE ConnectionId = @connectionId;
+            """,
+            new { connectionId, secretRef, expiresUtc },
+            cancellationToken: cancellationToken));
+    }
+
     /// <summary>Records what a connection test found, including who it authenticated as.</summary>
     /// <param name="connectionId">Which connection.</param>
     /// <param name="succeeded">Whether it worked.</param>

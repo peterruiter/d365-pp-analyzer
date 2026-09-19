@@ -9,7 +9,9 @@ using System.Globalization;
 using PowerPete.Analyzer.Export;
 using PowerPete.Analyzer.Export.Pdf;
 using PowerPete.Analyzer.Api;
+using Microsoft.AspNetCore.DataProtection;
 using PowerPete.Analyzer.Data;
+using PowerPete.Analyzer.Dataverse;
 using PowerPete.Analyzer.Domain;
 using PowerPete.Analyzer.Pipeline;
 using Microsoft.Data.SqlClient;
@@ -71,6 +73,24 @@ var uploadContainer = builder.Configuration["Uploads:ContainerUri"]
 
 builder.Services.AddSingleton(new SolutionUploads(
     string.IsNullOrWhiteSpace(uploadContainer) ? null : new Uri(uploadContainer)));
+
+// Interactive sign-in needs the product's own app registration, because it is the product
+// asking for consent to read somebody's environment, not a registration per client.
+builder.Services.AddDataProtection();
+builder.Services.AddHttpClient();
+
+builder.Services.AddSingleton(new InteractiveSignIn.Options(
+    builder.Configuration["AzureAd:Instance"] ?? DelegatedTokens.DefaultInstance,
+    builder.Configuration["AzureAd:TenantId"],
+    builder.Configuration["AzureAd:ClientId"],
+    builder.Configuration["AzureAd:ClientSecret"]));
+
+builder.Services.AddSingleton(provider => new InteractiveSignIn(
+    provider.GetRequiredService<WorkspaceStore>(),
+    provider.GetRequiredService<ISecretStore>(),
+    provider.GetRequiredService<IDataProtectionProvider>(),
+    provider.GetRequiredService<InteractiveSignIn.Options>(),
+    provider.GetRequiredService<IHttpClientFactory>().CreateClient("entra")));
 
 // ------------------------------------------------------------ authentication --
 // Entra sign-in, cookie session. The product knows who somebody is from their token and what
@@ -183,6 +203,14 @@ static string UserId(ClaimsPrincipal user) =>
 
 static string DisplayName(ClaimsPrincipal user) =>
     user.FindFirstValue("name") ?? user.FindFirstValue(ClaimTypes.Name) ?? UserId(user);
+
+// The callback, built from the request rather than configured.
+//
+// It has to match what the authorize call sent and what is registered in Entra, exactly. A
+// configured value is a value that is wrong on every deployment but the one it was written
+// for, and the failure is an Entra error naming a redirect URI rather than a mismatch.
+static string CallbackUri(HttpContext context) =>
+    $"{context.Request.Scheme}://{context.Request.Host}/api/connections/callback";
 
 // Reads what somebody may do, once per request rather than per endpoint.
 async Task<UserAccess> AccessFor(HttpContext context)
@@ -681,7 +709,12 @@ app.MapGet("/api/extraction-modes", () =>
         summary = mode.GetProperty("summary").GetString(),
         settings = mode.GetProperty("auth").GetProperty("settings")
             .EnumerateArray().Select(setting => setting.GetString()).ToList(),
-        needsSecret = mode.GetProperty("auth").GetProperty("secretRef").ValueKind != JsonValueKind.Null,
+        // Whether the person has to type one, which is not the same as whether the mode
+        // has a secret. Interactive sign-in ends with a refresh token in the vault and
+        // nobody ever types it; asking for one on that screen is asking for the wrong
+        // credential and getting a connection that cannot work.
+        needsSecret = mode.GetProperty("auth").GetProperty("type").GetString() == "clientCredentials",
+        authType = mode.GetProperty("auth").GetProperty("type").GetString(),
         reaches = mode.GetProperty("reaches").EnumerateObject()
             .ToDictionary(entry => entry.Name, entry => entry.Value.GetString())
     }).ToList();
@@ -907,6 +940,65 @@ app.MapPost("/api/engagements/{engagementId:guid}/connections",
     return Results.Created(
         $"/api/engagements/{engagementId}/connections",
         new { connection.ConnectionId, connection.Mode, connection.Name, connection.EnvironmentRole });
+}).RequireAuthorization();
+
+// ------------------------------------------------------- interactive sign in --
+// Two endpoints and a round trip through Entra.
+//
+// The connection is created first, by the ordinary connections endpoint, carrying only the
+// environment address. This sends the browser off to sign in to that environment, and the
+// callback below turns what comes back into a stored refresh token the worker can use.
+app.MapGet("/api/connections/{connectionId:guid}/authorize",
+    async (HttpContext context, WorkspaceStore store, InteractiveSignIn signIn, Guid connectionId) =>
+{
+    var connection = await store.GetConnectionAsync(connectionId, context.RequestAborted);
+
+    if (connection is null) return Results.NotFound();
+
+    // Checked against the engagement the connection belongs to, not against the connection
+    // id somebody happens to hold. Configuring a connection is a contributor's act.
+    if (await Denied(context, connection.EngagementId, EngagementRoles.Contributor) is { } denied) return denied;
+
+    if (!signIn.IsConfigured) return Results.Problem(signIn.NotConfiguredReason, statusCode: StatusCodes.Status503ServiceUnavailable);
+
+    var target = signIn.AuthorizeUrl(connection, CallbackUri(context));
+
+    return target is null
+        ? Results.BadRequest(new { error = "This connection has no usable environment address on it." })
+        : Results.Redirect(target.ToString());
+}).RequireAuthorization();
+
+// Entra sends the browser here. Anonymous to the product's own authorization filter would be
+// wrong: the reader is signed in, and the state is signed as well, so both halves are checked.
+app.MapGet("/api/connections/callback",
+    async (HttpContext context, InteractiveSignIn signIn, string? code, string? state, string? error, string? error_description) =>
+{
+    // Somebody cancelled at the Microsoft prompt, or consent was refused. Not a failure of
+    // this product, and it should not read like one.
+    if (!string.IsNullOrWhiteSpace(error))
+    {
+        return Results.Redirect($"/app/#Connections?signin=cancelled&reason={Uri.EscapeDataString(error_description ?? error)}");
+    }
+
+    if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(state))
+    {
+        return Results.BadRequest(new { error = "Entra returned neither a code nor an error." });
+    }
+
+    var outcome = await signIn.CompleteAsync(state, code, CallbackUri(context), context.RequestAborted);
+
+    if (outcome is null) return Results.BadRequest(new { error = "This sign-in does not belong to this deployment." });
+
+    // Checked after the state is unwrapped, because until then there is no engagement to
+    // check against. The state is signed, so it cannot name an engagement of its own choosing.
+    if (await Denied(context, outcome.EngagementId, EngagementRoles.Contributor) is not null)
+    {
+        return Results.Forbid();
+    }
+
+    return Results.Redirect(outcome.Succeeded
+        ? "/app/#Connections?signin=done"
+        : $"/app/#Connections?signin=failed&reason={Uri.EscapeDataString(outcome.Message)}");
 }).RequireAuthorization();
 
 // ------------------------------------------------------------------- uploads --

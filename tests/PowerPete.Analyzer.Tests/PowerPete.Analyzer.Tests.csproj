@@ -18,6 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\PowerPete.Analyzer.Analysis\PowerPete.Analyzer.Analysis.csproj" />
     <ProjectReference Include="..\..\src\PowerPete.Analyzer.Data\PowerPete.Analyzer.Data.csproj" />
+    <ProjectReference Include="..\..\src\PowerPete.Analyzer.Dataverse\PowerPete.Analyzer.Dataverse.csproj" />
     <ProjectReference Include="..\..\src\PowerPete.Analyzer.DevOps\PowerPete.Analyzer.DevOps.csproj" />
     <ProjectReference Include="..\..\src\PowerPete.Analyzer.Estimation\PowerPete.Analyzer.Estimation.csproj" />
     <ProjectReference Include="..\..\src\PowerPete.Analyzer.Export\PowerPete.Analyzer.Export.csproj" />

@@ -2,13 +2,11 @@
   "contract": "extraction-sources",
   "version": "1.0.0",
   "description": "How this product reaches a Power Platform estate, and honestly how much each way gives up. Selected per engagement. Generates the connection wizard, the capability matrix on the screens and in the microsite, and the not assessed section of every report.",
-
   "principles": {
     "absenceIsNotZero": "A rule whose evidence an extraction mode cannot reach is reported as not assessed. Never as passing and never as zero findings. The sibling product shipped a discovery that reported an empty estate when twenty-three reads had each failed separately, and it finished green. Saying a client has no technical debt when the truth is that nobody could read their environment is the most damaging thing this product could do in a sales conversation.",
     "readOnlyUntilDevOps": "Nothing this product does writes to a Power Platform environment. Ever, in any mode. The only write anywhere is to Azure DevOps, behind an approval gate. A discovery can therefore be run in a first conversation without a change advisory board, which is what makes it usable in presales.",
     "offlineIsFirstClass": "The zip mode is not a degraded fallback. It is the mode that gets past a security review in week one while the service principal request sits in a queue, and for a quality and debt assessment it reaches most of what matters."
   },
-
   "modes": [
     {
       "id": "servicePrincipal",
@@ -17,7 +15,11 @@
       "summary": "An Entra app registration added to the environment as an application user with a read only security role. The mode for anything repeatable.",
       "auth": {
         "type": "clientCredentials",
-        "settings": ["tenantId", "clientId", "environmentUrl"],
+        "settings": [
+          "tenantId",
+          "clientId",
+          "environmentUrl"
+        ],
         "secretRef": "Key Vault. No credential is ever stored in the product database.",
         "leastPrivilege": "A custom role granting read on the solution, component, workflow, plugin, web resource and process tables, plus read on the tables being analysed. The role definition ships with the product so a client's security team reviews a file rather than a description."
       },
@@ -33,12 +35,14 @@
     {
       "id": "delegated",
       "name": "Interactive sign in",
-      "status": "described",
-      "summary": "The consultant signs in with their own account and the product acts as them. Reaches the most, proves the least, and is the right mode for a workshop.",
+      "status": "supported",
+      "summary": "The consultant types the environment address and signs in. Nothing to register, no security role to request and no administrator to wait for, because reading Dataverse as yourself is a permission you grant yourself. Reaches the most and proves the least: a run made as an administrator is not evidence a least privileged integration could have made it.",
       "auth": {
         "type": "authorizationCode",
-        "settings": ["tenantId", "clientId", "environmentUrl"],
-        "secretRef": "A refresh token in Key Vault, scoped to the engagement and revoked when it closes.",
+        "settings": [
+          "environmentUrl"
+        ],
+        "secretRef": "A refresh token in Key Vault, obtained when the consultant signed in to the environment and scoped to that one organisation. Rotated on every use and revoked when the engagement closes.",
         "leastPrivilege": "Whatever the person holds, which is usually more than a reader and is the reason this mode is not the default. A run made as a system administrator cannot tell you what a service principal would have been able to see."
       },
       "reaches": {
@@ -56,7 +60,11 @@
       "summary": "An unmanaged solution export, uploaded. No connection, no credential, no security review. Reaches everything static and nothing operational.",
       "auth": {
         "type": "none",
-        "settings": ["uploadedFile", "declaredEnvironmentName", "exportedOnUtc"],
+        "settings": [
+          "uploadedFile",
+          "declaredEnvironmentName",
+          "exportedOnUtc"
+        ],
         "secretRef": null,
         "leastPrivilege": "None required. Somebody at the client exports a solution and sends it."
       },
@@ -71,16 +79,20 @@
       "consultantNote": "The mode to start every engagement in. It answers the quality and modernisation questions and defers the operational ones, which is the right order anyway."
     }
   ],
-
   "combination": {
     "description": "Modes combine within one engagement and the product merges what they return rather than preferring one wholesale.",
     "precedence": "For a component seen by more than one source: live metadata beats a zip for anything the zip cannot carry, the zip beats live metadata for definition detail, and runtime evidence only ever comes from a live connection.",
     "conflict": "Where a live read and a zip disagree about a component that should be identical, the finding is raised as an ALM finding rather than resolved silently. They disagreeing means somebody changed the environment after the export, which is itself worth reporting."
   },
-
   "environmentRoles": {
     "description": "What an environment is for, declared per connection rather than guessed from its name. Several rules only fire against production, and guessing wrong makes a report either alarmist or useless.",
-    "values": ["development", "test", "acceptance", "production", "unknown"],
+    "values": [
+      "development",
+      "test",
+      "acceptance",
+      "production",
+      "unknown"
+    ],
     "default": "unknown",
     "unknownBehaviour": "Rules scoped to production do not fire, and the report lists them as not assessed with a line saying which connection needs a role set. Assuming production would produce critical findings on somebody's sandbox."
   }

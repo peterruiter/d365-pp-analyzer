@@ -106,16 +106,25 @@ export function ConnectionWizard({
     setBusy(true);
     setError(null);
 
-    const result = await sendJson(`/api/engagements/${engagementId}/connections`, 'POST', {
-      mode: chosen.id,
-      name: name.trim() || chosen.name,
-      environmentRole: direction === 'target' ? 'production' : 'unknown',
-      settings: values,
-      secret: secret.trim() || null
-    });
+    const result = await sendJson<{ connectionId: string }>(
+      `/api/engagements/${engagementId}/connections`, 'POST', {
+        mode: chosen.id,
+        name: name.trim() || chosen.name,
+        environmentRole: direction === 'target' ? 'production' : 'unknown',
+        settings: values,
+        secret: secret.trim() || null
+      });
 
     if (result.error) {
       setError(result.error);
+    } else if (chosen.id === 'delegated' && result.data !== null) {
+      // Straight to Microsoft. The connection exists now and carries the environment
+      // address; what it does not have is anybody's permission to read it, and the only
+      // place that can be granted is the sign-in page. A full page navigation rather than a
+      // popup, because a popup is the thing every browser blocks and every consultant has
+      // already switched off.
+      window.location.href = `/api/connections/${result.data.connectionId}/authorize`;
+      return;
     } else {
       // The credential leaves the browser the moment it has been accepted. It is in the vault
       // now and nothing on this screen needs it again.
@@ -262,7 +271,9 @@ export function ConnectionWizard({
             <span>
               {missing.length > 0
                 ? t('connections.n-fields-left', missing.length)
-                : t('connections.ready-to-save')}
+                : chosen.authType === 'authorizationCode'
+                  ? t('connections.you-will-be-sent-to-microsoft')
+                  : t('connections.ready-to-save')}
             </span>
 
             <button
@@ -271,7 +282,9 @@ export function ConnectionWizard({
               disabled={busy || missing.length > 0}
               onClick={() => void save()}
             >
-              {t('connections.save')}
+              {chosen.authType === 'authorizationCode'
+                ? t('connections.sign-in-to-environment')
+                : t('connections.save')}
             </button>
           </div>
         </>

@@ -36,6 +36,9 @@ export type ExtractionMode = {
   summary: string;
   settings: string[];
   needsSecret: boolean;
+
+  /** clientCredentials, authorizationCode or none. Decides whether the wizard ends in a sign-in. */
+  authType: string;
   reaches: Record<string, string>;
 };
 

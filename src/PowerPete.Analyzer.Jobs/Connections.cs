@@ -153,6 +153,32 @@ public sealed class ConnectionFactory(ISecretStore secrets)
         return client;
     }
 
+    /// <summary>
+    /// This product's own app registration, which is what a delegated sign-in was granted to.
+    /// </summary>
+    /// <remarks>
+    /// Read from the environment, like everything else the worker is configured with. It is
+    /// the same registration the web application signs people in with: the consent a
+    /// consultant gave was given to this product, not to a registration per client.
+    /// </remarks>
+    private static (string Instance, string ClientId, string ClientSecret) ProductRegistration()
+    {
+        var clientId = Environment.GetEnvironmentVariable("AzureAd__ClientId");
+        var clientSecret = Environment.GetEnvironmentVariable("AzureAd__ClientSecret");
+
+        if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(clientSecret))
+        {
+            throw new InvalidOperationException(
+                "An interactive sign-in needs this product's own Entra client id and secret to redeem its refresh "
+                + "token, and the worker has not been given them. Set AzureAd__ClientId and AzureAd__ClientSecret.");
+        }
+
+        return (
+            Environment.GetEnvironmentVariable("AzureAd__Instance") ?? DelegatedTokens.DefaultInstance,
+            clientId,
+            clientSecret);
+    }
+
     private async Task<string> TokenAsync(Connection connection, Settings settings, string scope, CancellationToken cancellationToken)
     {
         var context = new TokenRequestContext([scope]);
@@ -174,13 +200,51 @@ public sealed class ConnectionFactory(ISecretStore secrets)
 
             case "delegated":
                 {
-                    // A refresh token stored per engagement and revoked when it closes. Every
-                    // report produced this way carries the identity it ran as, because a run
-                    // made as a system administrator is not evidence that a least privileged
-                    // integration could have made it.
-                    throw new NotSupportedException(
-                        "Delegated sign-in needs the interactive flow the web application owns, and there is no web " +
-                        "application yet. Use a service principal, or the offline solution file mode.");
+                    // A refresh token, obtained when somebody signed in to this environment in
+                    // the web application and stored per connection in Key Vault. Every report
+                    // produced this way carries the identity it ran as, because a run made as a
+                    // system administrator is not evidence that a least privileged integration
+                    // could have made it.
+                    if (connection.SecretRef is null)
+                    {
+                        throw new InvalidOperationException(
+                            $"Connection '{connection.Name}' is an interactive sign-in that nobody has completed. "
+                            + "Open it in the web application and sign in to the environment.");
+                    }
+
+                    if (string.IsNullOrWhiteSpace(settings.EnvironmentUrl))
+                    {
+                        throw new InvalidOperationException(
+                            $"Connection '{connection.Name}' has no environment address on it.");
+                    }
+
+                    var product = ProductRegistration();
+                    var name = SecretNames.For(connection.SecretRef, "refresh");
+                    var refreshToken = await secrets.GetAsync(name, cancellationToken).ConfigureAwait(false)
+                        ?? throw new InvalidOperationException(
+                            $"The sign-in for connection '{connection.Name}' is not in the vault any more. Sign in to the environment again.");
+
+                    var environment = DelegatedTokens.NormaliseEnvironment(settings.EnvironmentUrl)
+                        ?? throw new InvalidOperationException(
+                            $"Connection '{connection.Name}' has an environment address that is not a usable address.");
+
+                    var tokens = await DelegatedTokens.RefreshAsync(
+                        Shared,
+                        new DelegatedTokens.TokenRequest(
+                            product.Instance, "organizations", product.ClientId, product.ClientSecret, environment),
+                        refreshToken,
+                        cancellationToken).ConfigureAwait(false);
+
+                    // Entra rotates refresh tokens: the response carries a new one and the old
+                    // one stops working. Storing it back is what makes the second run work.
+                    // Key Vault keeps the previous value as an older version, so a run that
+                    // fails between here and the next one is recoverable.
+                    if (!string.IsNullOrWhiteSpace(tokens.RefreshToken) && tokens.RefreshToken != refreshToken)
+                    {
+                        await secrets.SetAsync(name, tokens.RefreshToken, cancellationToken).ConfigureAwait(false);
+                    }
+
+                    return tokens.AccessToken;
                 }
 
             default:
