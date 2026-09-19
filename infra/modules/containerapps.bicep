@@ -46,6 +46,9 @@ param sqlConnectionString string
 @description('Where credentials live. Without it the product refuses to store one rather than putting it in the database.')
 param keyVaultUri string
 
+@description('The blob container an exported solution file is uploaded to.')
+param uploadContainerUri string = ''
+
 @description('Entra tenant for sign in. Empty leaves authentication off, which is only ever right on a developer machine.')
 param azureAdTenantId string = ''
 
@@ -128,6 +131,8 @@ var commonEnv = [
   { name: 'AZURE_CLIENT_ID', value: identityClientId }
   { name: 'ConnectionStrings__Analyzer', value: sqlConnectionString }
   { name: 'KeyVault__Uri', value: keyVaultUri }
+  // The API writes an uploaded solution here and the worker reads it back, so both need it.
+  { name: 'ANALYZER_UPLOAD_CONTAINER', value: uploadContainerUri }
   { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
   { name: 'AzureAd__TenantId', value: azureAdTenantId }
   { name: 'AzureAd__ClientId', value: azureAdClientId }

@@ -98,6 +98,15 @@ module keyVault 'modules/keyvault.bicep' = {
   }
 }
 
+module storage 'modules/storage.bicep' = {
+  name: 'storage'
+  params: {
+    location: location
+    namePrefix: namePrefix
+    identityPrincipalId: identity.properties.principalId
+  }
+}
+
 module monitoring 'modules/monitoring.bicep' = {
   name: 'monitoring'
   params: {
@@ -123,6 +132,7 @@ module containers 'modules/containerapps.bicep' = {
     // database takes about a minute to wake and the credential chain is not instant either.
     sqlConnectionString: '${sql.outputs.connectionString}Authentication=Active Directory Default;Connect Timeout=90;'
     keyVaultUri: keyVault.outputs.vaultUri
+    uploadContainerUri: storage.outputs.uploadContainerUri
     azureAdTenantId: azureAdTenantId
     azureAdClientId: azureAdClientId
     azureAdClientSecret: azureAdClientSecret
@@ -151,6 +161,9 @@ output keyVaultName string = keyVault.outputs.vaultName
 
 @description('What goes in KeyVault:Uri. Without it the product refuses to store a credential rather than putting one in the database.')
 output keyVaultUri string = keyVault.outputs.vaultUri
+
+@description('Where an uploaded solution file goes.')
+output uploadContainerUri string = storage.outputs.uploadContainerUri
 
 @description('Where the product is.')
 output apiUrl string = containers.outputs.apiUrl
