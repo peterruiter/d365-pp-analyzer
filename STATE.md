@@ -670,7 +670,7 @@ The build gates, for reference:
 2. `./build/Test-Generators.ps1` — generates into a throwaway folder and checks the output.
    Passes.
 3. `./build/Invoke-CodeGen.ps1` — generates and builds. Twelve of twelve, no warnings.
-4. `dotnet test` — 99 tests, all passing.
+4. `dotnet test` — 100 tests, all passing.
 5. `./build/New-SampleSolution.ps1` then `analyse samples/SampleSolution.zip` — sixteen
    planted defects, twelve found and four correctly not assessed.
 
@@ -748,6 +748,55 @@ entry and fails in both directions: a newly declared type with no reader fails u
 writes one or records why not, and a type that gains a reader fails until it leaves the list.
 That is the guard that was missing for all three of the defects above. It was confirmed to
 fail on a removed entry before being kept.
+
+## The report looks like its siblings now, and the microsite shows it
+
+A client receives two of these from the same account team in the same month. A report that
+does not look like the other one reads as a document from somebody else, so the furniture
+matters more than it sounds.
+
+The palette and the typeface were already right and both wordmarks were already embedded in
+the assembly. **Nothing had ever drawn one.** The cover now carries the wordmark reversed out
+of the navy band, the product name and "Make it real." opposite it, the blue rule under the
+band, a prepared-by line, and for the demonstration estate an orange banner saying the data
+is a sample. Every footer carries the engagement, the page number and the wordmark in blue.
+
+### Two defects that only appear when you render it and look
+
+**Syncfusion draws nothing when a line box does not fit its rectangle.** No exception, no
+clipped glyph, an empty space where the text was. The default line height of 1.45 puts a 9pt
+string a fraction of a point over a 14pt box, so the first render of the new cover came out
+with the wordmark present and the product name and the tagline simply absent. This is the
+second time this has cost an afternoon; the first was the donut centre.
+
+**A running header is a document template, and a template paints over page content.** The
+cover could not cover it, so a stray engagement name floated above the navy. The cover gets
+its own section with `ApplyDocumentTopTemplate` switched off.
+
+### The front page was three quarters empty
+
+Band, four figures, then most of a page of white. It rendered, it was branded, and it read as
+a document somebody abandoned. Page one now carries what the report says and the worst six
+findings with their estimates, which is the shape the sibling reports use.
+
+The consultant's paragraph where there is one, falling back to a generated sentence rather
+than to the section prompt: a prompt is the right thing on the page that asks for it and the
+wrong thing on a cover that gets forwarded, where it reads as an unfinished draft.
+
+The hour range on the cover was formatted by plain interpolation rather than against
+`Culture`, so it came out as `342,00-1.324 h` on a machine set to Dutch and would have
+printed differently depending on which region the container happened to run in.
+
+### The microsite
+
+A report section with eight real pages from the demonstration estate, flipped with scroll
+snap the way the siblings do it, and the hero gains the cover beside the headline. The hero
+carried one column until now with a comment saying there was nothing true to put there and
+that an invented picture of a product is worse than none. There is something true now.
+
+Still no screenshots of the application itself. They need a signed-in session and the only
+account on this machine is in the wrong tenant, so that is the one thing on the microsite
+that is still missing.
 
 ## What was ported rather than invented
 
