@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useT, useLanguage } from './i18n';
 import { UserAdministration } from './UserAdministration';
 import { AccessWizard } from './AccessWizard';
+import { EngagementSettings } from './EngagementSettings';
 import { getJson, sendJson, when, type Engagement } from './workspace';
 
 /**
@@ -38,6 +39,7 @@ export function AdministrationPage({
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
   const [accessEngagement, setAccessEngagement] = useState<Engagement | null>(null);
+  const [settingsEngagement, setSettingsEngagement] = useState<Engagement | null>(null);
 
   useEffect(() => {
     // Clearing the form when the reader leaves it, so reopening does not present a
@@ -202,6 +204,18 @@ export function AdministrationPage({
                             </button>
                           )}
 
+                          {/* The name, the client and the two languages, none of which
+                              could be changed once the engagement existed. */}
+                          {(isGlobalAdmin || engagement.accessRole === 'Admin') && (
+                            <button
+                              type="button"
+                              className="secondary-button small"
+                              onClick={() => setSettingsEngagement(engagement)}
+                            >
+                              {t('common.edit')}
+                            </button>
+                          )}
+
                           {/* Deleting an engagement takes everything a client gave us with it,
                               so it asks twice. */}
                           {(isGlobalAdmin || engagement.accessRole === 'Admin') && (
@@ -241,6 +255,14 @@ export function AdministrationPage({
           {confirming && <p className="panel-note">{t('admin.delete-engagement-warning')}</p>}
           {error && <p className="curation-message danger">{error}</p>}
         </section>
+      )}
+
+      {settingsEngagement && (
+        <EngagementSettings
+          engagement={settingsEngagement}
+          onClose={() => setSettingsEngagement(null)}
+          onSaved={() => { setSettingsEngagement(null); void refresh(); }}
+        />
       )}
 
       {accessEngagement && (

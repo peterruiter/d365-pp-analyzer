@@ -5,6 +5,7 @@
     <ProjectReference Include="..\PowerPete.Analyzer.Data\PowerPete.Analyzer.Data.csproj" />
     <ProjectReference Include="..\PowerPete.Analyzer.Dataverse\PowerPete.Analyzer.Dataverse.csproj" />
     <ProjectReference Include="..\PowerPete.Analyzer.Export\PowerPete.Analyzer.Export.csproj" />
+    <ProjectReference Include="..\PowerPete.Analyzer.DevOps\PowerPete.Analyzer.DevOps.csproj" />
     <!-- For the demonstration engagement, whose numbers are produced by the real
          assessor rather than written out, so the demo cannot disagree with the product. -->
     <ProjectReference Include="..\PowerPete.Analyzer.Pipeline\PowerPete.Analyzer.Pipeline.csproj" />

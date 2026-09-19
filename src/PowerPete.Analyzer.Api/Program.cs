@@ -12,6 +12,7 @@ using PowerPete.Analyzer.Export.Pdf;
 using PowerPete.Analyzer.Api;
 using Microsoft.AspNetCore.DataProtection;
 using PowerPete.Analyzer.Data;
+using PowerPete.Analyzer.DevOps;
 using PowerPete.Analyzer.Dataverse;
 using PowerPete.Analyzer.Domain;
 using PowerPete.Analyzer.Pipeline;
@@ -60,6 +61,7 @@ var connectionString = builder.Configuration.GetConnectionString("Analyzer")
 var keyVaultUri = builder.Configuration["KeyVaultUri"] ?? Environment.GetEnvironmentVariable("ANALYZER_KEYVAULT_URI");
 var initialAdmin = builder.Configuration["InitialGlobalAdmin"] ?? Environment.GetEnvironmentVariable("ANALYZER_INITIAL_ADMIN");
 
+builder.Services.AddSingleton<DevOpsProjects>();
 builder.Services.AddSingleton(new WorkspaceStore(connectionString));
 builder.Services.AddSingleton(new AnalysisStore(connectionString));
 builder.Services.AddSingleton(new AccessStore(connectionString));
@@ -803,6 +805,229 @@ app.MapGet("/api/extraction-modes", () =>
     return Results.Ok(modes);
 }).RequireAuthorization();
 
+// Where a backlog can be published. Separate from the extraction modes because publishing
+// is the one thing this product does that writes, and a screen that listed it beside the
+// ways of reading an estate would be inviting somebody to pick it as a source.
+app.MapGet("/api/publish-targets", () =>
+{
+    var path = ContractFiles.Path("extraction-sources.json");
+
+    if (!File.Exists(path)) return Results.Ok(Array.Empty<object>());
+
+    using var document = JsonDocument.Parse(File.ReadAllText(path));
+
+    if (!document.RootElement.TryGetProperty("targets", out var targets)) return Results.Ok(Array.Empty<object>());
+
+    // Materialised inside the using. The same lazy-Select-over-a-disposed-document that
+    // emptied the connection wizard once already.
+    var list = targets.EnumerateArray().Select(target => new
+    {
+        id = target.GetProperty("id").GetString(),
+        name = target.GetProperty("name").GetString(),
+        status = target.GetProperty("status").GetString(),
+        summary = target.GetProperty("summary").GetString(),
+        settings = target.GetProperty("auth").GetProperty("settings")
+            .EnumerateArray().Select(setting => setting.GetString()).ToList(),
+        needsSecret = true,
+        authType = target.GetProperty("auth").GetProperty("type").GetString(),
+        reaches = new Dictionary<string, string>(StringComparer.Ordinal)
+    }).ToList();
+
+    return Results.Ok(list);
+}).RequireAuthorization();
+
+// The projects in the organisation a connection points at.
+//
+// Listed rather than typed. Azure DevOps answers 404 both for a project that does not exist
+// and for one the token cannot see, and from here the two are the same reply, so a typed
+// name fails in the one way nobody can diagnose. A list that came back through the same
+// token that will do the publishing cannot contain either.
+app.MapGet("/api/engagements/{engagementId:guid}/connections/{connectionId:guid}/projects",
+    async (HttpContext context, WorkspaceStore store, DevOpsProjects projects, Guid engagementId, Guid connectionId) =>
+{
+    if (await Denied(context, engagementId, EngagementRoles.Contributor) is { } denied) return denied;
+
+    var connection = await store.GetConnectionAsync(connectionId, context.RequestAborted);
+
+    if (connection is null || connection.EngagementId != engagementId) return Results.NotFound();
+
+    if (!string.Equals(connection.Mode, "azureDevOps", StringComparison.Ordinal))
+    {
+        return Results.BadRequest(new { error = "That connection does not publish anywhere." });
+    }
+
+    var settings = ConnectionSettings(connection.SettingsJson);
+    settings.TryGetValue("organisationUrl", out var organisation);
+
+    var secrets = context.RequestServices.GetRequiredService<ISecretStore>();
+    var token = connection.SecretRef is { Length: > 0 } reference
+        ? await secrets.GetAsync(SecretNames.For(reference, "secret"), context.RequestAborted)
+        : null;
+
+    var result = await projects.ListAsync(organisation ?? string.Empty, token ?? string.Empty, context.RequestAborted);
+
+    if (result.Error is not null) return Results.BadRequest(new { error = result.Error });
+
+    return Results.Ok(result.Projects.Select(project => new { project.Id, project.Name, project.Description }));
+}).RequireAuthorization();
+
+// Publishing a chosen set of the backlog into a chosen project.
+//
+// Both halves are the point. The worker's publish run mode sends the whole approved backlog
+// to the project named on the connection, which is right for a pipeline and wrong for a
+// person: the usual case is a consultant walking a client through the backlog and agreeing
+// that this epic and those four tasks go in now. So the items are chosen here and the
+// project is chosen here, and neither is remembered on the connection.
+app.MapPost("/api/engagements/{engagementId:guid}/publish",
+    async (HttpContext context,
+        WorkspaceStore workspace,
+        AnalysisStore analysis,
+        IHttpClientFactory factory,
+        Guid engagementId,
+        PublishRequest request) =>
+{
+    ArgumentNullException.ThrowIfNull(request);
+
+    if (await Denied(context, engagementId, EngagementRoles.Contributor) is { } denied) return denied;
+
+    var connection = await workspace.GetConnectionAsync(request.ConnectionId, context.RequestAborted);
+
+    if (connection is null || connection.EngagementId != engagementId) return Results.NotFound();
+
+    if (!string.Equals(connection.Mode, "azureDevOps", StringComparison.Ordinal))
+    {
+        return Results.BadRequest(new { error = "That connection does not publish anywhere." });
+    }
+
+    if (string.IsNullOrWhiteSpace(request.Project))
+    {
+        return Results.BadRequest(new { error = "Choose a project." });
+    }
+
+    var run = await analysis.GetLatestScoredRunAsync(engagementId, context.RequestAborted);
+
+    if (run is null) return Results.BadRequest(new { error = "Nothing has been analysed, so there is no backlog." });
+
+    // The approval, and what it was bound to. Publishing something nobody approved is the
+    // failure the approval exists to prevent, and it is worth refusing here as well as in
+    // the publisher: this endpoint does not go through a run.
+    var approved = await workspace.GetApprovedHashAsync(run.Value, context.RequestAborted);
+
+    if (approved is null)
+    {
+        return Results.BadRequest(new
+        {
+            error = "This backlog has not been approved. Approve it first: the approval is what records that "
+                + "somebody read these items before they landed in a client's project."
+        });
+    }
+
+    var all = await analysis.GetPublishableBacklogAsync(run.Value, context.RequestAborted);
+
+    var chosen = request.Keys is { Count: > 0 }
+        ? all.Where(item => request.Keys.Contains(item.Key, StringComparer.Ordinal)).ToList()
+        : [.. all];
+
+    if (chosen.Count == 0) return Results.BadRequest(new { error = "Nothing was selected." });
+
+    // A child without its parent is an orphan in the target project, so the parents of
+    // everything chosen come too. Somebody ticking three tasks under an epic means those
+    // three tasks in that epic, not three tasks loose in a backlog.
+    var byKey = all.ToDictionary(item => item.Key, StringComparer.Ordinal);
+    var wanted = new HashSet<string>(chosen.Select(item => item.Key), StringComparer.Ordinal);
+
+    foreach (var item in chosen)
+    {
+        var parent = item.ParentKey;
+
+        while (parent is not null && wanted.Add(parent) && byKey.TryGetValue(parent, out var above))
+        {
+            parent = above.ParentKey;
+        }
+    }
+
+    var items = all
+        .Where(item => wanted.Contains(item.Key))
+        .Select(item => new BacklogItem(
+            item.Key, item.Type, item.Title, item.DescriptionHtml, item.AcceptanceCriteria,
+            item.TestRequirement, item.Priority, item.StoryPoints, item.LowHours, item.HighHours,
+            item.Tags, item.ParentKey, []))
+        .ToList();
+
+    var settings = ConnectionSettings(connection.SettingsJson);
+    settings.TryGetValue("organisationUrl", out var organisation);
+
+    if (string.IsNullOrWhiteSpace(organisation))
+    {
+        return Results.BadRequest(new { error = "This connection has no organisation address on it." });
+    }
+
+    var secrets = context.RequestServices.GetRequiredService<ISecretStore>();
+    var token = connection.SecretRef is { Length: > 0 } reference
+        ? await secrets.GetAsync(SecretNames.For(reference, "secret"), context.RequestAborted)
+        : null;
+
+    if (string.IsNullOrWhiteSpace(token))
+    {
+        return Results.BadRequest(new { error = "This connection has no personal access token. Edit it and add one." });
+    }
+
+    using var client = factory.CreateClient("devops");
+    client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
+        "Basic", Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes($":{token}")));
+
+    var publisher = new WorkItemPublisher(client, organisation, request.Project);
+
+    try
+    {
+        var published = await publisher.PublishAsync(
+            items,
+
+            // The same hash twice. The publisher compares what was approved with what is
+            // being published, and here they are the same backlog by construction: the
+            // items were read from the run the approval is against.
+            approved,
+            approved,
+            request.DryRun,
+
+            // Confirmed by the person pressing the button, which the screen shows a count
+            // on. The publisher refuses more than two hundred without one.
+            confirmedCount: items.Count,
+            context.RequestAborted);
+
+        if (!request.DryRun)
+        {
+            await analysis.WritePublishedAsync(run.Value,
+                [.. published.Select(entry => (run.Value, organisation, request.Project,
+                    entry.WorkItemId, entry.Url, entry.Action))],
+                context.RequestAborted);
+        }
+
+        return Results.Ok(new
+        {
+            request.DryRun,
+            project = request.Project,
+            requested = chosen.Count,
+            published = published.Count,
+
+            // Said because it is surprising. Ticking a task pulls in the epic above it, and
+            // a count that came back larger than the number of boxes ticked needs to say
+            // why before somebody thinks it published the wrong thing.
+            parentsIncluded = items.Count - chosen.Count,
+            items = published.Select(entry => new { entry.Key, entry.WorkItemId, entry.Url, entry.Action })
+        });
+    }
+    catch (InvalidOperationException refused)
+    {
+        // The publisher's own refusals, which are written for a person to read.
+        return Results.BadRequest(new { error = refused.Message });
+    }
+    catch (HttpRequestException failure)
+    {
+        return Results.BadRequest(new { error = $"Azure DevOps could not be reached: {failure.Message}" });
+    }
+}).RequireAuthorization();
+
 // ------------------------------------------------------------------ overview --
 // What the latest finished analysis adds up to. The overview reads this and nothing else, so
 // the headline figures on the first screen of the product and the figures in the report come
@@ -1033,6 +1258,48 @@ app.MapPost("/api/engagements/{engagementId:guid}/connections",
     return Results.Created(
         $"/api/engagements/{engagementId}/connections",
         new { connection.ConnectionId, connection.Mode, connection.Name, connection.EnvironmentRole });
+}).RequireAuthorization();
+
+// Changing an engagement, which was also not possible.
+//
+// A client's name typed wrong on the day it was created stayed wrong on the cover of every
+// report afterwards, and the report language could only be chosen at creation, before
+// anybody knew who was going to read it.
+app.MapPut("/api/engagements/{engagementId:guid}",
+    async (HttpContext context, WorkspaceStore store, Guid engagementId, UpdateEngagement request) =>
+{
+    ArgumentNullException.ThrowIfNull(request);
+
+    // Admin rather than contributor. Renaming an engagement changes what every report it
+    // produces says on its cover.
+    if (await Denied(context, engagementId, EngagementRoles.Admin) is { } denied) return denied;
+
+    if (string.IsNullOrWhiteSpace(request.Name))
+    {
+        return Results.BadRequest(new { error = "An engagement needs a name." });
+    }
+
+    // Refused rather than stored. A language this product does not ship would fall through
+    // every lookup and print resource keys down the page of a document with a client's name
+    // on it.
+    foreach (var language in new[] { request.ReportLanguage, request.BacklogLanguage })
+    {
+        if (language is { Length: > 0 } code && !LocaleCatalogue.All.Any(locale => locale.Code == code))
+        {
+            return Results.BadRequest(new { error = $"'{code}' is not a language this product ships." });
+        }
+    }
+
+    var updated = await store.UpdateEngagementAsync(
+        engagementId,
+        request.Name.Trim(),
+        string.IsNullOrWhiteSpace(request.ClientName) ? null : request.ClientName.Trim(),
+        request.IsRegulated,
+        request.ReportLanguage ?? "en",
+        request.BacklogLanguage ?? request.ReportLanguage ?? "en",
+        context.RequestAborted);
+
+    return updated ? Results.Ok(new { engagementId, request.Name }) : Results.NotFound();
 }).RequireAuthorization();
 
 // Changing one, which was not possible at all.
@@ -1806,6 +2073,38 @@ internal sealed record UpdateConnection(
     Dictionary<string, string>? Settings,
     string? Secret,
     DateTime? SecretExpiresUtc);
+
+/// <summary>
+/// A request to publish part of a backlog.
+/// </summary>
+/// <param name="ConnectionId">Which Azure DevOps connection.</param>
+/// <param name="Project">Which project in that organisation, chosen per publish.</param>
+/// <param name="Keys">The deterministic keys chosen, or empty for all of them.</param>
+/// <param name="DryRun">Report what would happen and call nothing.</param>
+internal sealed record PublishRequest(
+    Guid ConnectionId,
+    string Project,
+    IReadOnlyList<string>? Keys,
+    bool DryRun);
+
+/// <summary>
+/// A change to an engagement.
+/// </summary>
+/// <remarks>
+/// No status and no identifier. Status is moved by what happens to the engagement rather
+/// than by editing a field, and the identifier is what every run hangs off.
+/// </remarks>
+/// <param name="Name">What it is called.</param>
+/// <param name="ClientName">Who it is for, which is what a report says on its cover.</param>
+/// <param name="IsRegulated">Drives a multiplier on every estimate.</param>
+/// <param name="ReportLanguage">The language the report is produced in.</param>
+/// <param name="BacklogLanguage">The language work items are written in.</param>
+internal sealed record UpdateEngagement(
+    string Name,
+    string? ClientName,
+    bool IsRegulated,
+    string? ReportLanguage,
+    string? BacklogLanguage);
 
 /// <summary>A new engagement.</summary>
 /// <param name="Name">What it is called.</param>

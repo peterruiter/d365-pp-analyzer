@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useT, type Translate } from './i18n';
-import { getJson, range, type Backlog, type BacklogItem } from './workspace';
+import { getJson, sendJson, range, type Backlog, type BacklogItem, type Connection } from './workspace';
+import { useCan } from './access';
 
 /**
  * Turns the acceptance criteria into lines a screen can show.
@@ -88,19 +89,36 @@ function Criteria({ item, t }: { item: BacklogItem; t: Translate }) {
  * Closed by default below the top level. The point of the tree is that somebody can read
  * the shape of the work before reading any of it.
  */
-function Item({ item, childrenOf, t, depth }: {
+function Item({ item, childrenOf, t, depth, selected, onToggle }: {
   item: BacklogItem;
   childrenOf: Map<string, BacklogItem[]>;
   t: Translate;
   depth: number;
+
+  /** The keys ticked, or null where nothing is choosing anything. */
+  selected: Set<string> | null;
+  onToggle: (item: BacklogItem, on: boolean) => void;
 }) {
   const children = childrenOf.get(item.backlogItemId) ?? [];
   const hours = range(item.lowHours, item.highHours);
+  const ticked = selected?.has(item.deterministicKey) ?? false;
 
   return (
     <details className={`backlog-item depth-${depth}`} open={depth === 0}>
       <summary>
         <span className="backlog-title">
+          {selected !== null && (
+            /* Stops the click reaching the summary, which would toggle the fold rather
+               than the box and makes ticking a parent feel like it did nothing. */
+            <input
+              type="checkbox"
+              className="backlog-tick"
+              checked={ticked}
+              aria-label={item.title}
+              onClick={(event) => event.stopPropagation()}
+              onChange={(event) => onToggle(item, event.target.checked)}
+            />
+          )}
           <span className={`tag type-${item.workItemType}`}>{t('backlog.type-' + item.workItemType)}</span>
           <strong>{item.title}</strong>
         </span>
@@ -123,7 +141,15 @@ function Item({ item, childrenOf, t, depth }: {
               .slice()
               .sort((a, b) => a.priority - b.priority)
               .map((child) => (
-                <Item key={child.backlogItemId} item={child} childrenOf={childrenOf} t={t} depth={depth + 1} />
+                <Item
+              key={child.backlogItemId}
+              item={child}
+              childrenOf={childrenOf}
+              t={t}
+              depth={depth + 1}
+              selected={selected}
+              onToggle={onToggle}
+            />
               ))}
           </div>
         )}
@@ -151,8 +177,37 @@ function Item({ item, childrenOf, t, depth }: {
  */
 export function BacklogPage({ engagementId }: { engagementId: string }) {
   const t = useT();
+  const canPublish = useCan('Contributor');
   const [backlog, setBacklog] = useState<Backlog | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  /**
+   * Ticks an item and everything under it.
+   *
+   * Ticking an epic means the epic and its children, because nobody ticking "ALM" means
+   * the empty container. Unticking does the same in reverse. The parents of a ticked child
+   * are added by the server rather than here: a child published without its parent is an
+   * orphan in the target project, and that rule belongs where it cannot be skipped.
+   */
+  function toggle(item: BacklogItem, on: boolean) {
+    setSelected((current) => {
+      const next = new Set(current);
+      const items = backlog?.items ?? [];
+
+      const subtree = (id: string): BacklogItem[] => {
+        const mine = items.filter((candidate) => candidate.parentItemId === id);
+        return [...mine, ...mine.flatMap((child) => subtree(child.backlogItemId))];
+      };
+
+      for (const affected of [item, ...subtree(item.backlogItemId)]) {
+        if (on) next.add(affected.deterministicKey);
+        else next.delete(affected.deterministicKey);
+      }
+
+      return next;
+    });
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -219,11 +274,191 @@ export function BacklogPage({ engagementId }: { engagementId: string }) {
 
       <div className="backlog-tree">
         {roots.map((item) => (
-          <Item key={item.backlogItemId} item={item} childrenOf={childrenOf} t={t} depth={0} />
+          <Item
+            key={item.backlogItemId}
+            item={item}
+            childrenOf={childrenOf}
+            t={t}
+            depth={0}
+            selected={canPublish ? selected : null}
+            onToggle={toggle}
+          />
         ))}
       </div>
 
+      {canPublish && (
+        <PublishPanel
+          engagementId={engagementId}
+          selected={selected}
+          total={backlog.items.length}
+          onClear={() => setSelected(new Set())}
+          t={t}
+        />
+      )}
+
       <p className="panel-note">{t('backlog.nothing-published-yet')}</p>
     </section>
+  );
+}
+
+/** One project in an Azure DevOps organisation. */
+type Project = { id: string; name: string; description: string | null };
+
+/**
+ * Where a chosen part of the backlog goes.
+ *
+ * The project is a list rather than a text box, loaded through the same token that will do
+ * the publishing. Azure DevOps answers 404 both for a project that does not exist and for
+ * one the token cannot see, so a typed name fails in the one way nobody can diagnose.
+ *
+ * Nothing is published until somebody has seen a count. A dry run is offered first and is
+ * the default thing to press, because the mistake this screen can make is putting several
+ * hundred work items into a client's project, and that mistake is not undoable from here.
+ */
+function PublishPanel({ engagementId, selected, total, onClear, t }: {
+  engagementId: string;
+  selected: Set<string>;
+  total: number;
+  onClear: () => void;
+  t: Translate;
+}) {
+  const [targets, setTargets] = useState<Connection[]>([]);
+  const [connectionId, setConnectionId] = useState('');
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [project, setProject] = useState('');
+  const [loadingProjects, setLoadingProjects] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void getJson<Connection[]>(`/api/engagements/${engagementId}/connections`).then((answer) => {
+      if (cancelled) return;
+
+      const found = (answer.data ?? []).filter((candidate) => candidate.mode === 'azureDevOps');
+      setTargets(found);
+      if (found.length === 1) setConnectionId(found[0].connectionId);
+    });
+
+    return () => { cancelled = true; };
+  }, [engagementId]);
+
+  // The projects come from the organisation the chosen connection points at, so they are
+  // reloaded whenever that changes rather than once on mount.
+  useEffect(() => {
+    if (!connectionId) { setProjects([]); return; }
+
+    let cancelled = false;
+    setLoadingProjects(true);
+    setError(null);
+
+    void getJson<Project[]>(`/api/engagements/${engagementId}/connections/${connectionId}/projects`)
+      .then((answer) => {
+        if (cancelled) return;
+
+        setProjects(answer.data ?? []);
+        setProject(answer.data?.length === 1 ? answer.data[0].name : '');
+        setError(answer.error);
+        setLoadingProjects(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [engagementId, connectionId]);
+
+  async function publish(dryRun: boolean) {
+    setBusy(true);
+    setError(null);
+    setResult(null);
+
+    const answer = await sendJson<{
+      published: number; requested: number; parentsIncluded: number; dryRun: boolean;
+    }>(`/api/engagements/${engagementId}/publish`, 'POST', {
+      connectionId,
+      project,
+      keys: [...selected],
+      dryRun
+    });
+
+    setBusy(false);
+
+    if (answer.error) { setError(answer.error); return; }
+    if (!answer.data) return;
+
+    const { published, parentsIncluded } = answer.data;
+
+    setResult(dryRun
+      ? t('backlog.publish.would', published)
+      : t('backlog.publish.done', published));
+
+    // Said because it is surprising: ticking a task pulls in the epic above it, and a
+    // count larger than the boxes ticked needs a reason before somebody thinks it
+    // published the wrong thing.
+    if (parentsIncluded > 0) {
+      setResult((current) => `${current} ${t('backlog.publish.parents', parentsIncluded)}`);
+    }
+  }
+
+  if (targets.length === 0) {
+    return (
+      <div className="publish-panel">
+        <h3>{t('backlog.publish')}</h3>
+        <p className="muted">{t('backlog.publish.no-target')}</p>
+      </div>
+    );
+  }
+
+  const count = selected.size;
+  const ready = connectionId !== '' && project !== '' && count > 0 && !busy;
+
+  return (
+    <div className="publish-panel">
+      <h3>{t('backlog.publish')}</h3>
+
+      <div className="field-row">
+        <label>
+          {t('backlog.publish.target')}
+          <select value={connectionId} onChange={(event) => setConnectionId(event.target.value)}>
+            <option value="">{t('backlog.publish.choose-target')}</option>
+            {targets.map((target) => (
+              <option key={target.connectionId} value={target.connectionId}>{target.name}</option>
+            ))}
+          </select>
+        </label>
+
+        <label>
+          {t('backlog.publish.project')}
+          <select
+            value={project}
+            disabled={loadingProjects || projects.length === 0}
+            onChange={(event) => setProject(event.target.value)}>
+            <option value="">
+              {loadingProjects ? t('common.loading') : t('backlog.publish.choose-project')}
+            </option>
+            {projects.map((candidate) => (
+              <option key={candidate.id} value={candidate.name}>{candidate.name}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <p className="muted">
+        {count === 0 ? t('backlog.publish.nothing-selected', total) : t('backlog.publish.n-selected', count)}
+        {count > 0 && <> · <button type="button" className="link-button" onClick={onClear}>{t('common.clear')}</button></>}
+      </p>
+
+      <div className="field-row">
+        <button type="button" className="secondary-button" disabled={!ready} onClick={() => void publish(true)}>
+          {t('backlog.publish.dry-run')}
+        </button>
+        <button type="button" className="primary-button" disabled={!ready} onClick={() => void publish(false)}>
+          {t('backlog.publish.go', count)}
+        </button>
+      </div>
+
+      {error && <p className="error">{error}</p>}
+      {result && <p className="curation-message">{result}</p>}
+    </div>
   );
 }

@@ -597,6 +597,100 @@ public sealed class AnalysisStore(string connectionString)
         return [.. rows];
     }
 
+    /// <summary>A backlog item with everything a work item needs on it.</summary>
+    /// <param name="Key">The deterministic key, which is how a republish finds what it made.</param>
+    /// <param name="ParentKey">The parent's key, resolved from the identifier the row holds.</param>
+    /// <param name="Type">epic, feature, story, bug or task.</param>
+    /// <param name="Title">Its title.</param>
+    /// <param name="DescriptionHtml">The body.</param>
+    /// <param name="AcceptanceCriteria">What has to be true before it is done.</param>
+    /// <param name="TestRequirement">How to prove it.</param>
+    /// <param name="Priority">Lower is sooner.</param>
+    /// <param name="StoryPoints">Where anybody set them.</param>
+    /// <param name="LowHours">The estimate.</param>
+    /// <param name="HighHours">The estimate.</param>
+    /// <param name="Tags">The tags the builder put on it.</param>
+    public sealed record PublishableItem(
+        string Key, string? ParentKey, string Type, string Title, string DescriptionHtml,
+        string AcceptanceCriteria, string TestRequirement, int Priority, int? StoryPoints,
+        decimal? LowHours, decimal? HighHours, IReadOnlyList<string> Tags);
+
+    /// <summary>
+    /// The backlog with the fields a publish needs, which the screen's read leaves out.
+    /// </summary>
+    /// <remarks>
+    /// A second read rather than widening the first. The screen draws a tree and needs a
+    /// title and an estimate; a publish needs the description, the tags and the parent's
+    /// key, and sending a few hundred descriptions to a browser that will not render them
+    /// is a page that loads slowly for no reason.
+    ///
+    /// The parent arrives as an identifier and the publisher wants a key, because the key
+    /// is what survives a re-extraction and is how a republish finds the work item it made
+    /// last time. Resolved here, where both columns are already in hand.
+    /// </remarks>
+    /// <param name="runId">Which run.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task<IReadOnlyList<PublishableItem>> GetPublishableBacklogAsync(
+        Guid runId,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        var rows = await connection.QueryAsync<(Guid BacklogItemId, Guid? ParentItemId, string WorkItemType,
+            string Title, string DescriptionHtml, string AcceptanceCriteria, string TestRequirement,
+            int Priority, int? StoryPoints, decimal? LowHours, decimal? HighHours, string TagsJson,
+            string DeterministicKey)>(
+            new CommandDefinition(
+                """
+                SELECT BacklogItemId, ParentItemId, WorkItemType, Title, DescriptionHtml,
+                       AcceptanceCriteria, TestRequirement, Priority, StoryPoints, LowHours,
+                       HighHours, TagsJson, DeterministicKey
+                FROM findings.BacklogItem
+                WHERE RunId = @runId
+                ORDER BY CASE WorkItemType
+                    WHEN 'epic' THEN 0 WHEN 'feature' THEN 1 WHEN 'story' THEN 2 WHEN 'bug' THEN 3 ELSE 4 END,
+                    Priority, Title;
+                """,
+                new { runId },
+                cancellationToken: cancellationToken));
+
+        var all = rows.ToList();
+        var keys = all.ToDictionary(row => row.BacklogItemId, row => row.DeterministicKey);
+
+        return
+        [
+            .. all.Select(row => new PublishableItem(
+                row.DeterministicKey,
+                row.ParentItemId is { } parent && keys.TryGetValue(parent, out var parentKey) ? parentKey : null,
+                row.WorkItemType,
+                row.Title,
+                row.DescriptionHtml,
+                row.AcceptanceCriteria,
+                row.TestRequirement,
+                row.Priority,
+                row.StoryPoints,
+                row.LowHours,
+                row.HighHours,
+                Tags(row.TagsJson)))
+        ];
+    }
+
+    /// <summary>The tags, or none where the column holds something unreadable.</summary>
+    /// <param name="json">The stored array.</param>
+    private static List<string> Tags(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return [];
+
+        try
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<List<string>>(json) ?? [];
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return [];
+        }
+    }
+
     /// <summary>One capability axis, as somebody scored it.</summary>
     /// <param name="AxisId">Which axis, from report-model.json.</param>
     /// <param name="Score">Nought to five.</param>

@@ -25,21 +25,24 @@ export function ConnectionsPage({ engagementId }: { engagementId: string }) {
   const t = useT();
   const [connections, setConnections] = useState<Connection[] | null>(null);
   const [modes, setModes] = useState<ExtractionMode[]>([]);
+  const [targets, setTargets] = useState<ExtractionMode[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
-      const [connectionResult, modeResult] = await Promise.all([
+      const [connectionResult, modeResult, targetResult] = await Promise.all([
         getJson<Connection[]>(`/api/engagements/${engagementId}/connections`),
-        getJson<ExtractionMode[]>('/api/extraction-modes')
+        getJson<ExtractionMode[]>('/api/extraction-modes'),
+        getJson<ExtractionMode[]>('/api/publish-targets')
       ]);
 
       if (cancelled) return;
 
       setConnections(connectionResult.data ?? []);
       setModes(modeResult.data ?? []);
+      setTargets(targetResult.data ?? []);
       setError(connectionResult.error ?? modeResult.error);
     }
 
@@ -67,6 +70,19 @@ export function ConnectionsPage({ engagementId }: { engagementId: string }) {
         engagementId={engagementId}
         direction="source"
         modes={modes.filter((mode) => mode.id !== 'azureDevOps')}
+        connections={connections}
+        onChanged={setConnections}
+      />
+
+      {/*
+        Where a backlog goes. The panel has supported a target direction since it was
+        written and nothing ever rendered one, so there was no way to connect Azure DevOps
+        at all: the button existed, in a component nobody mounted.
+      */}
+      <ConnectionPanel
+        engagementId={engagementId}
+        direction="target"
+        modes={targets}
         connections={connections}
         onChanged={setConnections}
       />

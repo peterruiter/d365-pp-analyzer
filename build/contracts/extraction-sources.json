@@ -95,5 +95,22 @@
     ],
     "default": "unknown",
     "unknownBehaviour": "Rules scoped to production do not fire, and the report lists them as not assessed with a line saying which connection needs a role set. Assuming production would produce critical findings on somebody's sandbox."
-  }
+  },
+  "targets": [
+    {
+      "id": "azureDevOps",
+      "name": "Azure DevOps",
+      "status": "supported",
+      "summary": "Where an approved backlog is published. The only place this product writes anything, which is why it is a separate connection with its own credential rather than a setting on the one that reads the estate.",
+      "auth": {
+        "type": "personalAccessToken",
+        "settings": [
+          "organisationUrl"
+        ],
+        "secretRef": "A personal access token in Key Vault, scoped to work items read and write on one organisation. Nothing about it reaches the database.",
+        "leastPrivilege": "Work Items: Read & write. Nothing else. The token does not need code, builds, releases or project administration, and a token that has them is a token somebody has to explain in a security review."
+      },
+      "note": "The project is chosen per publish rather than stored on the connection. One organisation usually holds several projects and the backlog from one engagement does not always land in the same one."
+    }
+  ]
 }

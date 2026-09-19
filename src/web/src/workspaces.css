@@ -1055,11 +1055,34 @@
 .override-form { display: grid; gap: 12px; margin-top: 14px; padding: 16px 18px; background: var(--cp-surface); border: 1px solid var(--cp-border); border-left: 3px solid var(--cp-accent); }
 .override-form .field-row { display: flex; flex-wrap: wrap; gap: 12px; }
 .override-form .field-row > label { flex: 1 1 140px; }
-.override-form label.full { display: block; width: 100%; }
+/* Grid, like every other label here. It was display: block, and a block label puts its
+   text and a textarea on the same line box, so "Why this number" sat beside the field
+   and baseline aligned to the bottom of it rather than sitting above it as a caption. */
+.override-form label.full { display: grid; width: 100%; }
 .override-form label { display: grid; gap: 6px; color: var(--brand-ink); font-size: 12px; font-weight: 700; }
 .override-form input, .override-form textarea { width: 100%; min-height: 34px; padding: 6px 8px; border: 1px solid var(--cp-border); border-radius: 6px; background: var(--cp-surface); color: var(--cp-text); font: inherit; font-size: 14px; font-weight: 400; }
 .override-form textarea { min-height: 76px; resize: vertical; }
 .override-form .primary-button { justify-self: start; }
+
+/* Why the button will not do anything yet. A disabled control with no explanation reads
+   as a broken product rather than as a form that is not finished. */
+.override-form .blocked { color: var(--cp-text-muted); font-size: 12px; }
+
+/* --------------------------------------------------------------- publishing --
+   Where a chosen part of the backlog goes. Sits under the tree because the
+   choosing happens in the tree and the sending is what you do after it. */
+.publish-panel { display: grid; gap: 12px; margin: 18px 23px 4px; padding: 16px 18px; background: var(--cp-surface); border: 1px solid var(--cp-border); border-left: 3px solid var(--cp-accent); }
+.publish-panel h3 { margin: 0; color: var(--brand-ink); font-size: 14px; }
+.publish-panel .field-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+.publish-panel label { display: grid; gap: 6px; flex: 1 1 200px; color: var(--brand-ink); font-size: 12px; font-weight: 700; }
+.publish-panel select { width: 100%; min-height: 34px; padding: 6px 8px; border: 1px solid var(--cp-border); border-radius: 6px; background: var(--cp-surface); color: var(--cp-text); font: inherit; font-size: 14px; font-weight: 400; }
+.publish-panel .muted { margin: 0; color: var(--cp-text-muted); font-size: 12px; }
+
+/* A tick in the tree. Sized to the row rather than the browser default, which is
+   two pixels taller than the type beside it and makes every row look misaligned. */
+.backlog-tick { flex: none; width: 15px; height: 15px; margin: 0; accent-color: var(--brand-blue); cursor: pointer; }
+
+.link-button { padding: 0; background: none; border: 0; color: var(--brand-blue); font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; }
 
 /* ------------------------------------------------------------- connections --
    The connection list and the monogram beside each one. The mark is drawn from

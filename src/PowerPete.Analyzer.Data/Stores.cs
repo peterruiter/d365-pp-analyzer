@@ -165,6 +165,52 @@ public sealed class WorkspaceStore(string connectionString)
         return [.. rows];
     }
 
+    /// <summary>
+    /// Changes an engagement.
+    /// </summary>
+    /// <remarks>
+    /// There was no way to. A client's name typed wrong on the day the engagement was
+    /// created stayed wrong in every report afterwards, and the report language could only
+    /// be chosen once, before anybody knew who the report was for.
+    ///
+    /// Not the status and not the identifier. Status is moved by what happens to the
+    /// engagement rather than by somebody editing a field, and an identifier is what every
+    /// run, connection and finding hangs off.
+    /// </remarks>
+    /// <param name="engagementId">Which engagement.</param>
+    /// <param name="name">What it is called.</param>
+    /// <param name="clientName">Who it is for, which is what the report says on its cover.</param>
+    /// <param name="isRegulated">Drives a multiplier on every estimate.</param>
+    /// <param name="reportLanguage">The language the report is written in.</param>
+    /// <param name="backlogLanguage">The language work items are written in, which is not always the same.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task<bool> UpdateEngagementAsync(
+        Guid engagementId,
+        string name,
+        string? clientName,
+        bool isRegulated,
+        string reportLanguage,
+        string backlogLanguage,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        var changed = await connection.ExecuteAsync(new CommandDefinition(
+            """
+            UPDATE ops.Engagement
+            SET Name = @name,
+                ClientName = @clientName,
+                IsRegulated = @isRegulated,
+                ReportLanguage = @reportLanguage,
+                BacklogLanguage = @backlogLanguage
+            WHERE EngagementId = @engagementId;
+            """,
+            new { engagementId, name, clientName, isRegulated, reportLanguage, backlogLanguage },
+            cancellationToken: cancellationToken));
+
+        return changed > 0;
+    }
+
     /// <summary>Creates an engagement and makes its creator an administrator of it.</summary>
     /// <param name="engagement">The engagement.</param>
     /// <param name="createdBy">Who created it.</param>

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useT } from './i18n';
+import { useCan } from './access';
 import { getJson, sendJson } from './workspace';
 
 /**
@@ -232,16 +233,21 @@ export function FindingsPage({ engagementId }: { engagementId: string }) {
  */
 function OverrideForm({ engagementId, finding }: { engagementId: string; finding: Finding }) {
   const t = useT();
+  const canContribute = useCan('Contributor');
   const [low, setLow] = useState(String(finding.lowHours));
   const [high, setHigh] = useState(String(finding.highHours));
   const [rationale, setRationale] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const valid = Number(low) <= Number(high) && rationale.trim().length > 0;
+  const range = Number(low) <= Number(high);
+  const reasoned = rationale.trim().length > 0;
+  const valid = range && reasoned;
 
   async function save() {
     setSaving(true);
+    setError(null);
 
     try {
       const result = await sendJson(`/api/engagements/${engagementId}/overrides`, 'POST', {
@@ -252,10 +258,25 @@ function OverrideForm({ engagementId, finding }: { engagementId: string; finding
         rationale: rationale.trim()
       });
 
-      if (!result.error) setSaved(true);
+      // Said out loud. This used to set saved on success and do nothing at all otherwise,
+      // so a refusal the API had explained in a sentence arrived as a button that did
+      // nothing when pressed.
+      if (result.error) setError(result.error);
+      else setSaved(true);
     } finally {
       setSaving(false);
     }
+  }
+
+  // A viewer cannot save one, and the endpoint refuses it. Saying so beats offering a form
+  // that fills in and then will not submit.
+  if (!canContribute) {
+    return (
+      <div className="override-form">
+        <h3>{t('estimate.override')}</h3>
+        <p className="muted">{t('estimate.override.needs-contributor')}</p>
+      </div>
+    );
   }
 
   return (
@@ -280,6 +301,14 @@ function OverrideForm({ engagementId, finding }: { engagementId: string; finding
       <button className="primary-button" disabled={!valid || saving} onClick={save}>
         {saved ? t('estimate.override.saved') : t('estimate.override.save')}
       </button>
+
+      {!valid && (
+        <p className="blocked">
+          {!range ? t('estimate.override.not-a-range') : t('estimate.override.rationaleRequired')}
+        </p>
+      )}
+
+      {error && <p className="error">{error}</p>}
 
       {/* Said on the form rather than discovered on the next run. */}
       <p className="muted">{t('estimate.override.survives-rerun')}</p>

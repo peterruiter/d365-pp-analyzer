@@ -9,6 +9,15 @@ export type Engagement = {
 
   /** The demonstration estate, which everybody can read and nobody can change. */
   isDemonstration?: boolean;
+
+  /** Drives a multiplier on every estimate. */
+  isRegulated?: boolean;
+
+  /** The language the report is written in. */
+  reportLanguage?: string;
+
+  /** The language work items are written in, which is not always the same. */
+  backlogLanguage?: string;
 };
 
 /** A configured way into one estate. */
