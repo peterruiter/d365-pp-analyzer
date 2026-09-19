@@ -299,5 +299,10 @@
   "runs.status.awaitingApproval": "Waiting for approval",
   "runs.status.partial": "Partial",
   "runs.status.cancelled": "Cancelled",
-  "reports.not-produced-by-the-service": "The command line produces the workbook and the report; this deployment does not. There is no export stage in the pipeline and nowhere to keep a document, so running another analysis will not produce one."
+  "reports.inventory": "Findings workbook",
+  "reports.inventory-summary": "Every finding, every component and the estimate behind each one.",
+  "reports.inventory-detail": "One sheet per thing a consultant filters on: findings with their evidence and estimate, the component inventory with its complexity rating, the customisation profile and the backlog. Produced in process and needing no licence.",
+  "reports.pdf": "Assessment report",
+  "reports.pdf-summary": "The document a client reads, with what could not be checked said in it.",
+  "reports.pdf-detail": "Written for somebody who will not open a spreadsheet. It carries the score, the findings that matter and the roadmap, and it names every check that could not run rather than leaving a short list to speak for itself. The written sections print their prompt until somebody types them."
 }

@@ -299,5 +299,10 @@
   "runs.status.awaitingApproval": "Wacht op goedkeuring",
   "runs.status.partial": "Gedeeltelijk",
   "runs.status.cancelled": "Geannuleerd",
-  "reports.not-produced-by-the-service": "De opdrachtregel maakt de werkmap en het rapport; deze omgeving niet. Er is geen exportstap in de pijplijn en geen plek om een document te bewaren, dus nog een analyse uitvoeren levert er geen op."
+  "reports.inventory": "Werkmap met bevindingen",
+  "reports.inventory-summary": "Elke bevinding, elk component en de schatting erachter.",
+  "reports.inventory-detail": "Eén tabblad per ding waarop een consultant filtert: bevindingen met hun bewijs en schatting, de componentinventarisatie met complexiteit, het maatwerkprofiel en de backlog. Wordt in het proces zelf gemaakt en heeft geen licentie nodig.",
+  "reports.pdf": "Assessmentrapport",
+  "reports.pdf-summary": "Het document dat een klant leest, met daarin wat niet gecontroleerd kon worden.",
+  "reports.pdf-detail": "Geschreven voor iemand die geen spreadsheet opent. Het bevat de score, de bevindingen die ertoe doen en de roadmap, en het noemt elke controle die niet kon draaien in plaats van een korte lijst voor zich te laten spreken. De geschreven secties tonen hun vraag totdat iemand ze invult."
 }

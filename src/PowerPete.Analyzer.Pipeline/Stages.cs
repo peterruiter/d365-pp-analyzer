@@ -75,6 +75,19 @@ public interface IRunPersistence
     /// <param name="cancellationToken">Cancellation.</param>
     Task SaveComponentsAsync(Guid runId, IReadOnlyList<DiscoveredComponent> components, CancellationToken cancellationToken);
 
+    /// <summary>The solutions the components came out of.</summary>
+    /// <remarks>
+    /// Saved before the components, because a component resolves its solution by unique name
+    /// and one that is not stored yet leaves every component in it unattributed.
+    /// </remarks>
+    /// <param name="runId">Which run.</param>
+    /// <param name="solutions">What was read.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    Task SaveSolutionsAsync(
+        Guid runId,
+        IReadOnlyList<SolutionZipReader.SolutionHeader> solutions,
+        CancellationToken cancellationToken);
+
     /// <summary>Findings with their estimates.</summary>
     /// <param name="runId">Which run.</param>
     /// <param name="engagementId">Which engagement.</param>
@@ -157,6 +170,11 @@ public sealed class ExtractStage(StageServices services) : StageBase(services)
                 Merge(state, result.Components);
                 state.Links.AddRange(result.Links);
                 state.Unresolved.AddRange(result.Unresolved);
+                foreach (var header in result.Solutions)
+                {
+                    state.Solutions[header.UniqueName] = header;
+                }
+
                 state.SolutionsAnalysed = Math.Max(state.SolutionsAnalysed, result.Solutions.Count);
                 state.SolutionsTotal = Math.Max(state.SolutionsTotal, result.Solutions.Count);
                 state.Reached.Add(EvidenceSource.SolutionZip);
@@ -197,6 +215,11 @@ public sealed class ExtractStage(StageServices services) : StageBase(services)
                 "No source was configured. There is no solution file and no environment connection on this engagement, " +
                 "so there is nothing to read and nothing to report.");
         }
+
+        // Solutions first. The components reference them by unique name.
+        await Services.Persist
+            .SaveSolutionsAsync(state.RunId, [.. state.Solutions.Values], cancellationToken)
+            .ConfigureAwait(false);
 
         await Services.Persist.SaveComponentsAsync(state.RunId, state.Components, cancellationToken).ConfigureAwait(false);
 

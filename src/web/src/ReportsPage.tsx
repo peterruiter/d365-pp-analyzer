@@ -16,8 +16,6 @@ type AvailableReport = {
 
 type ReportsState = {
   available: boolean;
-  /** Why not, when it is not. noRun means run one; notProducedByService means do not bother. */
-  reason?: 'noRun' | 'notProducedByService';
   producedFrom?: string;
   totalRecords?: number;
   caveat?: string;
@@ -78,16 +76,7 @@ export function ReportsPage({ engagementId }: { engagementId: string }) {
           </div>
         </div>
 
-        {/*
-          Two different sentences, because they ask for two different things. One says run an
-          analysis. The other says this deployment does not produce documents, so running
-          another analysis will not help and the command line is where they come from.
-        */}
-        <p className="panel-note">
-          {state.reason === 'notProducedByService'
-            ? t('reports.not-produced-by-the-service')
-            : t('reports.nothing-to-report-lede')}
-        </p>
+        <p className="panel-note">{t('reports.nothing-to-report-lede')}</p>
       </section>
     );
   }
@@ -97,11 +86,6 @@ export function ReportsPage({ engagementId }: { engagementId: string }) {
       title: 'reports.inventory',
       summary: 'reports.inventory-summary',
       detail: 'reports.inventory-detail'
-    },
-    runbook: {
-      title: 'reports.runbook',
-      summary: 'reports.runbook-summary',
-      detail: 'reports.runbook-detail'
     },
     pdf: {
       title: 'reports.pdf',

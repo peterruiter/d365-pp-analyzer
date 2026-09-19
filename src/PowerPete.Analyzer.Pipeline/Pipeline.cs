@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using PowerPete.Analyzer.Domain;
+using PowerPete.Analyzer.Extraction;
 
 /// <summary>What a stage is allowed to do and what it leaves behind.</summary>
 /// <remarks>
@@ -46,6 +47,17 @@ public sealed class RunState
     public List<NotAssessed> NotAssessed { get; } = [];
 
     /// <summary>How many solutions were in scope, and how many exist.</summary>
+    /// <summary>
+    /// The solutions the run read, by unique name.
+    /// </summary>
+    /// <remarks>
+    /// Kept rather than counted. A component resolves its solution by unique name when it is
+    /// stored, and a report that cannot say which solution a finding is in is one nobody can
+    /// act on: somebody has to know whose thing it is before they can change it.
+    /// </remarks>
+    public Dictionary<string, SolutionZipReader.SolutionHeader> Solutions { get; } =
+        new(StringComparer.OrdinalIgnoreCase);
+
     public int SolutionsAnalysed { get; set; }
 
     /// <summary>How many solutions exist. A different number from the above is a caveat, not a footnote.</summary>

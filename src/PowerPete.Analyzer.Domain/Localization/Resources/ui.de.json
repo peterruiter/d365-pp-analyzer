@@ -299,5 +299,10 @@
   "runs.status.awaitingApproval": "Wartet auf Freigabe",
   "runs.status.partial": "Teilweise",
   "runs.status.cancelled": "Abgebrochen",
-  "reports.not-produced-by-the-service": "Die Befehlszeile erzeugt die Arbeitsmappe und den Bericht, diese Installation nicht. Es gibt keine Export-Stufe in der Pipeline und keinen Ort für ein Dokument, eine weitere Analyse ändert daran nichts."
+  "reports.inventory": "Befundmappe",
+  "reports.inventory-summary": "Jeder Befund, jede Komponente und die Schätzung dahinter.",
+  "reports.inventory-detail": "Ein Blatt je Sache, nach der ein Berater filtert: Befunde mit Beleg und Schätzung, das Komponenteninventar mit seiner Komplexität, das Anpassungsprofil und das Backlog. Wird im Prozess erzeugt und braucht keine Lizenz.",
+  "reports.pdf": "Assessment-Bericht",
+  "reports.pdf-summary": "Das Dokument, das ein Kunde liest, mit dem, was nicht geprüft werden konnte.",
+  "reports.pdf-detail": "Geschrieben für jemanden, der keine Tabelle öffnet. Er enthält die Bewertung, die Befunde, auf die es ankommt, und die Roadmap, und er nennt jede Prüfung, die nicht laufen konnte, statt eine kurze Liste für sich sprechen zu lassen. Die geschriebenen Abschnitte zeigen ihre Frage, bis jemand sie beantwortet."
 }

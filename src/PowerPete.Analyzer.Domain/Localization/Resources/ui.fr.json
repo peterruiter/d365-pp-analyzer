@@ -299,5 +299,10 @@
   "runs.status.awaitingApproval": "En attente d'approbation",
   "runs.status.partial": "Partiel",
   "runs.status.cancelled": "Annulé",
-  "reports.not-produced-by-the-service": "La ligne de commande produit le classeur et le rapport ; ce déploiement non. Il n'y a pas d'étape d'export dans le pipeline ni d'endroit où conserver un document, donc relancer une analyse n'en produira pas."
+  "reports.inventory": "Classeur des constats",
+  "reports.inventory-summary": "Chaque constat, chaque composant et l'estimation qui va avec.",
+  "reports.inventory-detail": "Une feuille par chose sur laquelle un consultant filtre : les constats avec leur preuve et leur estimation, l'inventaire des composants avec leur complexité, le profil de personnalisation et le backlog. Produit en interne et sans licence.",
+  "reports.pdf": "Rapport d'évaluation",
+  "reports.pdf-summary": "Le document que lit un client, avec ce qui n'a pas pu être vérifié.",
+  "reports.pdf-detail": "Écrit pour quelqu'un qui n'ouvrira pas un tableur. Il porte le score, les constats qui comptent et la feuille de route, et il nomme chaque vérification qui n'a pas pu s'exécuter plutôt que de laisser une liste courte parler d'elle-même. Les sections rédigées affichent leur question tant que personne ne les écrit."
 }

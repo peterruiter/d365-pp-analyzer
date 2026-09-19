@@ -74,8 +74,8 @@ public sealed class AnalysisStore(string connectionString)
     public async Task WriteComponentsAsync(
         Guid runId,
         IReadOnlyList<(Guid ComponentId, string StableKey, string TypeId, string DisplayName, string? SchemaName,
-            string? PlatformId, string Craft, string Lifecycle, string Domain, bool IsManaged, bool IsCustom,
-            string? OwnerUpn, string AttributesJson)> components,
+            string? PlatformId, string? SolutionUniqueName, string Craft, string Lifecycle, string Domain,
+            bool IsManaged, bool IsCustom, string? OwnerUpn, string AttributesJson)> components,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(components);
@@ -94,12 +94,17 @@ public sealed class AnalysisStore(string connectionString)
             WHEN MATCHED THEN UPDATE SET
                 DisplayName = @DisplayName, SchemaName = @SchemaName, PlatformId = @PlatformId,
                 Craft = @Craft, Lifecycle = @Lifecycle, Domain = @Domain,
-                IsManaged = @IsManaged, IsCustom = @IsCustom, OwnerUpn = @OwnerUpn, AttributesJson = @AttributesJson
+                IsManaged = @IsManaged, IsCustom = @IsCustom, OwnerUpn = @OwnerUpn, AttributesJson = @AttributesJson,
+                SolutionId = (SELECT TOP 1 SolutionId FROM inv.Solution
+                              WHERE RunId = @runId AND UniqueName = @SolutionUniqueName)
             WHEN NOT MATCHED THEN
-                INSERT (ComponentId, RunId, ComponentTypeId, StableKey, PlatformId, DisplayName, SchemaName,
-                        Craft, Lifecycle, Domain, IsManaged, IsCustom, OwnerUpn, AttributesJson)
-                VALUES (@ComponentId, @runId, @TypeId, @StableKey, @PlatformId, @DisplayName, @SchemaName,
-                        @Craft, @Lifecycle, @Domain, @IsManaged, @IsCustom, @OwnerUpn, @AttributesJson);
+                INSERT (ComponentId, RunId, SolutionId, ComponentTypeId, StableKey, PlatformId, DisplayName,
+                        SchemaName, Craft, Lifecycle, Domain, IsManaged, IsCustom, OwnerUpn, AttributesJson)
+                VALUES (@ComponentId, @runId,
+                        (SELECT TOP 1 SolutionId FROM inv.Solution
+                         WHERE RunId = @runId AND UniqueName = @SolutionUniqueName),
+                        @TypeId, @StableKey, @PlatformId, @DisplayName,
+                        @SchemaName, @Craft, @Lifecycle, @Domain, @IsManaged, @IsCustom, @OwnerUpn, @AttributesJson);
             """,
             components.Select(component => new
             {
@@ -110,6 +115,7 @@ public sealed class AnalysisStore(string connectionString)
                 component.DisplayName,
                 component.SchemaName,
                 component.PlatformId,
+                component.SolutionUniqueName,
                 component.Craft,
                 component.Lifecycle,
                 component.Domain,
@@ -692,6 +698,138 @@ public sealed class AnalysisStore(string connectionString)
             FROM stg.EntityRead
             WHERE RunId = @runId
             ORDER BY Succeeded DESC, ComponentTypeId;
+            """,
+            new { runId },
+            cancellationToken: cancellationToken));
+
+        return rows.ToList();
+    }
+
+    /// <summary>One solution a run read, as it was recorded.</summary>
+    /// <param name="UniqueName">The name everything else keys on.</param>
+    /// <param name="FriendlyName">What a person calls it.</param>
+    /// <param name="Version">Its version, where the export carried one.</param>
+    /// <param name="IsManaged">Whether it is managed, which decides whose it is to change.</param>
+    /// <param name="PublisherPrefix">The prefix on its components.</param>
+    /// <param name="PublisherName">Who publishes it.</param>
+    public sealed record SolutionRow(
+        string UniqueName,
+        string FriendlyName,
+        string? Version,
+        bool IsManaged,
+        string? PublisherPrefix,
+        string? PublisherName);
+
+    /// <summary>
+    /// Records the solutions a run read.
+    /// </summary>
+    /// <remarks>
+    /// Written before the components, because a component resolves its solution by unique name
+    /// and a solution that is not here yet leaves every component in it unattributed. A report
+    /// that cannot say which solution a finding is in is one nobody can act on.
+    /// </remarks>
+    /// <param name="runId">Which run.</param>
+    /// <param name="solutions">What it read.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task WriteSolutionsAsync(
+        Guid runId, IReadOnlyList<SolutionRow> solutions, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(solutions);
+        if (solutions.Count == 0) return;
+
+        await using var connection = Connect();
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            MERGE inv.Solution AS target
+            USING (SELECT @runId AS RunId, @UniqueName AS UniqueName) AS source
+                ON target.RunId = source.RunId AND target.UniqueName = source.UniqueName
+            WHEN MATCHED THEN UPDATE SET
+                FriendlyName = @FriendlyName, Version = @Version, IsManaged = @IsManaged,
+                PublisherPrefix = @PublisherPrefix, PublisherName = @PublisherName
+            WHEN NOT MATCHED THEN
+                INSERT (SolutionId, RunId, UniqueName, FriendlyName, Version, IsManaged,
+                        PublisherPrefix, PublisherName)
+                VALUES (NEWID(), @runId, @UniqueName, @FriendlyName, @Version, @IsManaged,
+                        @PublisherPrefix, @PublisherName);
+            """,
+            solutions.Select(solution => new
+            {
+                runId,
+                solution.UniqueName,
+                solution.FriendlyName,
+                solution.Version,
+                solution.IsManaged,
+                solution.PublisherPrefix,
+                solution.PublisherName
+            }),
+            cancellationToken: cancellationToken));
+    }
+
+    /// <summary>The solutions one run read.</summary>
+    /// <param name="runId">Which run.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task<IReadOnlyList<SolutionRow>> GetSolutionsAsync(
+        Guid runId, CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        var rows = await connection.QueryAsync<SolutionRow>(new CommandDefinition(
+            """
+            SELECT UniqueName, FriendlyName, Version, IsManaged, PublisherPrefix, PublisherName
+            FROM inv.Solution WHERE RunId = @runId ORDER BY UniqueName;
+            """,
+            new { runId },
+            cancellationToken: cancellationToken));
+
+        return rows.ToList();
+    }
+
+    /// <summary>One component, as it was recorded.</summary>
+    /// <param name="ComponentId">Its identifier.</param>
+    /// <param name="StableKey">What findings and overrides key on.</param>
+    /// <param name="TypeId">Which kind of component.</param>
+    /// <param name="DisplayName">What it is called.</param>
+    /// <param name="SchemaName">The platform's own name.</param>
+    /// <param name="PlatformId">Its identifier in the environment.</param>
+    /// <param name="SolutionUniqueName">Which solution it came from.</param>
+    /// <param name="IsManaged">Whether it is managed.</param>
+    /// <param name="OwnerUpn">Who owns it, where anybody does.</param>
+    /// <param name="AttributesJson">Everything the reader found, as it found it.</param>
+    public sealed record ComponentRow(
+        Guid ComponentId,
+        string StableKey,
+        string TypeId,
+        string DisplayName,
+        string? SchemaName,
+        string? PlatformId,
+        string? SolutionUniqueName,
+        bool IsManaged,
+        string? OwnerUpn,
+        string AttributesJson);
+
+    /// <summary>
+    /// Every component one run found.
+    /// </summary>
+    /// <remarks>
+    /// The inventory is the half of a report the findings do not cover. A client reading that
+    /// they have nine findings wants to know nine out of what, and the answer is this.
+    /// </remarks>
+    /// <param name="runId">Which run.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task<IReadOnlyList<ComponentRow>> GetComponentsAsync(
+        Guid runId, CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        var rows = await connection.QueryAsync<ComponentRow>(new CommandDefinition(
+            """
+            SELECT c.ComponentId, c.StableKey, c.ComponentTypeId AS TypeId, c.DisplayName, c.SchemaName,
+                   c.PlatformId, s.UniqueName AS SolutionUniqueName, c.IsManaged, c.OwnerUpn, c.AttributesJson
+            FROM inv.Component c
+            LEFT JOIN inv.Solution s ON s.SolutionId = c.SolutionId
+            WHERE c.RunId = @runId
+            ORDER BY c.ComponentTypeId, c.DisplayName;
             """,
             new { runId },
             cancellationToken: cancellationToken));

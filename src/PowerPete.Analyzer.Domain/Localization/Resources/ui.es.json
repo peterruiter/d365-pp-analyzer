@@ -299,5 +299,10 @@
   "runs.status.awaitingApproval": "Esperando aprobación",
   "runs.status.partial": "Parcial",
   "runs.status.cancelled": "Cancelado",
-  "reports.not-produced-by-the-service": "La línea de comandos produce el libro de trabajo y el informe; esta implantación no. No hay fase de exportación en el proceso ni dónde guardar un documento, así que ejecutar otro análisis no producirá ninguno."
+  "reports.inventory": "Libro de hallazgos",
+  "reports.inventory-summary": "Cada hallazgo, cada componente y la estimación que lo acompaña.",
+  "reports.inventory-detail": "Una hoja por cada cosa sobre la que filtra un consultor: hallazgos con su evidencia y estimación, el inventario de componentes con su complejidad, el perfil de personalización y el backlog. Se produce en el propio proceso y no necesita licencia.",
+  "reports.pdf": "Informe de evaluación",
+  "reports.pdf-summary": "El documento que lee un cliente, con lo que no se pudo comprobar dentro.",
+  "reports.pdf-detail": "Escrito para quien no va a abrir una hoja de cálculo. Lleva la puntuación, los hallazgos que importan y la hoja de ruta, y nombra cada comprobación que no pudo ejecutarse en lugar de dejar que una lista corta hable por sí sola. Las secciones redactadas muestran su pregunta hasta que alguien las escribe."
 }

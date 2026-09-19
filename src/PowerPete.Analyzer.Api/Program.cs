@@ -4,12 +4,31 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Web;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using System.Globalization;
+using PowerPete.Analyzer.Export;
+using PowerPete.Analyzer.Export.Pdf;
 using PowerPete.Analyzer.Api;
 using PowerPete.Analyzer.Data;
 using PowerPete.Analyzer.Domain;
 
 // The four modes ops.Connection is constrained to. Kept beside the endpoint that writes one
 // so a mode the database would refuse is refused here, with a sentence rather than a 500.
+// A file name a file system will accept and a person can read, from a client's name.
+static string Slug(string value)
+{
+    var cleaned = new string([.. value.Trim().ToLowerInvariant()
+        .Select(character => char.IsLetterOrDigit(character) ? character : '-')]);
+
+    while (cleaned.Contains("--", StringComparison.Ordinal))
+    {
+        cleaned = cleaned.Replace("--", "-", StringComparison.Ordinal);
+    }
+
+    cleaned = cleaned.Trim('-');
+
+    return cleaned.Length == 0 ? "engagement" : cleaned;
+}
+
 // Worst first. The catalogue declares the order and this keeps one copy of it, so a screen
 // cannot sort findings differently from the report.
 static int SeverityRank(string severity) => severity switch
@@ -40,6 +59,7 @@ builder.Services.AddSingleton(new AnalysisStore(connectionString));
 builder.Services.AddSingleton(new AccessStore(connectionString));
 builder.Services.AddSingleton(SecretStore.For(keyVaultUri));
 builder.Services.AddSingleton<SystemHealth>();
+builder.Services.AddSingleton<ReportComposer>();
 
 // ------------------------------------------------------------ authentication --
 // Entra sign-in, cookie session. The product knows who somebody is from their token and what
@@ -408,25 +428,90 @@ string[] stepIds = ["connect", "discover", "review", "approve", "publish"];
 string[] stepWorkspaces = ["Connections", "Runs", "Findings", "Backlog", "Backlog"];
 
 // -------------------------------------------------------------------- reports --
-// Honest rather than empty. The command line produces the workbook and the PDF today and the
-// service does not: there is no export stage in the pipeline, nowhere to keep a document and
-// no way to read the component inventory back out of the database. A screen that said
-// "nothing to report yet" would send somebody to run another analysis, and another one after
-// that, for a document this deployment cannot produce however many times they run it.
+// Composed on demand rather than produced by a run and kept. A client's estate in a document
+// is the most sensitive thing this product makes, and a blob container quietly accumulating
+// them is a retention question nobody asked for. The run is stored; the document is rendered
+// from it when somebody asks, and is identical every time because the score it quotes is the
+// score the run recorded rather than one recomputed.
 app.MapGet("/api/engagements/{engagementId:guid}/reports",
-    async (HttpContext context, AnalysisStore store, Guid engagementId) =>
+    async (HttpContext context, ReportComposer composer, Guid engagementId) =>
 {
     if (await Denied(context, engagementId, EngagementRoles.Viewer) is { } denied) return denied;
 
-    var run = await store.GetLatestScoredRunAsync(engagementId, context.RequestAborted);
+    var composed = await composer.ComposeAsync(engagementId, context.RequestAborted);
+
+    if (composed is null)
+    {
+        return Results.Ok(new { available = false, reason = "noRun", reports = Array.Empty<object>() });
+    }
+
+    // The PDF says whether it can be produced rather than offering a download that fails.
+    // Syncfusion does not refuse an absent licence key, it watermarks every page, and a
+    // watermarked document reaching a client who was asked to sign it is worse than no
+    // document. A reader cannot tell whose fault a failed download is.
+    var pdfAvailable = SyncfusionLicence.IsRegisteredForPdf
+        || !string.IsNullOrWhiteSpace(builder.Configuration["Syncfusion:LicenseKey"])
+        || !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(SyncfusionLicence.EnvironmentVariable));
 
     return Results.Ok(new
     {
-        available = false,
-        reason = run is null ? "noRun" : "notProducedByService",
-        producedFrom = (DateTime?)null,
-        reports = Array.Empty<object>()
+        available = true,
+        producedFrom = composed.ProducedUtc,
+        runId = composed.RunId,
+        totalRecords = composed.Workbook.Score.ComponentsTotal,
+        reports = new object[]
+        {
+            new { id = "inventory", file = "workbook.xlsx", rows = composed.Workbook.Components.Count },
+            new { id = "pdf", file = "report.pdf", rows = composed.Report.Findings.Count, available = pdfAvailable }
+        }
     });
+}).RequireAuthorization();
+
+app.MapGet("/api/engagements/{engagementId:guid}/reports/{file}",
+    async (HttpContext context, ReportComposer composer, Guid engagementId, string file) =>
+{
+    if (await Denied(context, engagementId, EngagementRoles.Viewer) is { } denied) return denied;
+
+    if (file is not "workbook.xlsx" and not "report.pdf") return Results.NotFound();
+
+    var composed = await composer.ComposeAsync(engagementId, context.RequestAborted);
+
+    if (composed is null)
+    {
+        return Results.BadRequest(new
+        {
+            error = "Nothing has been analysed on this engagement, so there is nothing to put in a document."
+        });
+    }
+
+    // Named for the client and the date the analysis ran, not the date it was downloaded.
+    // Somebody with six of these in a folder has to be able to tell which is which, and the
+    // one that matters is when the estate was read.
+    var stamp = composed.ProducedUtc.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+    var safe = Slug(composed.Report.ClientName ?? composed.Report.EngagementName);
+
+    if (file == "workbook.xlsx")
+    {
+        var bytes = FindingsWorkbook.Build(composed.Workbook);
+
+        return Results.File(
+            bytes,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"{safe}-findings-{stamp}.xlsx");
+    }
+
+    try
+    {
+        var bytes = AssessmentReportPdf.Build(composed.Report);
+
+        return Results.File(bytes, "application/pdf", $"{safe}-assessment-{stamp}.pdf");
+    }
+    catch (InvalidOperationException failure)
+    {
+        // Almost always the licence key. Said plainly, because the alternative is a broken
+        // download and a reader who cannot tell whether the product or their browser failed.
+        return Results.Problem(failure.Message, statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
 }).RequireAuthorization();
 
 // ------------------------------------------------------ extraction modes --

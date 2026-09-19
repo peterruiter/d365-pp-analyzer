@@ -299,5 +299,10 @@
   "runs.status.awaitingApproval": "In attesa di approvazione",
   "runs.status.partial": "Parziale",
   "runs.status.cancelled": "Annullato",
-  "reports.not-produced-by-the-service": "La riga di comando produce la cartella di lavoro e il report; questa installazione no. Non c'è una fase di esportazione nella pipeline né un posto dove tenere un documento, quindi eseguire un'altra analisi non ne produrrà uno."
+  "reports.inventory": "Cartella dei rilievi",
+  "reports.inventory-summary": "Ogni rilievo, ogni componente e la stima che lo accompagna.",
+  "reports.inventory-detail": "Un foglio per ogni cosa su cui filtra un consulente: rilievi con la prova e la stima, l'inventario dei componenti con la loro complessità, il profilo di personalizzazione e il backlog. Prodotto nel processo stesso e senza bisogno di licenza.",
+  "reports.pdf": "Report di assessment",
+  "reports.pdf-summary": "Il documento che legge un cliente, con dentro ciò che non è stato possibile verificare.",
+  "reports.pdf-detail": "Scritto per chi non aprirà un foglio di calcolo. Porta il punteggio, i rilievi che contano e la roadmap, e nomina ogni controllo che non ha potuto essere eseguito invece di lasciare parlare da sé un elenco breve. Le sezioni scritte mostrano la loro domanda finché qualcuno non le compila."
 }

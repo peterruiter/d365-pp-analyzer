@@ -5,6 +5,7 @@ using PowerPete.Analyzer.Analysis;
 using PowerPete.Analyzer.Data;
 using PowerPete.Analyzer.DevOps;
 using PowerPete.Analyzer.Domain;
+using PowerPete.Analyzer.Extraction;
 using PowerPete.Analyzer.Estimation;
 using PowerPete.Analyzer.Pipeline;
 using PowerPete.Analyzer.Pipeline.Stages;
@@ -97,6 +98,20 @@ internal sealed class StorePersistence(AnalysisStore analysis, WorkspaceStore wo
     public Task RecordReadAsync(Guid runId, string componentTypeId, string evidenceSource, bool succeeded, int? count, string? reason, CancellationToken cancellationToken) =>
         analysis.RecordEntityReadAsync(runId, componentTypeId, evidenceSource, succeeded, count, reason, cancellationToken);
 
+    public Task SaveSolutionsAsync(
+        Guid runId,
+        IReadOnlyList<SolutionZipReader.SolutionHeader> solutions,
+        CancellationToken cancellationToken) =>
+        analysis.WriteSolutionsAsync(runId,
+            [.. solutions.Select(solution => new AnalysisStore.SolutionRow(
+                solution.UniqueName,
+                solution.FriendlyName,
+                solution.Version,
+                solution.IsManaged,
+                solution.PublisherPrefix,
+                solution.PublisherName))],
+            cancellationToken);
+
     public Task SaveComponentsAsync(Guid runId, IReadOnlyList<DiscoveredComponent> components, CancellationToken cancellationToken) =>
         analysis.WriteComponentsAsync(runId,
             [.. components.Select(component => (
@@ -106,6 +121,7 @@ internal sealed class StorePersistence(AnalysisStore analysis, WorkspaceStore wo
                 component.DisplayName,
                 component.SchemaName,
                 component.PlatformId,
+                component.SolutionUniqueName,
                 component.Type?.Craft.ToString().ToLowerInvariant() ?? "config",
                 component.Type?.Lifecycle.ToString().ToLowerInvariant() ?? "current",
                 component.Type?.Domain ?? "platform",
@@ -156,7 +172,7 @@ internal sealed class StorePersistence(AnalysisStore analysis, WorkspaceStore wo
              score.FindingsBySeverity.GetValueOrDefault("high"),
              score.NotAssessed.Count,
              score.TotalLowHours, score.TotalHighHours, score.FixedCostLowHours, score.FixedCostHighHours),
-            new { score.ByDomain, score.ByLifecycle, score.ByCraft, score.DebtByDomain, score.RatioDefinition, score.Caveats, customisation, roadmap },
+            new { score, customisation, roadmap },
             cancellationToken);
 
     public Task SaveBacklogAsync(Guid runId, Guid engagementId, IReadOnlyList<BacklogItem> items, CancellationToken cancellationToken)
