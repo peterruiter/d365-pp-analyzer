@@ -51,7 +51,7 @@ public static class DemoEstate
     /// demonstration that gains whatever a later release added and one frozen at whatever it
     /// looked like the first time the container started.
     /// </remarks>
-    public const int SeedVersion = 2;
+    public const int SeedVersion = 3;
 
     /// <summary>What it is called.</summary>
     public const string Name = "Demonstration estate";
@@ -288,6 +288,7 @@ public static class DemoEstate
             BuildSolutions();
             var tables = Tables();
             Columns(tables);
+            Relationships(tables);
             Forms(tables);
             Views(tables);
             Flows();
@@ -300,6 +301,7 @@ public static class DemoEstate
             Security();
             Analytics();
             Checker();
+            Publishers();
             RecordReads();
         }
 
@@ -375,6 +377,108 @@ public static class DemoEstate
             }
 
             return tables;
+        }
+
+        /// <summary>
+        /// The joins between the tables, and what each one does on delete.
+        /// </summary>
+        /// <remarks>
+        /// A real estate of this size carries a couple of hundred of these, and until the
+        /// offline reader learned to read them the demonstration did not have one. A data
+        /// model section listing twelve tables and no relationships between them describes a
+        /// spreadsheet rather than a system.
+        ///
+        /// The cascade behaviours are the point. Most are the platform's defaults, which is
+        /// what a real export looks like, and three are not: a cascading delete from a
+        /// low-volume parent onto a fourteen million row child is the finding worth being
+        /// able to show somebody.
+        /// </remarks>
+        /// <param name="tables">The custom tables, which is what these join.</param>
+        private void Relationships(List<DiscoveredComponent> tables)
+        {
+            // Referencing, referenced, what delete does. Named after the platform's own
+            // convention so they read like something an export produced.
+            var joins = new (string Child, string Parent, string OnDelete)[]
+            {
+                ("nwu_meterreading", "nwu_meter", "Cascade"),
+                ("nwu_meter", "nwu_customerpremise", "Restrict"),
+                ("nwu_outage", "nwu_customerpremise", "RemoveLink"),
+                ("nwu_serviceorder", "nwu_asset", "Restrict"),
+                ("nwu_serviceorder", "nwu_workcrew", "RemoveLink"),
+                ("nwu_inspection", "nwu_asset", "Cascade"),
+                ("nwu_asset", "nwu_customerpremise", "Restrict"),
+                ("nwu_complaint", "nwu_customerpremise", "RemoveLink"),
+                ("nwu_paymentplan", "nwu_tariff", "Restrict"),
+                ("nwu_greenscheme", "nwu_customerpremise", "Cascade"),
+                ("nwu_complaint", "nwu_outage", "RemoveLink"),
+                ("nwu_serviceorder", "nwu_outage", "RemoveLink")
+            };
+
+            var byName = tables.ToDictionary(table => table.SchemaName ?? table.DisplayName, StringComparer.Ordinal);
+
+            foreach (var (child, parent, onDelete) in joins)
+            {
+                var name = $"{parent}_{child}";
+
+                var relationship = Add("relationship", name, name, MainSolution, false,
+                    ("relationshipType", "OneToMany"),
+                    ("cascadeDelete", onDelete),
+                    ("cascadeConfiguration",
+                        $"CascadeDelete={onDelete}, CascadeAssign=NoCascade, CascadeReparent=NoCascade, "
+                        + "CascadeShare=NoCascade, CascadeUnshare=NoCascade"),
+                    ("isCustom", true),
+                    ("isHierarchical", false),
+                    ("referencingTable", child),
+                    ("referencedTable", parent),
+                    ("description", (string?)null));
+
+                foreach (var end in new[] { child, parent })
+                {
+                    if (byName.TryGetValue(end, out var table)) Link(relationship, table, "relatesTo");
+                }
+            }
+
+            // The ownership relationships every custom table gets whether anybody wanted
+            // them or not. Present because a real export carries them and an inventory that
+            // quietly drops them understates the model, and marked as not custom so the
+            // rules that only look at somebody's own work skip them.
+            foreach (var table in tables)
+            {
+                var schema = table.SchemaName ?? table.DisplayName;
+                var name = $"business_unit_{schema}";
+
+                Add("relationship", name, name, MainSolution, false,
+                    ("relationshipType", "OneToMany"),
+                    ("cascadeDelete", "Restrict"),
+                    ("cascadeConfiguration",
+                        "CascadeDelete=Restrict, CascadeAssign=NoCascade, CascadeReparent=NoCascade, "
+                        + "CascadeShare=NoCascade, CascadeUnshare=NoCascade"),
+                    ("isCustom", false),
+                    ("isHierarchical", false),
+                    ("referencingTable", schema),
+                    ("referencedTable", "BusinessUnit"),
+                    ("description", "System relationship."));
+            }
+        }
+
+        /// <summary>
+        /// Who published each solution.
+        /// </summary>
+        /// <remarks>
+        /// Two of them, which is the finding: the client's own prefix and an ISV's, in one
+        /// estate. The prefix is what every other judgement in this product keys off, so
+        /// showing it in the inventory rather than only using it silently is worth the two
+        /// components it costs.
+        /// </remarks>
+        private void Publishers()
+        {
+            Add("publisher", "Northwind Utilities", "NorthwindUtilities", MainSolution, false,
+                ("prefix", "nwu"), ("optionValuePrefix", "10000"), ("solutionCount", 2),
+                ("description", (string?)null));
+
+            Add("publisher", "SmartPortal BV", "SmartPortalBV", IsvSolution, true,
+                ("prefix", "isv"), ("optionValuePrefix", "42000"), ("solutionCount", 1),
+                ("description", "Third party publisher."));
         }
 
         private void Columns(List<DiscoveredComponent> tables)

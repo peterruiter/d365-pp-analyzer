@@ -567,7 +567,9 @@ to fail on a removed key before being kept.
 One built properly, one carrying a library it did not need, one shipped in a hurry. Between
 them they trip all seven rules, and the first trips none of them, which matters more: a report
 where every control has a finding against it reads as a tool that cannot tell good work from
-bad. `DemoEstate.SeedVersion` is 2, so deployed demonstrations rebuild.
+bad. `DemoEstate.SeedVersion` is 3, so deployed demonstrations rebuild. It also carries 24
+relationships and two publishers now, for the same reason: the offline reader produces them
+from a real file, so a demonstration without them understates what the product does.
 
 ## What the API port left behind
 
@@ -716,6 +718,23 @@ product produces. A reader that counted elements would have reported 32 pro code
 in an estate that has none. `ReadCommandBars` counts only ribbons with a `CustomAction` or a
 `CommandDefinition` in them, so the type stays correctly absent here and appears the moment a
 client actually has one. Wrong in the direction that looks like work is the worse failure.
+
+### No rule reads the relationships yet, on purpose
+
+246 relationships are now in the inventory and no rule looks at any of them, which is a
+decision rather than an oversight.
+
+The obvious rule is cascading delete, and 91 of the 246 are configured that way. But 90 of
+those 91 are one table's fan-in: `SmsCenter` relates a single message table to every other
+table in the estate, each with `CascadeDelete=Cascade`. Firing per relationship would produce
+91 findings that are really one observation, and firing above a threshold means inventing a
+threshold, which is how the other numeric codes in this reader went wrong.
+
+A cascading delete is correct for genuine parent-child composition and wrong for a loose
+reference, and a solution file does not say which one it is looking at. So the cascade
+configuration is carried into the inventory where a consultant can sort on it, and nothing
+claims to have judged it. That may be worth revisiting with row counts from a connected
+environment, where "cascades onto fourteen million rows" is a fact rather than a guess.
 
 ### Eight types are still unread, and they are named now
 
