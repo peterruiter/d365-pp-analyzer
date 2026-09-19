@@ -5,10 +5,11 @@ where the build is. Update it at the end of every working session, in the same c
 the work.
 
 **Version:** 1.0.0
-**Last updated:** 2026-09-18
-**Current block:** it is deployed and serving, in six languages, with a public site in front
-of it. Nobody has signed in yet, so everything past the sign-in page, including the database
-half of the export path, is built and untested against a real session.
+**Last updated:** 2026-09-19
+**Current block:** it is deployed, serving and signed in to. A demonstration engagement
+seeds itself on every start, interactive sign-in works, the reports render with charts, and
+the offline upload has somewhere to put a file. What has still never happened is a run
+against a real client environment.
 
 ---
 
@@ -41,14 +42,14 @@ about each other. What that cost is recorded under "what the API port left behin
 | Report model | Contract, plus the PDF and workbook renderers |
 | Estimator | Complete, with guards and provenance |
 | Backlog and DevOps publisher | Complete |
-| Tests | **56, all passing** |
+| Tests | **84, all passing** |
 | Infrastructure | Ported from the migrator, never deployed |
 | Pipeline orchestrator | Runner, 8 stages, worker loop, credential plumbing |
 | Data layer | Stores written, schema never applied |
 | Command line | `analyse` (with `--xlsx`, `--pdf`), `rules`, `components`. `work` not wired |
 | API | 14 endpoints, building. Three system health checks removed: see below |
 | Web workspace | Shell ported, 6 workspaces, findings screen written |
-| Microsite | **Not started** |
+| Microsite | Six languages, generated from the contracts |
 
 The machine this was written on had neither PowerShell nor the .NET SDK. That is no longer
 true: the contracts check, the generators run, the engine builds and the tests pass. The SQL
@@ -540,21 +541,29 @@ None of this fails a build and all of it fails a screen.
 
 ## What is not built at all
 
-- **Charts in the PDF.** Every visual in `report-model.json` renders as a table today. The
-  components by customisation chart and the roadmap grid are the two worth drawing, and the
-  Intent Miner's `ManagementReportBuilder.Charts.cs` is the thing to port for it.
 - **The consultant input screens.** The written report sections need somewhere to type: a web
   screen per section plus a store. Until they exist the report prints the prompt where the
   text should be, which is correct and not finished.
-- **Delegated sign-in.** Throws a `NotSupportedException` naming what it needs. The interactive
-  flow belongs to the web application, so this unblocks itself when that exists.
 - **The connect and selectSolutions stages.** Declared in the contract, not implemented. The
   connection test happens inside the extract stage today, which works and puts a failure one
   stage later than the contract says it should be.
 - **Flow run history.** Needs the Power Automate management API, a second token and separate
   consent. Until then eight rules report as not assessed, correctly.
-- **The demonstration engagement.** No `ops.DemoSeed` table, no seeder, no constants. Until it
-  exists, everybody admitted sees an empty product on their first sign in.
+
+### Built since, and what is left of each
+
+- **Charts.** Eight of the thirteen declared visuals are drawn: components by domain, the
+  low code donut, components by customisation, lifecycle, findings by severity, where the
+  hours sit, the estimate ranges and the roadmap grid. The five that are not are
+  componentsBySolution, which the score does not carry, and the maturity, readiness and
+  benchmark visuals, which have no data behind them until the consultant input screens
+  exist. Every chart sits beside the table it summarises, deliberately: a number that
+  appears only in a picture is a number nobody can audit.
+- **Interactive sign-in.** Works. Type the environment address, sign in, and the refresh
+  token goes to Key Vault for the worker to redeem. Entra rotates refresh tokens and the
+  worker stores back what it is given.
+- **The demonstration engagement.** Seeds on startup against a stamped version, 369
+  components and 99 findings, produced by running the real engine over a synthetic estate.
 
 ## The thing that most needs doing next
 

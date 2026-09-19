@@ -20,7 +20,7 @@ using Syncfusion.Pdf.Graphics;
 /// The caveats are on page two, before the numbers. A reader who reaches a total before
 /// reaching a warning has already decided what the total means.
 /// </remarks>
-public sealed class AssessmentReportPdf
+public sealed partial class AssessmentReportPdf
 {
     /// <summary>What the report needs.</summary>
     /// <param name="EngagementName">Whose estate.</param>
@@ -71,6 +71,12 @@ public sealed class AssessmentReportPdf
     }
 
     private static readonly CultureInfo Culture = CultureInfo.InvariantCulture;
+
+    /// <summary>Worst first, which is the order every severity list in this product reads in.</summary>
+    private static readonly string[] SeverityOrder = ["critical", "high", "medium", "low", "info"];
+
+    /// <summary>The roadmap's three bands, nearest work first.</summary>
+    private static readonly string[] RoadmapBands = ["unclutter", "accelerate", "innovate"];
 
     /// <summary>Builds the report.</summary>
     /// <param name="model">What to write.</param>
@@ -244,6 +250,10 @@ public sealed class AssessmentReportPdf
     {
         Heading(flow, model.Text["report.whatIsInTheEstate", "What is in the estate"]);
 
+        BarChart(flow,
+            [.. model.Score.ByDomain.OrderByDescending(pair => pair.Value).Select(pair => (pair.Key, (decimal)pair.Value))],
+            value => value.ToString("0", Culture));
+
         flow.Table(table =>
         {
             table.Columns(3, 1);
@@ -267,6 +277,31 @@ public sealed class AssessmentReportPdf
 
         flow.Text(model.Score.RatioDefinition,
             new TextStyle { Size = 9, Colour = CapgeminiBrand.Muted }, paddingTop: 6f);
+
+        // Only the three crafts that count toward the ratio. Configuration and content are
+        // in the table below and never in the circle, which is the whole argument of the
+        // ratio definition printed above it.
+        DonutChart(flow,
+            [
+                (model.Text["report.lowCode", "Low code"], model.Score.ByCraft.GetValueOrDefault("lowCode")),
+                (model.Text["report.proCode", "Pro code"], model.Score.ByCraft.GetValueOrDefault("proCode")),
+                (model.Text["report.external", "External"], model.Score.ByCraft.GetValueOrDefault("external"))
+            ],
+            model.Score.LowCodeShare is { } share ? share.ToString("P0", Culture) : "—",
+            model.Text["report.lowCode", "Low code"]);
+
+        StackedBarChart(flow,
+            [.. model.Customisation
+                .Where(row => row.Total > 0)
+                .OrderByDescending(row => row.Total)
+                .Take(12)
+                .Select(row => (row.Category, (IReadOnlyList<int>)[row.Simple, row.Medium, row.Complex, row.Unrated]))],
+            [
+                model.Text["report.simple", "Simple"],
+                model.Text["report.medium", "Medium"],
+                model.Text["report.complex", "Complex"],
+                model.Text["report.unrated", "Unrated"]
+            ]);
 
         flow.Table(table =>
         {
@@ -301,6 +336,10 @@ public sealed class AssessmentReportPdf
     {
         Heading(flow, model.Text["report.lifecyclePosition", "Lifecycle position"]);
 
+        BarChart(flow,
+            [.. model.Score.ByLifecycle.OrderByDescending(pair => pair.Value).Select(pair => (pair.Key, (decimal)pair.Value))],
+            value => value.ToString("0", Culture));
+
         flow.Table(table =>
         {
             table.Columns(3, 1);
@@ -323,6 +362,25 @@ public sealed class AssessmentReportPdf
     private static void Findings(Flow flow, Model model)
     {
         Heading(flow, model.Text["report.findings", "Findings"]);
+
+        // Worst first rather than largest first. The order of severity is the point, and
+        // sorting by count would put a hundred low findings above two critical ones.
+        BarChart(flow,
+            [.. SeverityOrder
+                .Where(level => model.Score.FindingsBySeverity.ContainsKey(level))
+                .Select(level => (model.Text["severity." + level, level], (decimal)model.Score.FindingsBySeverity[level]))],
+            value => value.ToString("0", Culture),
+            colour: CapgeminiBrand.Blue);
+
+        if (model.Score.DebtByDomain.Count > 0)
+        {
+            flow.Text(model.Text["report.debtByDomain", "Where the hours sit"],
+                new TextStyle { Size = 11, Bold = true }, paddingTop: 16f);
+
+            BarChart(flow,
+                [.. model.Score.DebtByDomain.OrderByDescending(pair => pair.Value).Select(pair => (pair.Key, pair.Value))],
+                value => string.Create(Culture, $"{value:0} h"));
+        }
 
         foreach (var category in model.Findings
             .GroupBy(entry => entry.Finding.Rule?.Category ?? "other", StringComparer.Ordinal)
@@ -366,7 +424,24 @@ public sealed class AssessmentReportPdf
             "in unclutter, which is the correct shape for a debt assessment: an analyser finds debt, not new " +
             "capability.");
 
-        foreach (var band in new[] { "unclutter", "accelerate", "innovate" })
+        // The grid before the tables. This is the page a client keeps after the rest is
+        // filed, and thirty rows across three tables is not something anybody keeps.
+        var rows = model.Roadmap
+            .Select(item => item.Position.Row)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(row => row, StringComparer.Ordinal)
+            .ToList();
+
+        GridChart(flow, rows, RoadmapBands, (row, band) =>
+        {
+            var cell = model.Roadmap
+                .Where(item => item.Position.Row == row && item.Position.Band == band)
+                .ToList();
+
+            return (cell.Sum(item => item.FindingCount), cell.Sum(item => item.HighHours));
+        });
+
+        foreach (var band in RoadmapBands)
         {
             var items = model.Roadmap.Where(item => item.Position.Band == band).ToList();
             if (items.Count == 0) continue;
@@ -396,6 +471,18 @@ public sealed class AssessmentReportPdf
     private static void Backlog(Flow flow, Model model)
     {
         Heading(flow, model.Text["report.estimate", "Estimate"]);
+
+        // A range per category rather than a bar to its midpoint. The estimate is a range,
+        // and a chart that draws the middle of it states more confidence than the number
+        // behind it has.
+        RangeBarChart(flow,
+            [.. model.Findings
+                .GroupBy(entry => entry.Finding.Rule?.Category ?? "other", StringComparer.Ordinal)
+                .OrderByDescending(group => group.Sum(entry => entry.Estimate.HighHours))
+                .Select(group => (
+                    group.Key,
+                    group.Sum(entry => entry.Estimate.LowHours),
+                    group.Sum(entry => entry.Estimate.HighHours)))]);
 
         flow.Table(table =>
         {
