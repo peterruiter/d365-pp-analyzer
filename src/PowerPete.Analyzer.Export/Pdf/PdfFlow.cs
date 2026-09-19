@@ -109,14 +109,27 @@ internal sealed class PdfSurface : IDisposable
     /// property of a section rather than of a page. The footer stays, which is deliberate:
     /// the sibling reports carry the page number and the wordmark on the cover too.
     /// </remarks>
-    public PdfPage AddPageWithoutHeader()
+    public PdfPage AddPageWithoutHeader() => Section(header: false).Pages.Add();
+
+    /// <summary>
+    /// Opens a section, with or without the running header.
+    /// </summary>
+    /// <remarks>
+    /// Sections are sticky and that is easy to miss. Pages added afterwards go into the
+    /// last section opened, so a cover that opts out of the header silently takes every
+    /// page after it with it: the document came back with a correct cover and no running
+    /// header anywhere, and nothing failed. Whatever follows a headerless section has to
+    /// open one of its own.
+    /// </remarks>
+    /// <param name="header">Whether the running header applies here.</param>
+    public PdfSection Section(bool header)
     {
         var section = document.Sections.Add();
         section.PageSettings.Size = document.PageSettings.Size;
         section.PageSettings.Margins.All = 0;
-        section.Template.ApplyDocumentTopTemplate = false;
+        section.Template.ApplyDocumentTopTemplate = header;
 
-        return section.Pages.Add();
+        return section;
     }
 
     /// <summary>Opens a column of content across the page, inside the given horizontal insets.</summary>
@@ -128,7 +141,9 @@ internal sealed class PdfSurface : IDisposable
     /// </param>
     public Flow Start(float insetLeft, float insetRight, float top = float.NaN)
     {
-        var page = AddPage();
+        // Its own section, so the body carries the running header whether or not a cover
+        // opted out of it before this ran.
+        var page = Section(header: true).Pages.Add();
         var start = float.IsNaN(top) ? ContentTop : top;
         return new Flow(this, insetLeft, PageWidth - insetLeft - insetRight, start, page, measuring: false);
     }
@@ -200,6 +215,19 @@ internal sealed class Flow
     {
         if (Measuring)
         {
+            return;
+        }
+
+        // Nothing on this page yet, so this one is the new page.
+        //
+        // Without the guard, a break on an untouched page leaves it behind, blank, with
+        // only the running header and footer on it. The report did exactly that: opening a
+        // column of content creates a page, the first section began with a break, and page
+        // two of every document ever produced was empty. It renders, it paginates, and
+        // nobody reads page two of their own output.
+        if (Y <= surface.ContentTop)
+        {
+            Y = float.IsNaN(top) ? surface.ContentTop : top;
             return;
         }
 
@@ -441,6 +469,18 @@ internal sealed class Flow
 
         Y += height;
     }
+
+    /// <summary>How tall a block would be here, without drawing it.</summary>
+    /// <remarks>
+    /// For content that has to fit a space rather than flow into the next page. The cover
+    /// is the case: it cannot spill, because half a table on page two under a running
+    /// header is worse than not printing the last two rows.
+    /// </remarks>
+    /// <param name="content">What would be drawn.</param>
+    public float Measure(Action<Flow> content) => MeasureBlock(content, Width);
+
+    /// <summary>How much room is left on this page.</summary>
+    public float Remaining => surface.ContentBottom - Y;
 
     /// <summary>Runs content against a flow that draws nothing, to learn how tall it is.</summary>
     private float MeasureBlock(Action<Flow> content, float width)

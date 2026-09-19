@@ -92,7 +92,11 @@ public sealed partial class AssessmentReportPdf
         SyncfusionLicence.Register();
 
         using var theme = new PdfTheme();
-        using var surface = new PdfSurface(theme, headerHeight: 46f, footerHeight: 34f);
+        // Content padding, so a heading has air under the header rule instead of sitting on
+        // it. It was zero, which put the first line of every page hard against the line
+        // above it, and a page whose text touches its own furniture reads as broken
+        // whatever else is right about it.
+        using var surface = new PdfSurface(theme, headerHeight: 46f, footerHeight: 40f, contentPadding: 26f);
 
         surface.Frame(
             header: (graphics, size) => Header(graphics, size, theme, model),
@@ -454,15 +458,43 @@ public sealed partial class AssessmentReportPdf
 
         flow.Text(opening, new TextStyle { Size = 10, LineHeight = 1.5f }, paddingTop: 8f);
 
-        var worst = model.Findings
+        var candidates = model.Findings
             .Where(entry => entry.Finding.Severity <= Severity.High)
             .OrderBy(entry => entry.Finding.Severity)
             .ThenByDescending(entry => entry.Estimate.HighHours)
             .Take(6)
             .ToList();
 
-        if (worst.Count == 0) return;
+        if (candidates.Count == 0) return;
 
+        // As many as fit, measured rather than assumed.
+        //
+        // A cover cannot overflow. Six rows fit this estate in English and did not fit it
+        // once the paragraph above them ran to five lines: the last row landed alone on
+        // page two, under a running header, which is a worse page than the one it was
+        // trying to avoid. The paragraph is a consultant's and its length is not knowable
+        // from here, so the count is measured against the room left rather than chosen.
+        var worst = candidates;
+
+        while (worst.Count > 1 && flow.Measure(probe => WorstTable(probe, model, worst)) > flow.Remaining)
+        {
+            worst = worst[..^1];
+        }
+
+        if (flow.Measure(probe => WorstTable(probe, model, worst)) > flow.Remaining) return;
+
+        WorstTable(flow, model, worst);
+    }
+
+    /// <summary>The worst findings, as a table. Drawn twice: once to measure, once for real.</summary>
+    /// <param name="flow">Where to write.</param>
+    /// <param name="model">What to write.</param>
+    /// <param name="worst">The rows.</param>
+    private static void WorstTable(
+        Flow flow,
+        Model model,
+        IReadOnlyList<(Finding Finding, Estimate Estimate, DiscoveredComponent? Component)> worst)
+    {
         flow.Text(model.Text["report.theWorstOfIt", "The worst of it"].ToUpperInvariant(),
             new TextStyle { Size = 8, Bold = true, Colour = CapgeminiBrand.Muted, LetterSpacing = 0.5f },
             paddingTop: 22f);
@@ -491,9 +523,37 @@ public sealed partial class AssessmentReportPdf
         });
     }
 
-    private static void Heading(Flow flow, string text)
+    /// <summary>
+    /// Opens a section.
+    /// </summary>
+    /// <remarks>
+    /// Reserves rather than breaks. Every heading used to start a new page, which is a
+    /// defensible rule for a document whose sections are all long and this one's are not:
+    /// it produced pages carrying a heading, four lines and a hand's width of white, and
+    /// twenty-three pages where the content justified about fifteen.
+    ///
+    /// The reserve is what keeps a heading attached to something. If a third of the page
+    /// remains the section starts here; if it does not, it starts on the next one, and
+    /// either way a heading is never the last thing on a page.
+    /// </remarks>
+    /// <param name="flow">Where to write.</param>
+    /// <param name="text">The heading.</param>
+    /// <param name="startsPage">
+    /// For the few sections that genuinely open a chapter and should not share a page with
+    /// the tail of the one before them.
+    /// </param>
+    private static void Heading(Flow flow, string text, bool startsPage = false)
     {
-        flow.Break();
+        if (startsPage)
+        {
+            flow.Break();
+        }
+        else
+        {
+            flow.Gap(26f);
+            flow.Reserve(210f);
+        }
+
         flow.Text(text, new TextStyle { Size = 18, Bold = true, Colour = CapgeminiBrand.DarkBlue });
         flow.Rule(CapgeminiBrand.LightBlue, paddingTop: 6f, thickness: 2f, width: 60f);
         flow.Gap(14f);
@@ -512,7 +572,7 @@ public sealed partial class AssessmentReportPdf
     /// </remarks>
     private static void ReadThisFirst(Flow flow, Model model)
     {
-        Heading(flow, model.Text["report.howToRead", "How to read this"]);
+        Heading(flow, model.Text["report.howToRead", "How to read this"], startsPage: true);
 
         if (model.Score.Caveats.Count == 0)
         {
@@ -694,7 +754,7 @@ public sealed partial class AssessmentReportPdf
 
     private static void Findings(Flow flow, Model model)
     {
-        Heading(flow, model.Text["report.findings", "Findings"]);
+        Heading(flow, model.Text["report.findings", "Findings"], startsPage: true);
 
         // Worst first rather than largest first. The order of severity is the point, and
         // sorting by count would put a hundred low findings above two critical ones.
@@ -748,7 +808,7 @@ public sealed partial class AssessmentReportPdf
 
     private static void Roadmap(Flow flow, Model model)
     {
-        Heading(flow, model.Text["report.roadmap", "Roadmap"]);
+        Heading(flow, model.Text["report.roadmap", "Roadmap"], startsPage: true);
 
         var bands = RoadmapBuilder.BandProfile(model.Roadmap);
 
