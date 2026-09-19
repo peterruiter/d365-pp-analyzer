@@ -289,7 +289,10 @@ function App() {
                     className={`engagement-menu-item ${item.engagementId === engagement?.engagementId ? 'active' : ''}`}
                     onClick={() => { setEngagement(item); setActiveView('Overview'); setEngagementsOpen(false); }}
                   >
-                    {item.name}<span>{item.clientName ?? ''}</span>
+                    {item.name}
+                    <span>
+                      {item.isDemonstration ? t('shell.demonstration') : (item.clientName ?? '')}
+                    </span>
                   </button>
                 ))}
                 <button

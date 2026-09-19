@@ -79,7 +79,12 @@ export function ConnectionsPage({ engagementId }: { engagementId: string }) {
           </div>
         </div>
 
-        <div className="wizard-body">
+        {/*
+          Scrolled rather than squeezed. There is a column per evidence source and the
+          contract decides how many, so the table has no width the layout can rely on. It
+          was running off the side of the panel with the last sources unreachable.
+        */}
+        <div className="wizard-body table-scroll">
           <table className="findings-table">
             <thead>
               <tr>

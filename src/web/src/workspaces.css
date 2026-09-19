@@ -971,6 +971,12 @@
 .filters select { min-height: 34px; padding: 6px 8px; border: 1px solid var(--cp-border); border-radius: 6px; background: var(--cp-surface); color: var(--cp-text); font: inherit; font-size: 14px; font-weight: 400; text-transform: none; letter-spacing: 0; }
 .filter-count { margin-left: auto; color: var(--cp-text-soft); font-size: 12px; }
 
+/* A table whose column count comes from a contract cannot be relied on to fit. Scrolling
+   the table keeps the panel intact and keeps the far columns reachable, which beats
+   shrinking the type until the near ones are unreadable too. */
+.table-scroll { overflow-x: auto; }
+.table-scroll > .findings-table { min-width: 620px; }
+
 .findings-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .findings-table th { padding: 10px 23px; border-bottom: 1px solid var(--cp-border); color: var(--cp-text-muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-align: left; text-transform: uppercase; }
 .findings-table td { padding: 12px 23px; border-bottom: 1px solid var(--cp-border); vertical-align: top; }

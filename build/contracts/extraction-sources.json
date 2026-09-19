@@ -33,7 +33,7 @@
     {
       "id": "delegated",
       "name": "Interactive sign in",
-      "status": "supported",
+      "status": "described",
       "summary": "The consultant signs in with their own account and the product acts as them. Reaches the most, proves the least, and is the right mode for a workshop.",
       "auth": {
         "type": "authorizationCode",

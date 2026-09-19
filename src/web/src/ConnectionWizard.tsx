@@ -1,9 +1,28 @@
 import { useState } from 'react';
 import { useT } from './i18n';
-import { ConnectorMark } from './ConnectorMark';
 import { sendJson, type ExtractionMode } from './workspace';
 
 type Step = 'mode' | 'settings' | 'done';
+
+/**
+ * How each declared setting is asked for.
+ *
+ * The contract names the settings a mode needs and says nothing about how to collect them,
+ * which is right: it describes the product rather than the screen. Without this table the
+ * wizard rendered the contract's own identifiers as labels, so a consultant was asked for
+ * "tenantId" and "exportedOnUtc" in a text box and had to guess the format.
+ *
+ * A setting with no entry here still renders, as a text box under its own name. That is the
+ * honest fallback: adding a setting to the contract should not make the wizard refuse to
+ * show it, it should make it look unfinished, which is what it is.
+ */
+const fields: Record<string, { type: string; placeholder?: string }> = {
+  tenantId: { type: 'text', placeholder: '00000000-0000-0000-0000-000000000000' },
+  clientId: { type: 'text', placeholder: '00000000-0000-0000-0000-000000000000' },
+  environmentUrl: { type: 'url', placeholder: 'https://contoso.crm4.dynamics.com' },
+  declaredEnvironmentName: { type: 'text', placeholder: 'Contoso production' },
+  exportedOnUtc: { type: 'date' }
+};
 
 /**
  * The connection wizard.
@@ -100,13 +119,17 @@ export function ConnectionWizard({
                   key={mode.id}
                   type="button"
                   className={`connector-card ${mode.id === modeId ? 'selected' : ''}`}
+                  disabled={mode.status !== 'supported'}
+                  title={mode.status !== 'supported' ? t('connections.not-built-yet-detail') : undefined}
                   onClick={() => choose(mode.id)}
                 >
                   <span className="connector-card-head">
-                    <ConnectorMark connectorId={mode.id} name={mode.name} />
                     <strong>{mode.name}</strong>
                   </span>
                   <span className="hint">{mode.summary}</span>
+                  {mode.status !== 'supported' && (
+                    <span className="tag warning">{t('connections.not-built-yet-short')}</span>
+                  )}
                 </button>
               ))}
             </div>
@@ -132,12 +155,14 @@ export function ConnectionWizard({
 
             {chosen.settings.map((setting) => (
               <label className="field-label" key={setting}>
-                {setting}
+                {t('field.' + setting)}
                 <input
-                  type="text"
+                  type={fields[setting]?.type ?? 'text'}
+                  placeholder={fields[setting]?.placeholder}
                   value={values[setting] ?? ''}
                   onChange={(event) => setValues({ ...values, [setting]: event.target.value })}
                 />
+                <span className="hint">{t('field.' + setting + '.hint')}</span>
               </label>
             ))}
 

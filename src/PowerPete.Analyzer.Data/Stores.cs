@@ -96,6 +96,21 @@ public sealed record RunCommand(Guid CommandId, Guid RunId, string Command, stri
 /// </remarks>
 public sealed class WorkspaceStore(string connectionString)
 {
+    /// <summary>
+    /// The columns each record declares, in one place.
+    /// </summary>
+    /// <remarks>
+    /// Dapper needs a constructor matching the columns it is given, so a starred select
+    /// against a table carrying audit columns the record does not declare fails to
+    /// materialise at run time with a message about constructors rather than about columns.
+    /// Naming them here keeps the list beside the record it belongs to and means adding a
+    /// column to a table cannot break a read that never wanted it.
+    /// </remarks>
+    private const string EngagementColumns = "EngagementId, Name, ClientName, Status, IsRegulated, ReportLanguage, BacklogLanguage, CreatedUtc";
+
+    /// <summary>The columns <see cref="AnalysisRun"/> declares.</summary>
+    private const string RunColumns = "RunId, EngagementId, Mode, Status, SourceConnectionId, TargetConnectionId, BasedOnRunId, CreatedBy, CreatedUtc, StartedUtc, CompletedUtc, Error";
+
     private SqlConnection Connect() => new(connectionString);
 
     /// <summary>Every engagement somebody may see.</summary>
@@ -118,17 +133,33 @@ public sealed class WorkspaceStore(string connectionString)
         // endpoints cannot disagree.
         if (!access.IsGlobalAdmin && access.Roles.Count == 0) return [];
 
+        // The columns are named rather than starred.
+        //
+        // Dapper materialises a record through its constructor, and it needs a constructor
+        // whose parameters match the columns it was handed. SELECT * hands it every column
+        // the table has, including the audit columns the record deliberately does not carry,
+        // and it throws rather than ignoring them. Every engagement list threw, so the
+        // product accepted a new engagement and then showed an empty picker: the row was
+        // written and could not be read back.
+        //
+        // Naming them also means a migration that adds a column cannot break a read.
+        // The demonstration first, then newest.
+        //
+        // It is the oldest engagement on any deployment, because it is written the first time
+        // a container starts, so ordering by date alone buries it under everything a
+        // consultant has created since. It is the one engagement that is meant to be found
+        // without being looked for.
+        const string order = """
+            ORDER BY CASE WHEN EngagementId = @demoId THEN 0 ELSE 1 END, CreatedUtc DESC;
+            """;
+
         var sql = access.IsGlobalAdmin
-            ? "SELECT * FROM ops.Engagement ORDER BY CreatedUtc DESC;"
-            : """
-              SELECT e.* FROM ops.Engagement e
-              WHERE e.EngagementId IN @engagementIds
-              ORDER BY e.CreatedUtc DESC;
-              """;
+            ? $"SELECT {EngagementColumns} FROM ops.Engagement {order}"
+            : $"SELECT {EngagementColumns} FROM ops.Engagement WHERE EngagementId IN @engagementIds {order}";
 
         var rows = await connection.QueryAsync<Engagement>(new CommandDefinition(
             sql,
-            new { engagementIds = access.Roles.Keys.ToArray() },
+            new { engagementIds = access.Roles.Keys.ToArray(), demoId = AccessStore.DemoEngagementId },
             cancellationToken: cancellationToken));
 
         return [.. rows];
@@ -209,7 +240,10 @@ public sealed class WorkspaceStore(string connectionString)
 
         var rows = await connection.QueryAsync<Connection>(new CommandDefinition(
             """
-            SELECT * FROM ops.Connection
+            SELECT ConnectionId, EngagementId, Mode, Name, EnvironmentRole, SettingsJson,
+                   SecretRef, SecretExpiresUtc, LastTestedUtc, LastTestSucceeded,
+                   LastTestIdentity, LastTestMessage, ReachJson
+            FROM ops.[Connection]
             WHERE SecretExpiresUtc IS NOT NULL AND SecretExpiresUtc < @deadline
             ORDER BY SecretExpiresUtc;
             """,
@@ -291,7 +325,7 @@ public sealed class WorkspaceStore(string connectionString)
         await using var connection = Connect();
 
         return await connection.QuerySingleOrDefaultAsync<AnalysisRun?>(new CommandDefinition(
-            "SELECT * FROM ops.AnalysisRun WHERE RunId = @runId;",
+            $"SELECT {RunColumns} FROM ops.AnalysisRun WHERE RunId = @runId;",
             new { runId },
             cancellationToken: cancellationToken));
     }

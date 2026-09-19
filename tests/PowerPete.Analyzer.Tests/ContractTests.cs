@@ -258,3 +258,58 @@ public sealed class GeneratedCatalogueTests
             "two point scales means a story sized against one and planned against the other");
     }
 }
+
+/// <summary>
+/// Guards against the read that compiles, passes review and fails only in production.
+/// </summary>
+public class DataLayerTests
+{
+    /// <summary>The data layer's source, found from the test assembly rather than hardcoded.</summary>
+    private static string DataLayer()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+
+        while (directory is not null && !Directory.Exists(Path.Combine(directory.FullName, "src")))
+        {
+            directory = directory.Parent;
+        }
+
+        return Path.Combine(directory!.FullName, "src", "PowerPete.Analyzer.Data");
+    }
+
+    /// <summary>
+    /// The file with its line comments removed.
+    /// </summary>
+    /// <remarks>
+    /// Scanned without them because the comment explaining why a starred select is wrong
+    /// contains the words, and a guard that fails on its own rationale gets deleted.
+    /// </remarks>
+    /// <param name="source">The file's text.</param>
+    private static string WithoutComments(string source) =>
+        string.Join(
+            Environment.NewLine,
+            source.Split('\n')
+                .Select(line => line.TrimStart().StartsWith("//", StringComparison.Ordinal) ? string.Empty : line));
+
+    [Fact]
+    public void Never_selects_star_into_a_record()
+    {
+        // Dapper materialises a record through its constructor and needs one matching the
+        // columns it was handed. A starred select hands it every column the table has,
+        // including audit columns the record deliberately does not declare, and it throws
+        // at run time with a message about constructors rather than about columns.
+        //
+        // This cost a day: the engagement list threw on every request, so the product
+        // accepted a new engagement and then showed an empty picker. The row was written and
+        // could not be read back, which looks exactly like a permissions problem and is not.
+        var offenders = Directory.EnumerateFiles(DataLayer(), "*.cs", SearchOption.AllDirectories)
+            .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            .Where(file => WithoutComments(File.ReadAllText(file)).Contains("SELECT *", StringComparison.OrdinalIgnoreCase))
+            .Select(Path.GetFileName)
+            .ToList();
+
+        offenders.Should().BeEmpty(
+            "a starred select into a record fails to materialise the moment the table gains a column");
+    }
+}
