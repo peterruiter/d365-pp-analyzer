@@ -87,8 +87,12 @@ export type Assessment = {
 export type TopFinding = {
   id: string;
   severity: string;
-  detail: string;
-  consequence: string;
+
+  /** The rule's name. This used to be the component and the line below it the rule id. */
+  title: string;
+
+  /** Which component it is on, or that it is about the solution as a whole. */
+  where: string;
 };
 
 /** One attempt to read one component type, and what became of it. */

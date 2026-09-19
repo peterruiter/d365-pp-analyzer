@@ -7,6 +7,7 @@
   "nav.honesty": "Honnêteté",
   "nav.safety": "Sûreté",
   "nav.output": "Livrables",
+  "nav.product": "Le produit",
   "nav.report": "Le rapport",
   "nav.rules": "Ce qu’il vérifie",
   "nav.privacy": "Confidentialité",
@@ -176,5 +177,14 @@
   "alt.pageFindings": "Le tableau des constats",
   "alt.pageRoadmap": "La grille de la feuille de route",
   "alt.pageMaturity": "Un radar de la maturité fonctionnelle",
-  "alt.pageScenarios": "La page des scénarios"
+  "alt.pageScenarios": "La page des scénarios",
+  "product.eyebrow": "Le produit",
+  "product.heading": "Trois écrans, et à quoi sert chacun.",
+  "product.lede": "Captures du produit sur le patrimoine de démonstration. Rien ici n'est une maquette.",
+  "product.screen1": "La vue d'ensemble. Ce qui a été lu, ce que cela coûte, et le pire.",
+  "product.screen2": "Les constats, les pires d'abord, avec la base de chaque estimation.",
+  "product.screen3": "Le backlog : un epic par catégorie, avec des critères d'acceptation avant publication.",
+  "alt.screenOverview": "L'écran de vue d'ensemble du produit",
+  "alt.screenFindings": "Le tableau des constats",
+  "alt.screenBacklog": "L'arbre du backlog"
 }

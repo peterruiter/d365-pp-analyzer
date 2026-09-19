@@ -7,6 +7,7 @@
   "nav.honesty": "Eerlijkheid",
   "nav.safety": "Veiligheid",
   "nav.output": "Resultaat",
+  "nav.product": "Het product",
   "nav.report": "Het rapport",
   "nav.rules": "Wat het controleert",
   "nav.privacy": "Privacy",
@@ -176,5 +177,14 @@
   "alt.pageFindings": "De tabel met bevindingen",
   "alt.pageRoadmap": "Het roadmapraster",
   "alt.pageMaturity": "Een radardiagram van functionele volwassenheid",
-  "alt.pageScenarios": "De scenariopagina"
+  "alt.pageScenarios": "De scenariopagina",
+  "product.eyebrow": "Het product",
+  "product.heading": "Drie schermen, en waar elk voor is.",
+  "product.lede": "Schermafbeeldingen van het product op de demonstratieomgeving. Niets hier is een mock-up.",
+  "product.screen1": "Het overzicht. Wat is gelezen, wat het kost, en het ergste ervan.",
+  "product.screen2": "Bevindingen, ergste eerst, met waar elke schatting op berust.",
+  "product.screen3": "De backlog: een epic per categorie, met acceptatiecriteria vóór publicatie.",
+  "alt.screenOverview": "Het overzichtsscherm van het product",
+  "alt.screenFindings": "De tabel met bevindingen",
+  "alt.screenBacklog": "De backlogboom"
 }

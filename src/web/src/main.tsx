@@ -246,8 +246,17 @@ function App() {
         <div className="topbar-actions">
           <LanguagePicker />
           <ThemeToggle />
-          {authConfigured
-            ? <span className="account-menu"><span>{displayName}</span><a href="/account/signout">{t('shell.sign-out')}</a></span>
+          {/* Who you are, whenever the product knows. It used to key off whether Entra was
+              configured rather than whether anybody was signed in, so a local run showed a
+              "Local development" badge even though it knew the name perfectly well. Sign
+              out only appears where there is something to sign out of. */}
+          {authenticated
+            ? (
+              <span className="account-menu">
+                <span>{displayName}</span>
+                {authConfigured && <a href="/account/signout">{t('shell.sign-out')}</a>}
+              </span>
+            )
             : <span className="dev-account">{t(authFailed ? 'shell.api-unavailable' : 'shell.local-development')}</span>}
 
           {/* Last in the row and last in the tab order, which is where a reader expects the

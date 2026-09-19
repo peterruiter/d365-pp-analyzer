@@ -31,7 +31,7 @@
       </div>
 
       <div class="hero-visual">
-        <img src="/assets/report-cover.png" alt="{{alt.pageCover}}" loading="eager" width="1240" height="1755">
+        <img src="/assets/screen-overview.png" alt="{{alt.screenOverview}}" loading="eager" width="1440" height="1000">
       </div>
     </div>
     <span class="scroll-cue">{{hero.scroll}}</span>
@@ -157,6 +157,34 @@
           <h3>{{output.card3.title}}</h3>
           <p>{{output.card3.body}}</p>
         </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- The product. Screenshots of it running against the demonstration estate, taken at
+       1440 by 1000 like the sibling sites. A change to the chrome dates all three at once,
+       so they are re-shot rather than touched up. -->
+  <section id="product" class="on-tint">
+    <div class="shell">
+      <div class="section-head reveal">
+        <p class="eyebrow">{{product.eyebrow}}</p>
+        <h2>{{product.heading}}</h2>
+        <p>{{product.lede}}</p>
+      </div>
+
+      <div class="screens">
+        <figure class="reveal">
+          <img src="/assets/screen-overview.png" alt="{{alt.screenOverview}}" loading="lazy" width="1440" height="1000">
+          <figcaption>{{product.screen1}}</figcaption>
+        </figure>
+        <figure class="reveal">
+          <img src="/assets/screen-findings.png" alt="{{alt.screenFindings}}" loading="lazy" width="1440" height="1000">
+          <figcaption>{{product.screen2}}</figcaption>
+        </figure>
+        <figure class="reveal">
+          <img src="/assets/screen-backlog.png" alt="{{alt.screenBacklog}}" loading="lazy" width="1440" height="1000">
+          <figcaption>{{product.screen3}}</figcaption>
+        </figure>
       </div>
     </div>
   </section>

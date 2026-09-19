@@ -131,7 +131,13 @@ else
     builder.Services
         .AddSingleton(new LocalSignInHandler.Identity(
             initialAdmin ?? "local@localhost",
-            "Local development"))
+
+            // Configurable because this name is on screen, and the screenshots on the
+            // public site are taken from a local run. "Local development" across the top
+            // of a picture on a marketing page is not what it is trying to say.
+            builder.Configuration["LocalSignIn:DisplayName"]
+                ?? Environment.GetEnvironmentVariable("ANALYZER_LOCAL_DISPLAY_NAME")
+                ?? "Local development"))
         .AddAuthentication(LocalSignInHandler.SchemeName)
         .AddScheme<AuthenticationSchemeOptions, LocalSignInHandler>(LocalSignInHandler.SchemeName, null);
 }
@@ -781,15 +787,23 @@ app.MapGet("/api/engagements/{engagementId:guid}/assessment",
 
     var breakdown = JsonDocument.Parse(score.Value.BreakdownJson).RootElement;
 
-    decimal? lowCodeShare = breakdown.TryGetProperty("LowCodeShare", out var share)
+    // Under "score", not at the root.
+    //
+    // The stored breakdown wraps the whole RunScore in a "score" property, and this read
+    // the root, so it never found the figure and the overview reported no ratio at all
+    // for every run this product has ever scored. It did not fail: a null share renders as
+    // an absent number, which looks like an estate the ratio does not apply to.
+    var figures = breakdown.TryGetProperty("score", out var nested)
+        && nested.ValueKind == JsonValueKind.Object
+            ? nested
+            : breakdown;
+
+    decimal? lowCodeShare = figures.TryGetProperty("LowCodeShare", out var share)
         && share.ValueKind == JsonValueKind.Number
         ? share.GetDecimal()
         : null;
 
-    var componentTypes = breakdown.TryGetProperty("ByDomain", out var domains)
-        && domains.ValueKind == JsonValueKind.Object
-        ? domains.EnumerateObject().Count()
-        : 0;
+    var componentTypes = await store.CountComponentTypesAsync(run.Value, context.RequestAborted);
 
     return Results.Ok(new
     {
@@ -813,8 +827,12 @@ app.MapGet("/api/engagements/{engagementId:guid}/assessment",
             {
                 id = finding.FindingId,
                 finding.Severity,
-                detail = finding.ComponentName ?? finding.SolutionName ?? finding.RuleId,
-                consequence = finding.RuleId
+
+                // The rule's name, and under it where it is. It was the other way round
+                // and the second line was the raw rule identifier, so the panel on the
+                // first screen of the product read "alm.unmanagedInProduction" twice.
+                title = RuleCatalogue.Find(finding.RuleId)?.Name ?? finding.RuleId,
+                where = finding.ComponentName ?? finding.SolutionName ?? "solution wide"
             })
     });
 }).RequireAuthorization();

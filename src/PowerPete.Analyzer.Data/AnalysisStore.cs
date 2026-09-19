@@ -524,6 +524,30 @@ public sealed class AnalysisStore(string connectionString)
         return row;
     }
 
+    /// <summary>
+    /// How many distinct component types a run actually produced.
+    /// </summary>
+    /// <remarks>
+    /// Counted from the inventory rather than derived from the score. The overview screen
+    /// wanted this figure and the score has no per type breakdown, so it was being read off
+    /// the domain map instead: seven domains reported as seven component types, except the
+    /// property was looked up at the wrong level of the stored JSON and it reported nought.
+    /// A headline figure of nought next to a component count of four hundred says the
+    /// product failed rather than that the estate is empty, which is the worse of the two
+    /// wrong things it could say.
+    /// </remarks>
+    /// <param name="runId">Which run.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task<int> CountComponentTypesAsync(Guid runId, CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        return await connection.ExecuteScalarAsync<int>(new CommandDefinition(
+            "SELECT COUNT(DISTINCT ComponentTypeId) FROM inv.Component WHERE RunId = @runId;",
+            new { runId },
+            cancellationToken: cancellationToken));
+    }
+
     /// <summary>The latest run on an engagement that produced findings, or null.</summary>
     /// <remarks>
     /// Latest that got as far as scoring, not latest that was started. A screen defaulting to

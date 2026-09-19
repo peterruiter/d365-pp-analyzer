@@ -7,6 +7,7 @@
   "nav.honesty": "Honesty",
   "nav.safety": "Safety",
   "nav.output": "Output",
+  "nav.product": "The product",
   "nav.report": "The report",
   "nav.rules": "What it checks",
   "nav.privacy": "Privacy",
@@ -176,5 +177,14 @@
   "alt.pageFindings": "The findings table",
   "alt.pageRoadmap": "The roadmap grid",
   "alt.pageMaturity": "A radar chart of functional maturity",
-  "alt.pageScenarios": "The scenarios page"
+  "alt.pageScenarios": "The scenarios page",
+  "product.eyebrow": "The product",
+  "product.heading": "Three screens, and what each is for.",
+  "product.lede": "Screenshots of the product running against the demonstration estate. Nothing here is a mock-up.",
+  "product.screen1": "The overview. What was read, what it would cost, and the worst of it.",
+  "product.screen2": "Findings, worst first, with what each estimate is based on.",
+  "product.screen3": "The backlog: an epic per category, with acceptance criteria before anybody publishes.",
+  "alt.screenOverview": "The overview screen of the product",
+  "alt.screenFindings": "The findings table",
+  "alt.screenBacklog": "The backlog tree"
 }

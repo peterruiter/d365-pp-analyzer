@@ -7,6 +7,7 @@
   "nav.honesty": "Onestà",
   "nav.safety": "Sicurezza",
   "nav.output": "Risultati",
+  "nav.product": "Il prodotto",
   "nav.report": "Il rapporto",
   "nav.rules": "Cosa verifica",
   "nav.privacy": "Privacy",
@@ -176,5 +177,14 @@
   "alt.pageFindings": "La tabella dei rilievi",
   "alt.pageRoadmap": "La griglia della roadmap",
   "alt.pageMaturity": "Un grafico radar della maturità funzionale",
-  "alt.pageScenarios": "La pagina degli scenari"
+  "alt.pageScenarios": "La pagina degli scenari",
+  "product.eyebrow": "Il prodotto",
+  "product.heading": "Tre schermate, e a cosa serve ciascuna.",
+  "product.lede": "Schermate del prodotto sul patrimonio dimostrativo. Nulla qui è un mock-up.",
+  "product.screen1": "La panoramica. Cosa è stato letto, quanto costa, e il peggio.",
+  "product.screen2": "Rilievi, i peggiori per primi, con la base di ogni stima.",
+  "product.screen3": "Il backlog: un epic per categoria, con criteri di accettazione prima di pubblicare.",
+  "alt.screenOverview": "La schermata di panoramica del prodotto",
+  "alt.screenFindings": "La tabella dei rilievi",
+  "alt.screenBacklog": "L'albero del backlog"
 }

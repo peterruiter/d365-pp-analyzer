@@ -7,6 +7,7 @@
   "nav.honesty": "Ehrlichkeit",
   "nav.safety": "Sicherheit",
   "nav.output": "Ergebnis",
+  "nav.product": "Das Produkt",
   "nav.report": "Der Bericht",
   "nav.rules": "Was es prüft",
   "nav.privacy": "Datenschutz",
@@ -176,5 +177,14 @@
   "alt.pageFindings": "Die Befundtabelle",
   "alt.pageRoadmap": "Das Roadmap-Raster",
   "alt.pageMaturity": "Ein Netzdiagramm der funktionalen Reife",
-  "alt.pageScenarios": "Die Szenarienseite"
+  "alt.pageScenarios": "Die Szenarienseite",
+  "product.eyebrow": "Das Produkt",
+  "product.heading": "Drei Bildschirme, und wofür jeder da ist.",
+  "product.lede": "Screenshots des Produkts auf der Demonstrationslandschaft. Nichts davon ist ein Mock-up.",
+  "product.screen1": "Die Übersicht. Was gelesen wurde, was es kostet, und das Schlimmste davon.",
+  "product.screen2": "Befunde, das Schlimmste zuerst, mit der Grundlage jeder Schätzung.",
+  "product.screen3": "Das Backlog: ein Epic je Kategorie, mit Abnahmekriterien vor der Veröffentlichung.",
+  "alt.screenOverview": "Der Übersichtsbildschirm des Produkts",
+  "alt.screenFindings": "Die Befundtabelle",
+  "alt.screenBacklog": "Der Backlog-Baum"
 }

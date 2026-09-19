@@ -144,8 +144,8 @@ export function OverviewPage({ engagementId, onNavigate }: {
                     <li key={risk.id} className="check-warning">
                       <span className="check-mark" aria-hidden="true" />
                       <div>
-                        <strong>{risk.detail}</strong>
-                        <p>{risk.consequence}</p>
+                        <strong>{risk.title}</strong>
+                        <p>{risk.where}</p>
                       </div>
                       <span className={`tag ${severityTag[risk.severity.toLowerCase()] ?? 'muted'}`}>
                         {t('severity.' + risk.severity.toLowerCase())}

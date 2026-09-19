@@ -991,11 +991,33 @@
 .findings-table td.numeric { color: var(--cp-text); }
 
 .severity-pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
-.severity-critical { background: var(--cp-danger); color: #ffffff; }
-.severity-high { background: rgba(220, 38, 38, .12); color: var(--cp-danger); }
-.severity-medium { background: rgba(190, 77, 0, .12); color: var(--cp-terracotta, #BE4D00); }
-.severity-low { background: var(--cp-surface-soft); color: var(--cp-text-muted); }
-.severity-info { background: var(--cp-accent-soft); color: var(--cp-accent); }
+
+/* Scoped to the pill, which is the only thing these were ever drawn for.
+   The severity also goes on the table row, so an unscoped rule painted the whole
+   row: ten solid red bands down the findings page with an orange "low confidence"
+   tag on top of them, unreadable, and a table nobody could scan. */
+.severity-pill.severity-critical { background: var(--cp-danger); color: #ffffff; }
+.severity-pill.severity-high { background: rgba(220, 38, 38, .12); color: var(--cp-danger); }
+.severity-pill.severity-medium { background: rgba(190, 77, 0, .12); color: var(--cp-terracotta, #BE4D00); }
+.severity-pill.severity-low { background: var(--cp-surface-soft); color: var(--cp-text-muted); }
+.severity-pill.severity-info { background: var(--cp-accent-soft); color: var(--cp-accent); }
+
+/* The row carries its severity as a stripe down the edge rather than as a fill, the
+   same way the narrow layout already did it. Worst first is the order; the stripe is
+   there to let somebody find where critical stops without reading the column. */
+.findings-table tbody tr[class*="severity-"] > td:first-child { border-left: 4px solid transparent; }
+.findings-table tbody tr.severity-critical > td:first-child { border-left-color: var(--cp-danger); }
+/* Not --brand-orange: that is aliased to the brand cyan, so a "high" row was striped
+   blue, which reads as information rather than as the second worst thing on the page. */
+.findings-table tbody tr.severity-high > td:first-child { border-left-color: rgba(220, 38, 38, .55); }
+.findings-table tbody tr.severity-medium > td:first-child { border-left-color: var(--cp-warning); }
+.findings-table tbody tr.severity-low > td:first-child { border-left-color: var(--cp-border-strong); }
+.findings-table tbody tr.severity-info > td:first-child { border-left-color: var(--cp-accent); }
+
+/* A whisper of tint on the two that matter, so the top of the table reads as heavier
+   than the bottom without any row becoming a block of colour. */
+.findings-table tbody tr.severity-critical > td { background: rgba(220, 38, 38, .05); }
+.findings-table tbody tr.severity-high > td { background: rgba(220, 38, 38, .025); }
 
 .tag-warning { background: rgba(190, 77, 0, .12); color: var(--cp-terracotta, #BE4D00); }
 
@@ -1101,7 +1123,11 @@
 .backlog-item[open] > summary::before { transform: rotate(45deg); }
 .backlog-item > summary:hover { background: var(--cp-surface-soft); }
 
-.backlog-title { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-width: 0; }
+/* Grows to fill, so it starts where the disclosure marker ends.
+   The summary is a space-between row of three: the marker, this, and the counts. With
+   this one sized to its content the free space landed on both sides of it, so every
+   title floated in the middle of its row with the type pill adrift in front of it. */
+.backlog-title { display: flex; flex: 1 1 auto; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 10px; min-width: 0; }
 .backlog-title strong { color: var(--brand-ink); font-size: 14px; font-weight: 600; line-height: 1.4; }
 
 .backlog-numbers { display: flex; flex: none; align-items: center; gap: 12px; }

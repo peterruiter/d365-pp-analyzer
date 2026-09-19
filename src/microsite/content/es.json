@@ -7,6 +7,7 @@
   "nav.honesty": "Honestidad",
   "nav.safety": "Seguridad",
   "nav.output": "Resultado",
+  "nav.product": "El producto",
   "nav.report": "El informe",
   "nav.rules": "Qué comprueba",
   "nav.privacy": "Privacidad",
@@ -176,5 +177,14 @@
   "alt.pageFindings": "La tabla de hallazgos",
   "alt.pageRoadmap": "La cuadrícula de la hoja de ruta",
   "alt.pageMaturity": "Un gráfico radar de madurez funcional",
-  "alt.pageScenarios": "La página de escenarios"
+  "alt.pageScenarios": "La página de escenarios",
+  "product.eyebrow": "El producto",
+  "product.heading": "Tres pantallas, y para qué sirve cada una.",
+  "product.lede": "Capturas del producto sobre el patrimonio de demostración. Nada de esto es una maqueta.",
+  "product.screen1": "La vista general. Qué se leyó, cuánto cuesta y lo peor de ello.",
+  "product.screen2": "Hallazgos, los peores primero, con la base de cada estimación.",
+  "product.screen3": "El backlog: un epic por categoría, con criterios de aceptación antes de publicar.",
+  "alt.screenOverview": "La pantalla de vista general del producto",
+  "alt.screenFindings": "La tabla de hallazgos",
+  "alt.screenBacklog": "El árbol del backlog"
 }
