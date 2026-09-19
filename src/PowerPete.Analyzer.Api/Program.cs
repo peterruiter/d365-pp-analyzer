@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Web;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -82,6 +83,25 @@ builder.Services.AddAuthorization();
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
+
+// The container app terminates TLS at its ingress and forwards plain HTTP to this process,
+// so without this every URL the framework builds for itself carries the scheme it was
+// reached on rather than the one the browser used. The sign-in redirect is the first casualty:
+// Entra is handed http://.../signin-oidc, refuses it against a registration that says https,
+// and the error names the redirect URI rather than the proxy that rewrote it.
+//
+// The ingress is not in a known network or a known proxy list, and clearing both is what tells
+// the middleware to trust the hop in front of it. That is safe here because nothing reaches
+// this container except through that ingress.
+var forwarded = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost
+};
+
+forwarded.KnownNetworks.Clear();
+forwarded.KnownProxies.Clear();
+
+app.UseForwardedHeaders(forwarded);
 
 app.UseAuthentication();
 app.UseAuthorization();

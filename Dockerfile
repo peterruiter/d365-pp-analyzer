@@ -53,9 +53,12 @@ COPY docs ./docs
 RUN mkdir -p ./src/PowerPete.Analyzer.Api/wwwroot/documentation \
  && cp -R docs/. ./src/PowerPete.Analyzer.Api/wwwroot/documentation/
 
-# The microsite stage came across with the port and is not here: src/microsite does not
-# exist in this product and STATE.md lists it as not started. A COPY of a path that is not
-# in the context fails the build, so the stage goes until there is a microsite to build.
+# The public site, built here into the web root. It reads the contracts so the rule count and
+# the reach matrix on the page are the product's own numbers rather than a second copy that
+# drifts. English at the root, every other language in a folder of its own.
+COPY src/microsite ./src/microsite
+COPY src/web/public ./src/web/public
+RUN node src/microsite/build.mjs src/microsite src/PowerPete.Analyzer.Api/wwwroot
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS publish
 WORKDIR /src
