@@ -778,12 +778,17 @@ public sealed class WorkspaceStore(string connectionString)
     {
         await using var connection = Connect();
 
+        // The shared column list, not a second one written out by hand.
+        //
+        // This selected CreatedBy as well, which the record does not have, so Dapper could
+        // not find a constructor for the nine columns and threw. It is on the worker's
+        // setup path, which means every run ever queued died before its first stage with a
+        // message about constructors rather than about a column.
+        //
+        // The existing guard only catches SELECT *, and this was an explicit list that had
+        // simply drifted from the record beside it. One constant cannot drift.
         return await connection.QuerySingleOrDefaultAsync<Engagement>(new CommandDefinition(
-            """
-            SELECT EngagementId, Name, ClientName, Status, IsRegulated, ReportLanguage, BacklogLanguage,
-                   CreatedUtc, CreatedBy
-            FROM ops.Engagement WHERE EngagementId = @engagementId;
-            """,
+            $"SELECT {EngagementColumns} FROM ops.Engagement WHERE EngagementId = @engagementId;",
             new { engagementId },
             cancellationToken: cancellationToken));
     }
