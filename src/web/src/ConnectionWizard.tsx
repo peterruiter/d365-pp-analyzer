@@ -180,7 +180,9 @@ export function ConnectionWizard({
         <>
           <div className="wizard-body">
             <h3>{t('connections.which-system')}</h3>
-            <p className="wizard-help">{t('connections.which-system-help')}</p>
+            <p className="wizard-help">
+              {t(direction === 'target' ? 'connections.which-system-help-target' : 'connections.which-system-help')}
+            </p>
 
             <div className="connector-grid">
               {modes.map((mode) => (
@@ -267,7 +269,11 @@ export function ConnectionWizard({
             {chosen.needsSecret && (
               <>
                 <label className="field-label">
-                  {t('connections.secret')}
+                  {/* Named for what it actually is. "Client secret" is right for an Entra
+                      app registration and wrong for a personal access token and wronger
+                      for an Atlassian API token, and somebody pasting the wrong kind of
+                      credential gets an authentication error rather than a hint. */}
+                  {t('connections.secret.' + chosen.authType)}
                   <input
                     type="password"
                     value={secret}

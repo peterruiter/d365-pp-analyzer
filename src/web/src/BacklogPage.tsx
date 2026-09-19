@@ -301,8 +301,15 @@ export function BacklogPage({ engagementId }: { engagementId: string }) {
   );
 }
 
-/** One project in an Azure DevOps organisation. */
-type Project = { id: string; name: string; description: string | null };
+/**
+ * One project a backlog can land in.
+ *
+ * The name is what a person recognises and the value is what the publish call wants, and
+ * they are not the same thing on both targets: Azure DevOps takes a project name and Jira
+ * takes a project key. The server decides which is which so this screen does not have to
+ * know what it is talking to.
+ */
+type Project = { id: string; name: string; value: string; description: string | null };
 
 /**
  * Where a chosen part of the backlog goes.
@@ -337,7 +344,9 @@ function PublishPanel({ engagementId, selected, total, onClear, t }: {
     void getJson<Connection[]>(`/api/engagements/${engagementId}/connections`).then((answer) => {
       if (cancelled) return;
 
-      const found = (answer.data ?? []).filter((candidate) => candidate.mode === 'azureDevOps');
+      // Anything that is a place a backlog goes. The server decides which modes those
+      // are; a list hard coded here would have missed Jira the day it was added.
+      const found = (answer.data ?? []).filter((candidate) => candidate.direction === 'target');
       setTargets(found);
       if (found.length === 1) setConnectionId(found[0].connectionId);
     });
@@ -359,7 +368,7 @@ function PublishPanel({ engagementId, selected, total, onClear, t }: {
         if (cancelled) return;
 
         setProjects(answer.data ?? []);
-        setProject(answer.data?.length === 1 ? answer.data[0].name : '');
+        setProject(answer.data?.length === 1 ? answer.data[0].value : '');
         setError(answer.error);
         setLoadingProjects(false);
       });
@@ -437,7 +446,7 @@ function PublishPanel({ engagementId, selected, total, onClear, t }: {
               {loadingProjects ? t('common.loading') : t('backlog.publish.choose-project')}
             </option>
             {projects.map((candidate) => (
-              <option key={candidate.id} value={candidate.name}>{candidate.name}</option>
+              <option key={candidate.id} value={candidate.value}>{candidate.name}</option>
             ))}
           </select>
         </label>

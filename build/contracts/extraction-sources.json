@@ -111,6 +111,22 @@
         "leastPrivilege": "Work Items: Read & write. Nothing else. The token does not need code, builds, releases or project administration, and a token that has them is a token somebody has to explain in a security review."
       },
       "note": "The project is chosen per publish rather than stored on the connection. One organisation usually holds several projects and the backlog from one engagement does not always land in the same one."
+    },
+    {
+      "id": "jira",
+      "name": "Jira",
+      "status": "supported",
+      "summary": "A Jira board, for the clients who do not use Azure DevOps. The same backlog, the same deterministic keys and the same refusal to reopen anything somebody closed.",
+      "auth": {
+        "type": "apiToken",
+        "settings": [
+          "siteUrl",
+          "email"
+        ],
+        "secretRef": "An Atlassian API token in Key Vault, paired with the account email it was issued to. Nothing about it reaches the database.",
+        "leastPrivilege": "Browse projects and Create issues on the one project the backlog lands in. An Atlassian API token carries the whole account rather than a scope, so the account it belongs to is the thing to keep small: a service account on that project beats a consultant’s own login."
+      },
+      "note": "The project is chosen per publish, the same as Azure DevOps. The issue types are read from the project rather than assumed, because a team managed project and a company managed one do not offer the same ones and neither always has Epic."
     }
   ]
 }

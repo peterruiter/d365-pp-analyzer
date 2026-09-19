@@ -47,7 +47,14 @@ static int SeverityRank(string severity) => severity switch
     _ => 4
 };
 
-string[] ExtractionModesList() => ["servicePrincipal", "delegated", "offlineZip", "azureDevOps"];
+// Every mode a connection can be, which is the three ways in plus the two ways out.
+// Publish targets live in the same table as sources and are told apart by this value.
+string[] ExtractionModesList() => ["servicePrincipal", "delegated", "offlineZip", "azureDevOps", "jira"];
+
+// The modes that are somewhere a backlog goes rather than somewhere an estate is read. Held
+// once: this used to be an equality check against azureDevOps in three places, and adding a
+// second target would have meant finding all three.
+string[] PublishTargets() => ["azureDevOps", "jira"];
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -62,6 +69,7 @@ var keyVaultUri = builder.Configuration["KeyVaultUri"] ?? Environment.GetEnviron
 var initialAdmin = builder.Configuration["InitialGlobalAdmin"] ?? Environment.GetEnvironmentVariable("ANALYZER_INITIAL_ADMIN");
 
 builder.Services.AddSingleton<DevOpsProjects>();
+builder.Services.AddSingleton<JiraProjects>();
 builder.Services.AddSingleton(new WorkspaceStore(connectionString));
 builder.Services.AddSingleton(new AnalysisStore(connectionString));
 builder.Services.AddSingleton(new AccessStore(connectionString));
@@ -438,7 +446,7 @@ app.MapGet("/api/engagements/{engagementId:guid}/connections",
         // Derived from the mode rather than stored. Azure DevOps is the one place this
         // product writes, so it is the one connection that is a target, and a column nobody
         // sets is a column that eventually says a Dataverse connection writes somewhere.
-        direction = string.Equals(connection.Mode, "azureDevOps", StringComparison.Ordinal) ? "target" : "source",
+        direction = PublishTargets().Contains(connection.Mode, StringComparer.Ordinal) ? "target" : "source",
         connection.LastTestMessage,
 
         // The settings, so the screen can show what a connection points at and offer to
@@ -851,24 +859,56 @@ app.MapGet("/api/engagements/{engagementId:guid}/connections/{connectionId:guid}
 
     if (connection is null || connection.EngagementId != engagementId) return Results.NotFound();
 
-    if (!string.Equals(connection.Mode, "azureDevOps", StringComparison.Ordinal))
+    if (!PublishTargets().Contains(connection.Mode, StringComparer.Ordinal))
     {
         return Results.BadRequest(new { error = "That connection does not publish anywhere." });
     }
 
     var settings = ConnectionSettings(connection.SettingsJson);
-    settings.TryGetValue("organisationUrl", out var organisation);
 
     var secrets = context.RequestServices.GetRequiredService<ISecretStore>();
     var token = connection.SecretRef is { Length: > 0 } reference
         ? await secrets.GetAsync(SecretNames.For(reference, "secret"), context.RequestAborted)
         : null;
 
+    // Both targets answer the same question and neither answers it the same way. What the
+    // screen gets back is the same shape either way: a name a person recognises and a value
+    // the publish call wants, which is a project name in Azure DevOps and a project key in
+    // Jira.
+    if (string.Equals(connection.Mode, "jira", StringComparison.Ordinal))
+    {
+        settings.TryGetValue("siteUrl", out var site);
+        settings.TryGetValue("email", out var email);
+
+        var boards = context.RequestServices.GetRequiredService<JiraProjects>();
+
+        var found = await boards.ListAsync(
+            site ?? string.Empty, email ?? string.Empty, token ?? string.Empty, context.RequestAborted);
+
+        if (found.Error is not null) return Results.BadRequest(new { error = found.Error });
+
+        return Results.Ok(found.Projects.Select(project => new
+        {
+            project.Id,
+            name = $"{project.Name} ({project.Key})",
+            value = project.Key,
+            description = (string?)null
+        }));
+    }
+
+    settings.TryGetValue("organisationUrl", out var organisation);
+
     var result = await projects.ListAsync(organisation ?? string.Empty, token ?? string.Empty, context.RequestAborted);
 
     if (result.Error is not null) return Results.BadRequest(new { error = result.Error });
 
-    return Results.Ok(result.Projects.Select(project => new { project.Id, project.Name, project.Description }));
+    return Results.Ok(result.Projects.Select(project => new
+    {
+        project.Id,
+        project.Name,
+        value = project.Name,
+        project.Description
+    }));
 }).RequireAuthorization();
 
 // Publishing a chosen set of the backlog into a chosen project.
@@ -894,7 +934,7 @@ app.MapPost("/api/engagements/{engagementId:guid}/publish",
 
     if (connection is null || connection.EngagementId != engagementId) return Results.NotFound();
 
-    if (!string.Equals(connection.Mode, "azureDevOps", StringComparison.Ordinal))
+    if (!PublishTargets().Contains(connection.Mode, StringComparer.Ordinal))
     {
         return Results.BadRequest(new { error = "That connection does not publish anywhere." });
     }
@@ -955,12 +995,6 @@ app.MapPost("/api/engagements/{engagementId:guid}/publish",
         .ToList();
 
     var settings = ConnectionSettings(connection.SettingsJson);
-    settings.TryGetValue("organisationUrl", out var organisation);
-
-    if (string.IsNullOrWhiteSpace(organisation))
-    {
-        return Results.BadRequest(new { error = "This connection has no organisation address on it." });
-    }
 
     var secrets = context.RequestServices.GetRequiredService<ISecretStore>();
     var token = connection.SecretRef is { Length: > 0 } reference
@@ -969,37 +1003,70 @@ app.MapPost("/api/engagements/{engagementId:guid}/publish",
 
     if (string.IsNullOrWhiteSpace(token))
     {
-        return Results.BadRequest(new { error = "This connection has no personal access token. Edit it and add one." });
+        return Results.BadRequest(new { error = "This connection has no credential on it. Edit it and add one." });
     }
 
-    using var client = factory.CreateClient("devops");
-    client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
-        "Basic", Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes($":{token}")));
+    var jira = string.Equals(connection.Mode, "jira", StringComparison.Ordinal);
 
-    var publisher = new WorkItemPublisher(client, organisation, request.Project);
+    settings.TryGetValue(jira ? "siteUrl" : "organisationUrl", out var host);
+
+    if (string.IsNullOrWhiteSpace(host))
+    {
+        return Results.BadRequest(new { error = "This connection has no address on it." });
+    }
 
     try
     {
-        var published = await publisher.PublishAsync(
-            items,
+        // The two publishers answer the same shape and nothing below this line cares which
+        // one ran. Both refuse a backlog that has changed since it was approved, both
+        // refuse more than two hundred items without a confirmed count, and neither
+        // reopens anything somebody closed.
+        IReadOnlyList<(string Key, string Id, string Url, string Action)> published;
 
-            // The same hash twice. The publisher compares what was approved with what is
-            // being published, and here they are the same backlog by construction: the
-            // items were read from the run the approval is against.
-            approved,
-            approved,
-            request.DryRun,
+        if (jira)
+        {
+            settings.TryGetValue("email", out var email);
 
-            // Confirmed by the person pressing the button, which the screen shows a count
-            // on. The publisher refuses more than two hundred without one.
-            confirmedCount: items.Count,
-            context.RequestAborted);
+            var boards = context.RequestServices.GetRequiredService<JiraProjects>();
+            using var jiraClient = boards.Authenticated(email ?? string.Empty, token);
+
+            // Read from the project rather than assumed. A team managed project and a
+            // company managed one do not offer the same issue types.
+            var types = await JiraProjects.IssueTypesAsync(jiraClient, host, request.Project, context.RequestAborted);
+
+            var result = await new JiraPublisher(jiraClient, host, request.Project, types).PublishAsync(
+                items, approved, approved, request.DryRun, confirmedCount: items.Count, context.RequestAborted);
+
+            published = [.. result.Select(entry => (entry.Key, entry.IssueKey, entry.Url, entry.Action))];
+        }
+        else
+        {
+            using var client = factory.CreateClient("devops");
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
+                "Basic", Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes($":{token}")));
+
+            var result = await new WorkItemPublisher(client, host, request.Project).PublishAsync(
+                items, approved, approved, request.DryRun, confirmedCount: items.Count, context.RequestAborted);
+
+            published = [.. result.Select(entry => (
+                entry.Key,
+                entry.WorkItemId.ToString(CultureInfo.InvariantCulture),
+                entry.Url,
+                entry.Action))];
+        }
 
         if (!request.DryRun)
         {
             await analysis.WritePublishedAsync(run.Value,
-                [.. published.Select(entry => (run.Value, organisation, request.Project,
-                    entry.WorkItemId, entry.Url, entry.Action))],
+                [.. published.Select(entry => (run.Value, host, request.Project,
+
+                    // The identifier column is an integer, which Azure DevOps work item
+                    // identifiers are and Jira issue keys are not. A Jira key carries its
+                    // project in it and is in the URL beside this, so nothing is lost by
+                    // storing nought where there is no number.
+                    int.TryParse(entry.Id, CultureInfo.InvariantCulture, out var numeric) ? numeric : 0,
+                    entry.Url,
+                    entry.Action))],
                 context.RequestAborted);
         }
 
@@ -1014,17 +1081,17 @@ app.MapPost("/api/engagements/{engagementId:guid}/publish",
             // a count that came back larger than the number of boxes ticked needs to say
             // why before somebody thinks it published the wrong thing.
             parentsIncluded = items.Count - chosen.Count,
-            items = published.Select(entry => new { entry.Key, entry.WorkItemId, entry.Url, entry.Action })
+            items = published.Select(entry => new { entry.Key, id = entry.Id, entry.Url, entry.Action })
         });
     }
     catch (InvalidOperationException refused)
     {
-        // The publisher's own refusals, which are written for a person to read.
+        // The publishers' own refusals, which are written for a person to read.
         return Results.BadRequest(new { error = refused.Message });
     }
     catch (HttpRequestException failure)
     {
-        return Results.BadRequest(new { error = $"Azure DevOps could not be reached: {failure.Message}" });
+        return Results.BadRequest(new { error = $"{(jira ? "Jira" : "Azure DevOps")} could not be reached: {failure.Message}" });
     }
 }).RequireAuthorization();
 

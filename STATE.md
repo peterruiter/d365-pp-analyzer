@@ -873,6 +873,44 @@ control. A state the deployment signed gets past the check and the next thing it
 read the connection, so with a store pointed at a server that is not there, a refusal
 returns null and an acceptance fails reaching the database. That difference is the proof.
 
+## Jira, beside Azure DevOps
+
+A second target rather than a rewrite of the first. The two disagree about almost everything
+at the wire and agree about the only two things that matter: an item has a parent, and an
+item this product created before has to be found again rather than created twice. So the
+rules are the same and only the calls differ, and both publishers refuse a backlog that has
+changed since it was approved, refuse more than two hundred items without a confirmed count,
+and never reopen anything somebody closed.
+
+The deterministic key is a Jira label, the way it is an Azure DevOps tag. A label is the one
+field present on every Jira project however somebody configured it, needs no custom field
+created first, and is searchable with JQL.
+
+Three things Jira does differently and neither the contract nor the publisher may assume
+away:
+
+- **Issue types are read from the project rather than named.** A team managed project and a
+  company managed one do not offer the same ones and neither reliably has Epic, so each of
+  ours falls down a chain: a feature that lands as a story is a board somebody can work
+  with, and a publish that refuses because a project has no Feature type is not.
+- **Descriptions are Atlassian Document Format, not HTML.** The backlog builder emits HTML
+  because that is what the Azure DevOps field takes, and changing it would change what gets
+  published there, so it is converted here. Only the shapes the builder emits are
+  understood, which is all it has to understand: it is a converter for the six sections this
+  product writes rather than a general one.
+- **An API token is paired with the email it was issued to.** Neither works alone, so both
+  are on the connection and the error says so, because "401" sends people to check the token.
+
+The direction of a connection was an equality check against `azureDevOps` in three places.
+It is one list now, which is what made adding the second target a contract entry and a
+publisher rather than a hunt.
+
+Opening the new form found the older gap it was hiding: `field.organisationUrl` had never
+been translated and rendered as its own key, because nothing had ever opened the Azure
+DevOps form either. The credential label said "Client secret" on every mode, which is right
+for an app registration and wrong for both tokens, and the mode chooser told somebody
+picking a target to pick the platform this connection reads.
+
 ## What was ported rather than invented
 
 | From | What |
