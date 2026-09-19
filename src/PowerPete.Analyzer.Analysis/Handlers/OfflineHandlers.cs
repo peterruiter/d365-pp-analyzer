@@ -17,6 +17,48 @@ internal static class Fire
 
         return Finding.From(rule, component, evidence.ToDictionary(pair => pair.Key, pair => pair.Value));
     }
+
+    /// <summary>
+    /// Builds a finding about a scope rather than a component.
+    /// </summary>
+    /// <remarks>
+    /// For the rules that fire once per solution, per table or per component type. Without a
+    /// scope every one of those findings would carry the same stable key and the second one
+    /// written would violate the unique constraint on the run, taking the whole run with it.
+    /// </remarks>
+    /// <param name="ruleId">The rule.</param>
+    /// <param name="scope">What this one is about: a solution's unique name, a table, a component type.</param>
+    /// <param name="evidence">What triggered it.</param>
+    public static Finding About(string ruleId, string scope, params (string Key, object? Value)[] evidence)
+    {
+        var rule = RuleCatalogue.Find(ruleId)
+            ?? throw new InvalidOperationException($"Rule '{ruleId}' is not in the catalogue.");
+
+        return Finding.From(rule, null, evidence.ToDictionary(pair => pair.Key, pair => pair.Value), scope);
+    }
+
+    /// <summary>
+    /// Builds a finding against a component where one was found, and against a scope where
+    /// the component could not be resolved.
+    /// </summary>
+    /// <remarks>
+    /// For a rule that names a component it looked up rather than iterated. The lookup can
+    /// miss: a rule can count logic sitting on a table that is itself outside the solutions
+    /// in scope. Falling back to the component's name as the scope keeps such findings apart
+    /// from each other, where passing null would give every one of them the same key.
+    /// </remarks>
+    /// <param name="ruleId">The rule.</param>
+    /// <param name="component">What it fired against, where that could be resolved.</param>
+    /// <param name="scope">What it is about, used when the component could not be.</param>
+    /// <param name="evidence">What triggered it.</param>
+    public static Finding AtOrAbout(string ruleId, DiscoveredComponent? component, string scope, params (string Key, object? Value)[] evidence)
+    {
+        var rule = RuleCatalogue.Find(ruleId)
+            ?? throw new InvalidOperationException($"Rule '{ruleId}' is not in the catalogue.");
+
+        return Finding.From(rule, component, evidence.ToDictionary(pair => pair.Key, pair => pair.Value),
+            component is null ? scope : null);
+    }
 }
 
 /// <summary>A dialog is present. Removed in 2020, so anything found is a leftover record.</summary>
@@ -452,7 +494,7 @@ public sealed class PublisherPrefixSprawlHandler : IRuleHandler
 
             if (prefixes.Count <= 1) continue;
 
-            yield return Fire.At(RuleId, null,
+            yield return Fire.About(RuleId, solution.Key,
                 ("solution", solution.Key),
                 ("prefixes", string.Join(", ", prefixes)),
                 ("count", prefixes.Count),
@@ -507,7 +549,7 @@ public sealed class MissingDescriptionHandler : IRuleHandler
             // One finding per type rather than per component. Four hundred individually named
             // findings for a low severity hygiene rule buries every other category in the
             // report, and the work is done in one sitting anyway.
-            yield return Fire.At(RuleId, null,
+            yield return Fire.About(RuleId, typeId,
                 ("componentType", typeId),
                 ("count", missing.Count),
                 ("examples", string.Join(", ", missing.Take(10).Select(component => component.DisplayName))),
@@ -570,7 +612,7 @@ public sealed class LogicSpreadHandler : IRuleHandler
             var component = context.OfType("table")
                 .FirstOrDefault(candidate => string.Equals(candidate.SchemaName, table, StringComparison.OrdinalIgnoreCase));
 
-            yield return Fire.At(RuleId, component,
+            yield return Fire.AtOrAbout(RuleId, component, table,
                 ("table", table),
                 ("mechanisms", string.Join(", ", mechanisms.OrderBy(mechanism => mechanism, StringComparer.Ordinal))),
                 ("count", mechanisms.Count),

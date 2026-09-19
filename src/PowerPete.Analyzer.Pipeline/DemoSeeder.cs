@@ -176,6 +176,7 @@ public sealed class DemoSeeder(string connectionString)
             new
             {
                 id = DemoEstate.EngagementId,
+                runId = DemoEstate.RunId,
                 name = DemoEstate.Name,
                 clientName = DemoEstate.ClientName,
                 connectionId = DemoEstate.ConnectionId,

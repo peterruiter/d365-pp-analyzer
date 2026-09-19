@@ -34,7 +34,7 @@ public sealed class OrphanedColumnHandler : IRuleHandler
             var columns = table.ToList();
             if (columns.Count == 0) continue;
 
-            yield return Fire.At(RuleId, null,
+            yield return Fire.About(RuleId, table.Key,
                 ("table", table.Key),
                 ("count", columns.Count),
                 ("columns", string.Join(", ", columns.Take(25).Select(column => column.SchemaName ?? column.DisplayName))),
@@ -108,7 +108,7 @@ public sealed class NamingInconsistentHandler : IRuleHandler
             var conventions = names.Select(Convention).Distinct(StringComparer.Ordinal).ToList();
             if (conventions.Count <= 2) continue;
 
-            yield return Fire.At(RuleId, null,
+            yield return Fire.About(RuleId, typeId,
                 ("componentType", typeId),
                 ("conventions", string.Join(", ", conventions)),
                 ("count", conventions.Count),
@@ -310,7 +310,7 @@ public sealed class NoEnvironmentSeparationHandler : IRuleHandler
 
         foreach (var solution in diverging)
         {
-            yield return Fire.At(RuleId, null,
+            yield return Fire.About(RuleId, solution.Key,
                 ("solution", solution.Key),
                 ("environments", solution.Count()),
                 ("versions", string.Join(", ", solution.Select(entry => entry.Attribute<string>("version")).Distinct(StringComparer.Ordinal))),

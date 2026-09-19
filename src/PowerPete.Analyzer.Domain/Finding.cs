@@ -30,9 +30,14 @@ public sealed record Finding(
     /// A finding from this product's own catalogue.
     /// </summary>
     /// <param name="rule">The rule that fired.</param>
-    /// <param name="component">The component it fired against, or null for a solution wide rule.</param>
+    /// <param name="component">The component it fired against, or null for a rule with a wider scope.</param>
     /// <param name="evidence">What triggered it. Never empty: a recommendation nobody can check is one nobody will act on.</param>
-    public static Finding From(AnalysisRule rule, DiscoveredComponent? component, IReadOnlyDictionary<string, object?> evidence)
+    /// <param name="scope">What it is about when it is not about one component: a solution, a table, a component type. Required of any rule that can fire more than once without a component.</param>
+    public static Finding From(
+        AnalysisRule rule,
+        DiscoveredComponent? component,
+        IReadOnlyDictionary<string, object?> evidence,
+        string? scope = null)
     {
         ArgumentNullException.ThrowIfNull(rule);
         ArgumentNullException.ThrowIfNull(evidence);
@@ -47,7 +52,7 @@ public sealed record Finding(
 
         return new Finding(
             Guid.NewGuid(),
-            StableKeys.ForFinding(rule.Id, component?.StableKey),
+            StableKeys.ForFinding(rule.Id, component?.StableKey, scope),
             rule.Id,
             component?.StableKey,
             component?.DisplayName,

@@ -114,6 +114,26 @@ public class DemoEstateTests
     }
 
     [Fact]
+    public void Gives_every_finding_a_key_of_its_own()
+    {
+        // The database holds a unique constraint on run and stable key, so two findings
+        // sharing one key do not produce a duplicate row. They fail the whole run, at the
+        // point of saving rather than the point of making them, and the message names a
+        // constraint rather than the rule that emitted twice.
+        //
+        // Rules with no component are where this bites: prefix sprawl fires per solution,
+        // orphaned columns per table, inconsistent naming per component type. Each of those
+        // keyed on the rule alone until this estate found it.
+        var duplicates = Estate.Findings
+            .GroupBy(entry => entry.Finding.StableKey, StringComparer.Ordinal)
+            .Where(group => group.Count() > 1)
+            .Select(group => $"{group.Key} ({group.Count()})")
+            .ToList();
+
+        duplicates.Should().BeEmpty();
+    }
+
+    [Fact]
     public void Never_claims_a_rule_passed_that_it_could_not_check()
     {
         // Whatever could not run has to be named. The count may be zero here, because this

@@ -105,11 +105,34 @@ public static class StableKeys
             nameof(platformId));
     }
 
-    /// <summary>Builds a key for one finding, which is a rule against a component.</summary>
+    /// <summary>
+    /// Builds a key for one finding, which is a rule against a component or against a scope.
+    /// </summary>
+    /// <remarks>
+    /// A rule with no component used to key on the rule alone, which held only while every
+    /// such rule produced at most one finding. Several of them do not: prefix sprawl fires
+    /// per solution, orphaned columns per table, inconsistent naming per component type. Each
+    /// of those produced two or more findings carrying one key, the database refused the
+    /// second on its unique constraint, and the whole run failed at the point of saving
+    /// rather than at the point of making them.
+    ///
+    /// The scope is the thing the finding is about when it is not about a component: a
+    /// solution's unique name, a table's schema name, a component type. It is part of the key
+    /// rather than only part of the evidence because an override and a published work item
+    /// attach to the key, and "the naming in the flows" and "the naming in the tables" are
+    /// two findings somebody will want to answer differently.
+    /// </remarks>
     /// <param name="ruleId">The rule.</param>
-    /// <param name="componentKey">The component's stable key, or null for a solution wide rule.</param>
-    public static string ForFinding(string ruleId, string? componentKey) =>
-        componentKey is null ? $"{ruleId}:solution" : $"{ruleId}|{componentKey}";
+    /// <param name="componentKey">The component's stable key, or null for a rule with a wider scope.</param>
+    /// <param name="scope">What the finding is about, when it is not one component. Null for a rule that genuinely fires once.</param>
+    public static string ForFinding(string ruleId, string? componentKey, string? scope = null)
+    {
+        if (componentKey is not null) return $"{ruleId}|{componentKey}";
+
+        return string.IsNullOrWhiteSpace(scope)
+            ? $"{ruleId}:solution"
+            : $"{ruleId}:scope:{scope.Trim().ToLowerInvariant()}";
+    }
 
     /// <summary>
     /// The deterministic identifier a published work item carries, so a second publish updates
