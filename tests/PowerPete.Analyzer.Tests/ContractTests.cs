@@ -946,6 +946,105 @@ public class DataLayerTests
             + "rather than as an error anybody can read");
     }
 
+    [Fact]
+    public void Deleting_a_run_removes_whatever_points_at_what_it_deletes()
+    {
+        // The delete removes a run's rows table by table, in a written order, because one
+        // statement over a hundred thousand rows escalates to a table lock and a single
+        // transaction over them never finishes. Written orders rot.
+        //
+        // findings.PublishedWorkItem points at both the run and the backlog item it came
+        // from. SQL Server refuses two cascade paths to the same table, so the backlog
+        // reference is a plain foreign key and nothing deletes it for you. It was missing
+        // from the order, and the failure was precise: every run deleted cleanly until
+        // somebody published from one, and that one could never be deleted at all.
+        //
+        // So this holds the order against the schema rather than against a list somebody
+        // maintains. A table added in a year with a foreign key into anything the delete
+        // touches fails here, at the point it is added, rather than the first time a
+        // consultant tries to tidy up after a publish.
+        var order = WorkspaceStore.RunDeleteOrder
+            .Select(step => step.Table)
+            .Append("ops.AnalysisRun")
+            .ToList();
+
+        var offending = ForeignKeys()
+            .Where(key => !key.Cascades)
+            .Where(key => order.Contains(key.References, StringComparer.OrdinalIgnoreCase))
+            .Where(key =>
+            {
+                var referencing = order.FindIndex(table =>
+                    string.Equals(table, key.Table, StringComparison.OrdinalIgnoreCase));
+
+                var referenced = order.FindIndex(table =>
+                    string.Equals(table, key.References, StringComparison.OrdinalIgnoreCase));
+
+                // Absent from the order entirely, or deleted after the thing it points at.
+                // Both are the same failure: the delete hits the constraint and stops.
+                return referencing < 0 || referencing > referenced;
+            })
+            .Select(key => $"{key.Table} -> {key.References} ({key.Name})")
+            .ToList();
+
+        offending.Should().BeEmpty(
+            "every table with a foreign key into a run's rows has to be emptied before the rows it points "
+            + "at, or cascade from them. Otherwise deleting a run fails on the constraint, and it fails "
+            + "the same way however many times somebody presses the button");
+    }
+
+    /// <summary>One foreign key, as the migrations declare it.</summary>
+    /// <param name="Name">Its constraint name, for the failure message.</param>
+    /// <param name="Table">The table that holds it.</param>
+    /// <param name="References">The table it points at.</param>
+    /// <param name="Cascades">Whether deleting the parent removes it.</param>
+    private sealed record ForeignKey(string Name, string Table, string References, bool Cascades);
+
+    /// <summary>Every foreign key in the schema, read out of the migrations.</summary>
+    /// <remarks>
+    /// Read from the files rather than from a database, so this runs everywhere the rest of
+    /// the tests do. The migrations create each table once and never rewrite a foreign key,
+    /// which is what makes a scan of them accurate.
+    /// </remarks>
+    private static List<ForeignKey> ForeignKeys()
+    {
+        var root = Directory.GetParent(Solution())!.FullName;
+        var keys = new List<ForeignKey>();
+
+        foreach (var file in Directory
+            .EnumerateFiles(Path.Combine(root, "db", "migrations"), "*.sql")
+            .OrderBy(file => file, StringComparer.Ordinal))
+        {
+            var text = File.ReadAllText(file);
+
+            // Split on CREATE TABLE so each foreign key is attributed to the table that
+            // declares it. A foreign key knows what it points at and not what holds it.
+            foreach (Match table in Regex.Matches(
+                text,
+                @"CREATE TABLE (?<table>[A-Za-z]+\.[A-Za-z]+)(?<body>.*?)\n\s*\);",
+                RegexOptions.Singleline,
+                TimeSpan.FromSeconds(5)))
+            {
+                foreach (Match key in Regex.Matches(
+                    table.Groups["body"].Value,
+                    @"CONSTRAINT (?<name>FK_\w+) FOREIGN KEY \([^)]*\)\s*"
+                    + @"REFERENCES (?<references>[A-Za-z]+\.[A-Za-z]+) \([^)]*\)(?<options>[^,;]*)",
+                    RegexOptions.Singleline,
+                    TimeSpan.FromSeconds(5)))
+                {
+                    keys.Add(new ForeignKey(
+                        key.Groups["name"].Value,
+                        table.Groups["table"].Value,
+                        key.Groups["references"].Value,
+                        key.Groups["options"].Value.Contains("ON DELETE CASCADE", StringComparison.Ordinal)));
+                }
+            }
+        }
+
+        keys.Should().NotBeEmpty("the migrations have to be readable for this to mean anything");
+
+        return keys;
+    }
+
     /// <summary>The literals one check constraint permits, read out of the migrations.</summary>
     private static List<string> ConstraintValues(string constraint, string pattern)
     {

@@ -1239,22 +1239,7 @@ public sealed class WorkspaceStore(string connectionString)
         // rows either completes or rolls back after holding locks for minutes, and on a
         // large enough run it never completes at all. Pressing the button again finishes the
         // job, because every statement here is "delete what is left".
-        //
-        // Children before parents, largest first. The cascades would handle the order; doing
-        // it explicitly is what lets each one be batched.
-        string[] tables =
-        [
-            "findings.Estimate",
-            "findings.Finding",
-            "findings.BacklogItem",
-            "inv.Component",
-            "inv.UnresolvedReference",
-            "stg.EntityRead",
-            "inv.NotAssessed",
-            "inv.Solution",
-        ];
-
-        foreach (var table in tables)
+        foreach (var step in RunDeleteOrder)
         {
             int removed;
 
@@ -1263,7 +1248,7 @@ public sealed class WorkspaceStore(string connectionString)
                 cancellationToken.ThrowIfCancellationRequested();
 
                 removed = await connection.ExecuteAsync(new CommandDefinition(
-                    $"DELETE TOP (5000) FROM {table} WHERE RunId = @runId;",
+                    step.Statement,
                     new { runId },
                     commandTimeout: (int)DeleteTimeout.TotalSeconds,
                     cancellationToken: cancellationToken));
@@ -1281,6 +1266,69 @@ public sealed class WorkspaceStore(string connectionString)
 
         return published;
     }
+
+    /// <summary>
+    /// One table a run's rows are deleted from, and the statement that empties it.
+    /// </summary>
+    /// <param name="Table">Which table, for the order and for the guard that reads it.</param>
+    /// <param name="Statement">One batch of the delete. Bounded, so it can be repeated until nothing is left.</param>
+    public sealed record RunDeleteStep(string Table, string Statement);
+
+    /// <summary>
+    /// The tables a run's rows are deleted from, in the order they have to go.
+    /// </summary>
+    /// <remarks>
+    /// Children before parents, largest first. The cascades would handle most of the order;
+    /// doing it explicitly is what lets each one be batched, and it is the only way to
+    /// handle the four that cannot cascade.
+    ///
+    /// They cannot cascade for one reason, and it is not an oversight in the schema. Every
+    /// table here already cascades from the run, and a second cascading path to the same row
+    /// is something SQL Server refuses outright: the table cannot be created at all. So a
+    /// link table cascades from one of its two parents and points plainly at the other, and
+    /// the plain one has to be emptied here or the delete stops on the constraint.
+    ///
+    /// Three of the four were missing and one was in the wrong place, and only one of them
+    /// had ever been noticed, because each needs a particular history to bite:
+    /// findings.PublishedWorkItem needs a run somebody published from, which took until the
+    /// first real publish. The others were waiting.
+    ///
+    /// Held here rather than inline so a test can read it. The defect is not this order
+    /// being wrong today; it is a table added in a year with a foreign key into something
+    /// here, and nobody thinking about this method.
+    /// </remarks>
+    public static IReadOnlyList<RunDeleteStep> RunDeleteOrder { get; } =
+    [
+        // Points at the backlog item it was raised from, and cascades from the run instead.
+        new("findings.PublishedWorkItem", ByRun("findings.PublishedWorkItem")),
+
+        // Points at both a backlog item and a finding, cascades from the backlog item, and
+        // has no run of its own to filter on: it is reached through the item.
+        new("findings.BacklogItemFinding",
+            """
+            DELETE TOP (5000) link FROM findings.BacklogItemFinding link
+            INNER JOIN findings.BacklogItem item ON item.BacklogItemId = link.BacklogItemId
+            WHERE item.RunId = @runId;
+            """),
+
+        new("findings.Estimate", ByRun("findings.Estimate")),
+        new("findings.Finding", ByRun("findings.Finding")),
+        new("findings.BacklogItem", ByRun("findings.BacklogItem")),
+
+        // Both point at a component and cascade from the run, so both come before it.
+        new("inv.ComponentReference", ByRun("inv.ComponentReference")),
+        new("inv.UnresolvedReference", ByRun("inv.UnresolvedReference")),
+
+        new("inv.Component", ByRun("inv.Component")),
+        new("stg.EntityRead", ByRun("stg.EntityRead")),
+        new("inv.NotAssessed", ByRun("inv.NotAssessed")),
+        new("inv.Solution", ByRun("inv.Solution")),
+    ];
+
+    /// <summary>One bounded batch of the ordinary case: a table with the run on it.</summary>
+    /// <param name="table">Which table.</param>
+    private static string ByRun(string table) =>
+        $"DELETE TOP (5000) FROM {table} WHERE RunId = @runId;";
 
     /// <summary>
     /// How long one batch of a delete may take.

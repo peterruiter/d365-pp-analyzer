@@ -1491,6 +1491,61 @@ The stage bar also fills properly now for the stages that know their total, whic
 ones working through a list of solutions. It stops at 95 percent: a stage still has to write
 what it read, and a full bar beside a spinner looks stuck at the finish.
 
+## A run that had been published from could not be deleted, ever
+
+Reported from the deployed product: removing a run returned
+
+> The DELETE statement conflicted with the REFERENCE constraint
+> "FK_PublishedWorkItem_Backlog".
+
+and the message underneath told them to press the button again, which would have failed in
+exactly the same place every time.
+
+`findings.PublishedWorkItem` points at both the run and the backlog item it was raised from.
+SQL Server refuses two cascading paths to the same row — the table cannot be created at all
+— so the backlog reference is a plain foreign key and nothing deletes it for you. It was
+missing from the delete order.
+
+The condition to hit it is precise: a run somebody published from. Every other run deleted
+cleanly, which is why this survived the batching work done on the same method that morning.
+
+### The guard found two more, and then a third
+
+The order is now held where a test can read it, and the test reads every foreign key out of
+the migrations and asserts that any table pointing into a run's rows, without a cascade, is
+emptied before the rows it points at.
+
+It failed three times before it passed, each on something nobody had noticed:
+
+| Table | Points at | Why it never cascaded |
+|---|---|---|
+| `findings.PublishedWorkItem` | `findings.BacklogItem` | Already cascades from the run |
+| `inv.ComponentReference` | `inv.Component` | Cascades from the *from* side, cannot also cascade from the *to* side |
+| `inv.UnresolvedReference` | `inv.Component` | Already cascades from the run |
+| `findings.BacklogItemFinding` | `findings.Finding` | Cascades from the backlog item |
+
+Three were absent from the order and one was in it but too late. Each needed a particular
+history to bite — a run published from, a component referenced by another component that
+outlived it in the batch, a backlog item linked to a finding — and each would have been
+found one at a time, in front of a client, over the next year.
+
+`findings.BacklogItemFinding` has no run on it at all, so it is deleted through a join to
+its backlog item. The order is a list of statements now rather than a list of table names.
+
+### Proved against the real database
+
+Every statement, in order, against `ppanalyzer-db`, inside one transaction that was rolled
+back: nine published work items, nine backlog items, seventy three components, and no
+constraint hit. The schema is the thing being tested here and a scan of the migration files
+is only evidence that they agree with each other.
+
+### And the message no longer gives advice that cannot work
+
+A timeout is worth retrying, because the delete is batched and resumes. A foreign key
+conflict is not: something still points at what is being deleted and it will point at it
+just as firmly next time. The two now say different things, and the second one says it is a
+defect in the product rather than something the reader did wrong.
+
 ## What was ported rather than invented
 
 | From | What |

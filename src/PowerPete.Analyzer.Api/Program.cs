@@ -836,14 +836,28 @@ app.MapDelete("/api/runs/{runId:guid}",
     catch (SqlException failure)
     {
         // A database failure here reached the browser as a bare 500, which says nothing a
-        // person can act on. The commonest one was a timeout on a run that had read a whole
-        // environment, and "press it again" is genuinely the right advice: the delete works
-        // in batches and resumes where it stopped.
+        // person can act on. Two of them are not the same, and telling them apart is the
+        // difference between useful advice and a loop.
+        //
+        // A timeout on a run that had read a whole environment is worth retrying: the delete
+        // works in batches and resumes where it stopped.
+        //
+        // A foreign key conflict is not. Something still points at what is being deleted,
+        // and it will point at it just as firmly on the next attempt. Telling somebody to
+        // press the button again is telling them to do the same thing until they give up,
+        // which is exactly what happened to the first run anybody published from: nothing
+        // deleted the published work items before the backlog rows they referenced.
+        const int foreignKeyConflict = 547;
+
         return Results.BadRequest(new
         {
             error = "The run was not fully removed: " + failure.Message
-                  + " Removing a large run can take more than one attempt. Press it again and it will "
-                  + "carry on from where it stopped."
+                  + (failure.Number == foreignKeyConflict
+                      ? " Something in the database still refers to part of this run, and pressing the button "
+                        + "again will fail in the same place. This is a defect in the product rather than "
+                        + "anything you did: please report it with this message."
+                      : " Removing a large run can take more than one attempt. Press it again and it will "
+                        + "carry on from where it stopped.")
         });
     }
 }).RequireAuthorization();
