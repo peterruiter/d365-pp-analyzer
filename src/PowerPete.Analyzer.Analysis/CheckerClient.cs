@@ -21,6 +21,14 @@ using PowerPete.Analyzer.Domain;
 /// </remarks>
 public sealed class CheckerClient
 {
+    /// <summary>
+    /// For the result files, which authenticate themselves.
+    /// </summary>
+    /// <remarks>
+    /// Static and shared: it holds no credential, so there is nothing per caller about it.
+    /// </remarks>
+    private static readonly HttpClient Anonymous = new();
+
     private readonly HttpClient client;
     private readonly string geography;
 
@@ -350,9 +358,28 @@ public sealed class CheckerClient
     /// rule id, the category, the severity, the message and where it happened. The rest of
     /// SARIF is a standard, not a requirement.
     /// </remarks>
-    private async Task<IReadOnlyList<CheckerIssue>> DownloadAsync(string uri, CancellationToken cancellationToken)
+    private static async Task<IReadOnlyList<CheckerIssue>> DownloadAsync(string uri, CancellationToken cancellationToken)
     {
-        using var stream = await client.GetStreamAsync(new Uri(uri), cancellationToken).ConfigureAwait(false);
+        // Downloaded by a client carrying nothing, because the URI carries everything.
+        //
+        // The result is an Azure blob with a shared access signature in its query string.
+        // Azure Storage refuses a request that presents a SAS *and* an Authorization
+        // header, with 403 and no explanation, and this was downloaded with the checker's
+        // own authenticated client. So the analysis ran, the report was written, and
+        // fetching it failed on the credential that had been necessary for every call up
+        // to that point.
+        using var response = await Anonymous
+            .GetAsync(new Uri(uri), HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(string.Create(
+                CultureInfo.InvariantCulture,
+                $"The checker's report could not be downloaded: {(int)response.StatusCode} {response.ReasonPhrase}. The link the service returns is time limited, so a run resumed long afterwards has to be checked again rather than resumed."));
+        }
+
+        using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         using var buffer = new MemoryStream();
         await stream.CopyToAsync(buffer, cancellationToken).ConfigureAwait(false);
         buffer.Position = 0;
