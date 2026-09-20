@@ -25,9 +25,11 @@ storage.
 The interface, the rule names and explanations, the finding text, the inventory labels and
 the backlog text are all translated into all six languages.
 
-The written guides you are reading are currently English only, with their titles and
-summaries translated. A guide falls back to English per guide rather than per product, so a
-partly translated set shows you what has been translated and the rest in English.
+The written guides you are reading are translated too, into the same six languages.
+
+A guide falls back to English per guide rather than per product, so if a page is ever added
+faster than it is translated you see that page in English and everything else in your own
+language, rather than the whole set reverting.
 
 ## Theme
 

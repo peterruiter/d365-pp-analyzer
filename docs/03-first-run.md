@@ -3,8 +3,9 @@
 What to do the first time you open this in Visual Studio. In order, because each step
 depends on the one before it.
 
-Nothing in this repository has ever been executed. Expect the first two steps to fail.
-That is what they are for.
+All of it has run since, and the product is deployed and serving. Nothing on this page needs
+an Azure subscription, an environment or a credential, which is the point of it: the whole
+offline path works on a laptop with nothing configured.
 
 ## What you need
 
@@ -38,14 +39,17 @@ time as a rule that silently matches nothing.
 
 Runs the contract check again, then three generators, then `dotnet build`.
 
-**This has never run.** The likely failures, in the order you will hit them:
+The generated code is gitignored, so this has to run before anything builds. The image build
+checks for it rather than assuming, because a build context packed by a machine that skipped
+this step would otherwise ship an image built from a stale contract.
+
+Three things to know if a generator fails:
 
 - String escaping in the generated C# literals. The generators quote contract text into C#
   strings, and the contract text contains apostrophes and quotation marks.
 - Nullable annotations. Warnings are errors in this repository.
 - Enum member names. `ConvertTo-PascalCase` upper cases the first letter only, so a contract
-  id of `lowCode` becomes `LowCode` and one of `notMigratable` becomes `NotMigratable`. Check
-  the generated enums match what the C# expects.
+  id of `lowCode` becomes `LowCode`. Check the generated enums match what the C# expects.
 
 To iterate on a generator without building each time:
 
@@ -126,11 +130,21 @@ the step that answers, in an afternoon and with no security review:
 Every one of those is currently taken from documentation rather than from a file, and every
 one of them fails silently when it is wrong.
 
-## What does not exist yet
+## Beyond the offline path
 
-`analyzer work` prints a message and exits. The pipeline, the stages, the stores and the
-readers all exist; what is missing is the composition root that reads configuration, resolves
-a connection string and a Key Vault and hands the services to the runner.
+`analyzer work` is the poll loop the deployed worker runs. It needs a database and, for
+anything using a credential, a Key Vault:
 
-No API, no web application, no microsite and no exports. `STATE.md` has the order they come in
-and what each one is waiting on.
+```
+./build/Deploy-Infrastructure.ps1 -NamePrefix ppa -ResourceGroup rg-ppa -Location westeurope
+./build/Initialize-Database.ps1 -ConnectionString "<from the deployment output>"
+./build/Publish-Container.ps1 -ResourceGroup rg-ppa
+```
+
+The API, the web application, the microsite and both exports exist and are deployed. The
+containers apply no migrations themselves and are not meant to: the managed identity holds
+read and write and nothing else, so `Initialize-Database.ps1` is run by a person, and the
+worker reports and waits rather than crashing when the schema is behind it.
+
+`STATE.md` is the authoritative record of where the build actually is, including what is
+still unproven. Read it before believing anything on this page.

@@ -1052,6 +1052,57 @@ public class DataLayerTests
             + "written in another language and nothing fails while it does");
     }
 
+    [Fact]
+    public void Offers_every_guide_in_every_language_it_offers()
+    {
+        // The documentation screen fetches /documentation/{language}/{file} and falls back
+        // to English per guide. That fallback is right, and it is also why nobody noticed
+        // for months that there was nothing to fall back from: a French consultant read a
+        // French interface wrapped around eight English documents and the product never
+        // said a word about it.
+        //
+        // Per guide rather than per language, so a guide added next year fails this rather
+        // than quietly appearing in English for everybody but the author.
+        var root = Directory.GetParent(Solution())!.FullName;
+        var docs = Path.Combine(root, "docs");
+
+        var offered = Contracts.Read("locales").Array("locales")
+            .Select(locale => locale.Str("code"))
+            .Where(code => code != "en")
+            .ToList();
+
+        offered.Should().NotBeEmpty("the product offers more than English and locales.json is the list");
+
+        // The guides the product actually serves, read from the page that serves them, so a
+        // guide removed from that list stops being required here on the same commit.
+        var page = File.ReadAllText(
+            Path.Combine(root, "src", "web", "src", "DocumentationPage.tsx"));
+
+        var served = Regex
+            .Matches(page, @"\['(?<file>[0-9]+-[a-z-]+\.md)'", RegexOptions.None, TimeSpan.FromSeconds(5))
+            .Select(match => match.Groups["file"].Value)
+            .ToList();
+
+        served.Should().NotBeEmpty("the documentation page lists the guides and this reads that list");
+
+        var missing = new List<string>();
+
+        foreach (var guide in served)
+        {
+            File.Exists(Path.Combine(docs, guide)).Should().BeTrue(
+                $"the documentation page offers {guide} and the English original has to exist");
+
+            foreach (var language in offered)
+            {
+                if (!File.Exists(Path.Combine(docs, language, guide))) missing.Add($"{language}/{guide}");
+            }
+        }
+
+        missing.Should().BeEmpty(
+            "a guide with no translation renders in English inside an interface in another language, and the "
+            + "per guide fallback means nothing fails while it does");
+    }
+
     /// <summary>Every environment variable name the container definition sets.</summary>
     private static List<string> WrittenByTheInfrastructure()
     {

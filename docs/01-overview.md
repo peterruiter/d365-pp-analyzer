@@ -64,11 +64,21 @@ believed, it would be quoted, and it would be wrong.
 
 ## Where to go next
 
+Every document below is also served inside the product, on the Documentation screen, in all
+six languages.
+
 | Question | Document |
 |---|---|
-| What do I need before I start | `02-prerequisites.md` |
-| How do I connect to a client environment | `05-connecting-an-environment.md` |
-| What does each rule mean | `06-the-rule-catalogue.md` |
-| How are the estimates produced | `09-estimating.md` |
-| How do I publish to Azure DevOps | `12-publishing-to-devops.md` |
-| Why is it built this way | `19-architecture-decisions.md` |
+| What is this, and what will it not do | `10-what-this-is.md` |
+| How do I get in, and what can I then see | `20-getting-access.md` |
+| How do I connect to a client environment | `30-connecting-an-environment.md` |
+| How do I run one, and what are the stages | `40-running-an-analysis.md` |
+| What does a finding mean | `50-reading-the-findings.md` |
+| How are the estimates produced | `60-estimates-and-the-backlog.md` |
+| What comes out, and in what language | `70-reports-and-exports.md` |
+| Languages, themes and administration | `80-languages-and-settings.md` |
+| What to do the first time you build it | `03-first-run.md` |
+| Where the build actually is | `../STATE.md` |
+
+This table pointed at six documents that have never existed, which is the kind of thing a
+reader finds out one click at a time.
