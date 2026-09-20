@@ -128,6 +128,7 @@ export function FindingsPage({ engagementId }: { engagementId: string }) {
             <th>{t('findings.severity')}</th>
             <th>{t('findings.finding')}</th>
             <th>{t('findings.component')}</th>
+            <th>{t('findings.solution')}</th>
             <th className="numeric">{t('findings.hours')}</th>
             <th>{t('findings.estimate-from')}</th>
           </tr>
@@ -138,6 +139,7 @@ export function FindingsPage({ engagementId }: { engagementId: string }) {
               <tr
                 key={finding.findingId}
                 className={`severity-${finding.severity} ${open === finding.findingId ? 'open' : ''}`}
+                aria-expanded={open === finding.findingId}
                 onClick={() => setOpen(open === finding.findingId ? null : finding.findingId)}
               >
                 {/*
@@ -149,12 +151,34 @@ export function FindingsPage({ engagementId }: { engagementId: string }) {
                   <span className={`severity-pill severity-${finding.severity}`}>{t(`severity.${finding.severity}`)}</span>
                 </td>
                 <td data-label={t('findings.finding')}>
-                  {finding.ruleName}
-                  {/* A finding on a managed component is somebody else's to fix, and saying so
-                      in the row saves a conversation that otherwise happens in the workshop. */}
-                  {finding.isManaged && <span className="tag">{t('findings.managed')}</span>}
+                  {/*
+                    The row opens. Nothing said so, so a reader saw a table of rule names
+                    with no explanation anywhere and concluded the product had not produced
+                    one: the evidence, the reason and the recommendation were all one click
+                    away behind no affordance at all.
+                  */}
+                  <span className="finding-name">
+                    <span className="finding-caret" aria-hidden="true" />
+                    <span>
+                      {finding.ruleName}
+                      {/* A finding on a managed component is somebody else's to fix, and
+                          saying so in the row saves a conversation that otherwise happens
+                          in the workshop. */}
+                      {finding.isManaged && <span className="tag">{t('findings.managed')}</span>}
+
+                      {/* One line of why, in the row. The full reason, the evidence and the
+                          recommendation are inside. */}
+                      <small>{finding.why}</small>
+                    </span>
+                  </span>
                 </td>
-                <td data-label={t('findings.component')}>{finding.componentName ?? t('findings.solution-wide')}</td>
+                <td data-label={t('findings.component')}>
+                  {finding.componentName ?? t('findings.solution-wide')}
+                  {finding.componentType && <small>{finding.componentType}</small>}
+                </td>
+                <td data-label={t('findings.solution')}>
+                  {finding.solutionName ?? t('findings.no-solution')}
+                </td>
                 <td className="numeric" data-label={t('findings.hours')}>{finding.lowHours}–{finding.highHours}</td>
                 <td data-label={t('findings.estimate-from')}>
                   {t(`estimate.source.${finding.estimateLayer}`)}
@@ -165,7 +189,7 @@ export function FindingsPage({ engagementId }: { engagementId: string }) {
 
               {open === finding.findingId && (
                 <tr className="detail-row" key={`${finding.findingId}-detail`}>
-                  <td colSpan={5}>
+                  <td colSpan={6}>
                     <div className="finding-detail">
                       <h3>{t('evidence.heading')}</h3>
                       <p className="muted">{t('evidence.explain')}</p>

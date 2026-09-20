@@ -318,6 +318,40 @@ public sealed class Worker(WorkerSettings settings)
                 chosen?.Checks.EnvironmentHealth)
         };
 
+        // The scope, seeded from the database rather than left to the stage that asked for
+        // it. This is the defect that made a retry read 92,059 components out of eleven
+        // solutions.
+        //
+        // RunState is built fresh on every pass and only the stages that actually run put
+        // anything in it. A resumed run skips every stage that already succeeded, so
+        // selectSolutions did not run, nothing set Chosen, and extract saw an empty scope,
+        // which means no scope at all. The run then read the entire environment and reported
+        // findings against Microsoft's managed components.
+        //
+        // Anything a later stage needs has to be in the state before the pipeline starts,
+        // not put there by an earlier stage that may be skipped.
+        if (chosen is not null)
+        {
+            state.Chosen.AddRange(chosen.Solutions);
+        }
+
+        // The denominator for "four of nineteen solutions", which selectSolutions would
+        // otherwise have set and which a resumed run would report as zero.
+        var listed = await workspace.ListRunSolutionsAsync(run.RunId, cancellationToken).ConfigureAwait(false);
+
+        if (listed.Count > 0)
+        {
+            state.SolutionsTotal = listed.Count;
+
+            foreach (var solution in listed)
+            {
+                state.Available[solution.UniqueName] = new SolutionSummary(
+                    solution.UniqueName, solution.FriendlyName, solution.Version,
+                    solution.IsManaged, solution.PublisherPrefix, solution.PublisherName,
+                    solution.ComponentCount);
+            }
+        }
+
         var stages = new IStage[]
         {
             // In the order analysis-stages.json declares. Connect writes nothing and proves

@@ -316,7 +316,16 @@ public sealed class SelectSolutionsStage(StageServices services) : StageBase(ser
                 + "Choose which to analyse before the run reads the environment.");
         }
 
-        state.Chosen.AddRange(chosen.Solutions);
+        // Only what is not already there. The worker seeds this from the database before the
+        // pipeline starts, because a resumed run skips this stage and extract still needs the
+        // scope, so on a first pass both would otherwise put the same names in.
+        foreach (var solution in chosen.Solutions)
+        {
+            if (!state.Chosen.Contains(solution, StringComparer.OrdinalIgnoreCase))
+            {
+                state.Chosen.Add(solution);
+            }
+        }
 
         state.Checks = RunChecks.ForMode(
             state.Mode, chosen.SolutionChecker, chosen.ModelEstimates, chosen.EnvironmentHealth);

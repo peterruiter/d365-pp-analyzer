@@ -201,6 +201,32 @@ public sealed class DataverseReader(HttpClient client)
         {
             components.RemoveAll(component => !InScope(component, scope, solutionUniqueNames));
 
+            // Which solution each surviving component came out of. The reader had no way to
+            // know this: it reads tables and plug-ins and flows, and nothing in those
+            // records says which solution carries them. solutioncomponent does, and it has
+            // already been read to work out the scope.
+            for (var index = 0; index < components.Count; index++)
+            {
+                var component = components[index];
+
+                if (component.SolutionUniqueName is { Length: > 0 }) continue;
+
+                // A solution is its own answer. It is not a component of itself, so it is
+                // not in the map.
+                if (string.Equals(component.TypeId, "solution", StringComparison.Ordinal))
+                {
+                    components[index] = component with { SolutionUniqueName = component.SchemaName };
+                    continue;
+                }
+
+                if (component.PlatformId is { Length: > 0 } platformId
+                    && Guid.TryParse(platformId, out var id)
+                    && scope.TryGetValue(id, out var solution))
+                {
+                    components[index] = component with { SolutionUniqueName = solution };
+                }
+            }
+
             // The counts are recounted rather than left as read, so every number downstream
             // describes the same set of components. A read that says it found four hundred
             // tables beside a report that discusses twelve is a report nobody trusts.
@@ -234,31 +260,35 @@ public sealed class DataverseReader(HttpClient client)
     /// </remarks>
     /// <param name="solutionUniqueNames">The chosen solutions.</param>
     /// <param name="cancellationToken">Cancellation.</param>
-    private async Task<HashSet<Guid>?> ScopeAsync(
+    private async Task<Dictionary<Guid, string>?> ScopeAsync(
         IReadOnlyList<string> solutionUniqueNames, CancellationToken cancellationToken)
     {
         if (solutionUniqueNames.Count == 0) return null;
 
-        var solutionIds = new List<Guid>();
+        // Which solution, not just whether. The same read answers both questions and the
+        // inventory had no answer to the first: every component came back with no solution
+        // on it, so a consultant looking at a finding could not say where it lived and the
+        // report could not group by solution at all.
+        var solutionIds = new Dictionary<Guid, string>();
         var filter = string.Join(" or ", solutionUniqueNames.Select(name => $"uniquename eq '{Escape(name)}'"));
 
         await foreach (var solution in PageAsync(
-            $"solutions?$select=solutionid&$filter={Uri.EscapeDataString(filter)}",
+            $"solutions?$select=solutionid,uniquename&$filter={Uri.EscapeDataString(filter)}",
             cancellationToken).ConfigureAwait(false))
         {
             if (solution.TryGetProperty("solutionid", out var id)
                 && Guid.TryParse(id.GetString(), out var parsed))
             {
-                solutionIds.Add(parsed);
+                solutionIds[parsed] = Str(solution, "uniquename") ?? string.Empty;
             }
         }
 
-        var objectIds = new HashSet<Guid>();
+        var objectIds = new Dictionary<Guid, string>();
 
         // One request per solution rather than one filter listing them all. A filter naming
         // nineteen solutions is a URL long enough to be refused, and the refusal reads as a
         // bad request rather than as a URL length.
-        foreach (var solutionId in solutionIds)
+        foreach (var (solutionId, uniqueName) in solutionIds)
         {
             await foreach (var component in PageAsync(
                 $"solutioncomponents?$select=objectid&$filter=_solutionid_value eq {solutionId}",
@@ -267,7 +297,11 @@ public sealed class DataverseReader(HttpClient client)
                 if (component.TryGetProperty("objectid", out var objectId)
                     && Guid.TryParse(objectId.GetString(), out var parsed))
                 {
-                    objectIds.Add(parsed);
+                    // First wins. A component can be in more than one solution, and the
+                    // report needs one answer to "where does this live" rather than a list
+                    // nobody can act on. The chosen solutions are read in the order the
+                    // picker showed them.
+                    objectIds.TryAdd(parsed, uniqueName);
                 }
             }
         }
@@ -286,7 +320,7 @@ public sealed class DataverseReader(HttpClient client)
     /// <param name="scope">Identifiers the chosen solutions contain.</param>
     /// <param name="chosen">The chosen unique names.</param>
     private static bool InScope(
-        DiscoveredComponent component, HashSet<Guid> scope, IReadOnlyList<string> chosen)
+        DiscoveredComponent component, Dictionary<Guid, string> scope, IReadOnlyList<string> chosen)
     {
         // A solution is not a component of itself, so its own identifier is not in
         // solutioncomponent and the scope check below threw all eleven chosen solutions out
@@ -309,7 +343,7 @@ public sealed class DataverseReader(HttpClient client)
 
         return component.PlatformId is { Length: > 0 } platformId
             && Guid.TryParse(platformId, out var id)
-            && scope.Contains(id);
+            && scope.ContainsKey(id);
     }
 
     /// <summary>A literal safe to put in an OData filter.</summary>

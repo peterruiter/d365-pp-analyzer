@@ -1523,3 +1523,13 @@
 .solution-filter input[type="search"]:focus { border-color: var(--cp-accent); outline: 2px solid var(--cp-accent-soft); outline-offset: 1px; }
 .solution-filter-toggle { display: flex; align-items: center; gap: 8px; color: var(--cp-text-muted); font-size: 12px; cursor: pointer; }
 .solution-filter .hint { color: var(--cp-text-soft); font-size: 11px; }
+
+/* ------------------------------------------------- a finding row that opens -- */
+/* The row expanded and nothing said so. A reader saw rule names with no explanation
+   anywhere and reasonably concluded there was none, while the evidence, the reason and the
+   recommendation sat one click away behind no affordance. */
+.findings-table tbody tr:not(.detail-row) { cursor: pointer; }
+.finding-name { display: grid; grid-template-columns: 12px 1fr; align-items: start; gap: 9px; }
+.finding-caret { width: 0; height: 0; margin-top: 5px; border-top: 4px solid transparent; border-bottom: 4px solid transparent; border-left: 5px solid var(--cp-text-soft); transition: transform .12s ease; }
+.findings-table tr.open .finding-caret { transform: rotate(90deg) translateX(1px); }
+.findings-table td small { display: block; margin-top: 3px; max-width: 62ch; color: var(--cp-text-muted); font-size: 11px; line-height: 1.5; white-space: normal; }

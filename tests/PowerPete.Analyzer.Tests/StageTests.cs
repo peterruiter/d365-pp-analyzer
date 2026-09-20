@@ -322,6 +322,31 @@ public class StageTests
             "the tick survives the list being recorded again, which is what a resume does");
     }
 
+    [Fact]
+    public async Task SelectSolutions_adds_nothing_the_worker_already_seeded()
+    {
+        // The worker puts the selection into the state before the pipeline starts, because a
+        // resumed run skips this stage and extract needs the scope regardless. On a first
+        // pass this stage runs as well, and both writing the same names would double the
+        // scope and the count this stage reports back.
+        //
+        // The bug that made the seeding necessary: RunState is built fresh on every pass and
+        // only the stages that actually run fill it in, so a retry from extract left Chosen
+        // empty, an empty scope means no scope, and a run of eleven solutions read 92,059
+        // components and reported findings against Microsoft's managed ones.
+        var services = Services(
+            list: _ => Task.FromResult<IReadOnlyList<SolutionSummary>>(
+                [new SolutionSummary("nwu_core", "Core", "1.0", false, "nwu", "Northwind", 140)]),
+            selection: Chose("nwu_core"));
+
+        var state = State();
+        state.Chosen.Add("nwu_core");
+
+        await new SelectSolutionsStage(services).RunAsync(state, null, CancellationToken.None);
+
+        state.Chosen.Should().Equal(["nwu_core"], "the worker had already seeded it");
+    }
+
     /// <summary>An answer to the picker, with the mode's defaults left alone.</summary>
     /// <param name="solutions">What was ticked.</param>
     private static ChosenScope Chose(params string[] solutions) =>
