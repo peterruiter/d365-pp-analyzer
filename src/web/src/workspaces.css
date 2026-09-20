@@ -285,6 +285,35 @@
 .field-label.checkbox { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px; }
 .field-label.checkbox input { width: 15px; height: 15px; margin: 0; accent-color: var(--brand-blue); }
 .field-label.checkbox .hint { grid-column: 1 / -1; margin-top: 0; }
+
+/* ============================== the engagement settings dialog ==========
+   Five fields of three shapes: two plain inputs, two selects, and a checkbox,
+   with a hint under three of them.
+
+   It used to borrow .access-form, which is three columns and align-items: end.
+   That is exactly right for the row it was written for — a user, a role and a
+   Grant button, bottom aligned so the button sits on the inputs' baseline —
+   and wrong for this: the fields with a hint underneath had their inputs
+   pushed up by the height of the hint, so no two labels and no two boxes on
+   the dialog lined up.
+
+   Two equal columns, aligned to the top, and the pairs fall out of the order
+   they are written in: the two names, then the two languages, then the one
+   checkbox across the bottom. */
+.settings-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 20px 24px; }
+
+/* The field's own top margin is for a stacked form. Here the grid's row gap
+   does that job, and both together made every row a different height. */
+.settings-form .field-label { max-width: none; margin-top: 0; }
+
+/* Full width, because it is one control with a sentence under it rather than
+   half a row, and because a checkbox in a column of text boxes looks like it
+   lost its input. */
+.settings-form .field-label.checkbox { grid-column: 1 / -1; align-items: start; }
+
+/* The tick beside its own label rather than above it, and sized to the text
+   it sits next to. */
+.settings-form .field-label.checkbox input { margin-top: 1px; }
 .field-problem { display: block; margin-top: 3px; color: var(--cp-danger); font-size: 11px; font-weight: 400; }
 .check-list { display: grid; gap: 2px; margin: 8px 0 0; padding: 0; list-style: none; }
 .check-list.compact { margin: 0 0 4px; padding: 0 0 8px; }

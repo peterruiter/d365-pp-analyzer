@@ -61,7 +61,13 @@ export function EngagementSettings({ engagement, onClose, onSaved }: {
         </div>
 
         <div className="wizard-body">
-          <div className="access-form">
+          {/*
+            Its own layout rather than the access row's. .access-form is three columns with
+            align-items: end, which is right for "user, role, Grant" and wrong for five
+            fields of different shapes: the two with a hint under them pushed their inputs
+            up, so no label and no box on this dialog lined up with its neighbour.
+          */}
+          <div className="settings-form">
             <label className="field-label">
               {t('common.name')}
               <input value={name} onChange={(event) => setName(event.target.value)} />
