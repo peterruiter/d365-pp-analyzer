@@ -505,17 +505,55 @@ public sealed class WorkspaceStore(string connectionString)
     {
         await using var connection = Connect();
 
+        // Unclaimed, or claimed by a worker nothing has heard from.
+        //
+        // This read "WHERE ClaimedUtc IS NULL" and nothing else, so a command claimed by a
+        // worker that then stopped was orphaned for ever: the run stayed running, the stage
+        // stayed running, and no worker would touch either again. The worker is a container
+        // and every deployment replaces it, so this happened on any deployment during an
+        // extraction.
+        //
+        // A heartbeat rather than the age of the claim. An extraction of a large estate
+        // takes an hour and the checker takes minutes, so "claimed a while ago" would steal
+        // work from a worker that is still doing it. The heartbeat is written by the poll
+        // loop rather than by the stage, so a live worker always has a recent one.
         var claimed = await connection.QuerySingleOrDefaultAsync<RunCommand?>(new CommandDefinition(
             """
             UPDATE TOP (1) ops.RunCommand
-            SET ClaimedUtc = SYSUTCDATETIME(), ClaimedBy = @workerId, ClaimedVersion = @version
+            SET ClaimedUtc = SYSUTCDATETIME(), ClaimedBy = @workerId, ClaimedVersion = @version,
+                HeartbeatUtc = SYSUTCDATETIME()
             OUTPUT inserted.CommandId, inserted.RunId, inserted.Command, inserted.StageId, inserted.RequestedBy
-            WHERE ClaimedUtc IS NULL;
+            WHERE CompletedUtc IS NULL
+              AND (ClaimedUtc IS NULL
+                   OR ISNULL(HeartbeatUtc, ClaimedUtc) < DATEADD(minute, -@staleMinutes, SYSUTCDATETIME()));
             """,
-            new { workerId, version },
+            new { workerId, version, staleMinutes = AbandonedAfter.TotalMinutes },
             cancellationToken: cancellationToken));
 
         return claimed;
+    }
+
+    /// <summary>
+    /// How long a claimed command goes unheard from before another worker may take it.
+    /// </summary>
+    /// <remarks>
+    /// Ten times the heartbeat interval, so a worker has to miss ten in a row before its work
+    /// is taken. Two workers running the same command would both write findings against the
+    /// same run, and the second one's would be the ones kept.
+    /// </remarks>
+    public static TimeSpan AbandonedAfter { get; } = TimeSpan.FromMinutes(5);
+
+    /// <summary>Says this worker is still doing the thing it claimed.</summary>
+    /// <param name="commandId">Which command.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task HeartbeatAsync(Guid commandId, CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            "UPDATE ops.RunCommand SET HeartbeatUtc = SYSUTCDATETIME() WHERE CommandId = @commandId;",
+            new { commandId },
+            cancellationToken: cancellationToken));
     }
 
     /// <summary>Records how a command ended.</summary>

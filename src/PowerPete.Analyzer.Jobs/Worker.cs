@@ -197,8 +197,26 @@ public sealed class Worker(WorkerSettings settings)
 
                 Console.WriteLine($"Claimed {command.Command} for run {command.RunId}.");
 
-                await ExecuteAsync(command, workspace, analysis, cancellationToken).ConfigureAwait(false);
-                await workspace.CompleteCommandAsync(command.CommandId, true, null, cancellationToken).ConfigureAwait(false);
+                // Says this worker is still here, every half minute, for as long as the
+                // command takes. Without it a command claimed by a container that was then
+                // replaced stayed claimed for ever and nothing ever retried it.
+                //
+                // Out here rather than inside a stage, because a stage can legitimately run
+                // for an hour and the question this answers is whether the worker is alive,
+                // not whether the stage is making progress.
+                using var beating = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                var heartbeat = HeartbeatAsync(workspace, command.CommandId, beating.Token);
+
+                try
+                {
+                    await ExecuteAsync(command, workspace, analysis, cancellationToken).ConfigureAwait(false);
+                    await workspace.CompleteCommandAsync(command.CommandId, true, null, cancellationToken).ConfigureAwait(false);
+                }
+                finally
+                {
+                    await beating.CancelAsync().ConfigureAwait(false);
+                    await heartbeat.ConfigureAwait(false);
+                }
             }
             catch (OperationCanceledException)
             {
@@ -337,6 +355,40 @@ public sealed class Worker(WorkerSettings settings)
         Console.WriteLine(outcome.Status == "awaitingSelection"
             ? $"Run {run.RunId} is waiting for somebody to choose solutions, after {outcome.StagesRun} stage(s)."
             : $"Run {run.RunId} ended {outcome.Status} after {outcome.StagesRun} stage(s).");
+    }
+
+    /// <summary>
+    /// Writes a heartbeat until the command finishes.
+    /// </summary>
+    /// <remarks>
+    /// Failures are swallowed on purpose. A missed heartbeat because the database blinked is
+    /// not a reason to abandon a run that is going perfectly well, and the claim query
+    /// tolerates ten missed in a row before anybody else may take the work.
+    /// </remarks>
+    /// <param name="workspace">Where to write it.</param>
+    /// <param name="commandId">Which command.</param>
+    /// <param name="cancellationToken">Cancelled when the command ends.</param>
+    private static async Task HeartbeatAsync(
+        WorkspaceStore workspace, Guid commandId, CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken).ConfigureAwait(false);
+                await workspace.HeartbeatAsync(commandId, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+#pragma warning disable CA1031 // A heartbeat that cannot be written must not end the run it is reporting on.
+            catch (Exception exception)
+#pragma warning restore CA1031
+            {
+                Console.Error.WriteLine($"Could not write a heartbeat: {exception.Message}");
+            }
+        }
     }
 
     /// <summary>
