@@ -1,5 +1,6 @@
 namespace PowerPete.Analyzer.Analysis;
 
+using System.Globalization;
 using System.IO.Compression;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -45,12 +46,27 @@ public sealed class CheckerClient
     /// </remarks>
     /// <param name="name">Usually "Solution Checker".</param>
     /// <param name="cancellationToken">Cancellation.</param>
-    public async Task<Guid?> ResolveRulesetAsync(string name, CancellationToken cancellationToken = default)
+    /// <returns>The ruleset, or why it could not be resolved.</returns>
+    public async Task<RulesetLookup> ResolveRulesetAsync(string name, CancellationToken cancellationToken = default)
     {
         using var response = await client.GetAsync(new Uri($"{Base}/ruleset?api-version=2.0"), cancellationToken)
             .ConfigureAwait(false);
 
-        if (!response.IsSuccessStatusCode) return null;
+        if (!response.IsSuccessStatusCode)
+        {
+            // The status, and what the service said about it.
+            //
+            // This returned null and the caller reported "the checker service did not
+            // return its ruleset list", five times, once per solution. That sentence is
+            // true of an outage, of a wrong geography, of an expired credential and of a
+            // token for the wrong resource, which is what it actually was, and it
+            // distinguishes none of them. A 401 here is a different afternoon from a 503.
+            var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+            return new RulesetLookup(null, string.Create(CultureInfo.InvariantCulture,
+                $"The checker at {geography} answered {(int)response.StatusCode} {response.ReasonPhrase} when asked "
+                + $"for its rulesets.{Detail(response, body)}"));
+        }
 
         var rulesets = await response.Content
             .ReadFromJsonAsync<List<RulesetRecord>>(cancellationToken)
@@ -59,8 +75,41 @@ public sealed class CheckerClient
         var match = rulesets?.FirstOrDefault(ruleset =>
             string.Equals(ruleset.Name, name, StringComparison.OrdinalIgnoreCase));
 
-        return match is null ? null : Guid.Parse(match.Id);
+        if (match is not null) return new RulesetLookup(Guid.Parse(match.Id), null);
+
+        // Answered, and without the one we need. A different failure again: the service is
+        // reachable and the credential works.
+        var offered = rulesets is null || rulesets.Count == 0
+            ? "nothing"
+            : string.Join(", ", rulesets.Select(ruleset => ruleset.Name));
+
+        return new RulesetLookup(null,
+            $"The checker at {geography} does not offer a ruleset called '{name}'. It offers {offered}.");
     }
+
+    /// <summary>What the service said, where it said anything useful.</summary>
+    /// <param name="response">The response.</param>
+    /// <param name="body">Its body.</param>
+    private static string Detail(HttpResponseMessage response, string body)
+    {
+        // Unauthorized is worth a sentence of its own, because the cause is almost always
+        // the same one and it is not obvious: the checker is its own resource and a token
+        // for the environment is not a token for it.
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            return " A token for the environment is not a token for the checker: this connection needs "
+                 + "PowerApps-Advisor consent. Sign in to the connection again.";
+        }
+
+        var trimmed = body.Trim();
+
+        return trimmed.Length == 0 ? string.Empty : $" It said: {(trimmed.Length > 300 ? trimmed[..300] : trimmed)}";
+    }
+
+    /// <summary>A ruleset, or why there is not one.</summary>
+    /// <param name="Id">The ruleset, when it resolved.</param>
+    /// <param name="FailureReason">Why not, when it did not. Carried into the report per rule.</param>
+    public sealed record RulesetLookup(Guid? Id, string? FailureReason);
 
     private sealed record RulesetRecord(string Id, string Name);
 

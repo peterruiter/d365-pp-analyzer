@@ -43,6 +43,9 @@ param azureAdTenantId string = ''
 @description('Entra application id for sign in.')
 param azureAdClientId string = ''
 
+@description('The directory the app registration lives in, for the credentials this product issues as itself.')
+param azureAdHomeTenantId string = ''
+
 @description('Entra client secret for the sign in flow.')
 @secure()
 param azureAdClientSecret string = ''
@@ -153,6 +156,7 @@ module containers 'modules/containerapps.bicep' = {
     dataProtectionKeyUri: keyVault.outputs.dataProtectionKeyUri
     azureAdTenantId: azureAdTenantId
     azureAdClientId: azureAdClientId
+    azureAdHomeTenantId: azureAdHomeTenantId
     azureAdClientSecret: azureAdClientSecret
     azureAdClientSecretExpiresUtc: azureAdClientSecretExpiresUtc
     syncfusionLicenseKey: syncfusionLicenseKey

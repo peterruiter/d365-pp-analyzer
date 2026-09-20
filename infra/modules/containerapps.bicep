@@ -67,6 +67,9 @@ param azureAdTenantId string = ''
 @description('Entra application id for sign in.')
 param azureAdClientId string = ''
 
+@description('The directory the app registration lives in. Not the sign in audience: that is "organizations" so any tenant can sign in, and client credentials cannot be issued in a word.')
+param azureAdHomeTenantId string = ''
+
 @description('Entra client secret for the sign in flow.')
 @secure()
 param azureAdClientSecret string = ''
@@ -154,6 +157,11 @@ var commonEnv = [
   { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
   { name: 'AzureAd__TenantId', value: azureAdTenantId }
   { name: 'AzureAd__ClientId', value: azureAdClientId }
+
+  // Where this product's own credential is issued, which is not where people sign in from.
+  // The checker is called as the product: no client credential has ever worked against it,
+  // and an offline engagement has none to try.
+  { name: 'AzureAd__HomeTenantId', value: azureAdHomeTenantId }
   { name: 'AzureAd__Instance', value: 'https://login.microsoftonline.com/' }
   { name: 'AzureAd__CallbackPath', value: '/signin-oidc' }
   { name: 'AzureAd__ClientSecretExpiresUtc', value: azureAdClientSecretExpiresUtc }

@@ -59,6 +59,22 @@ public static class DeploymentSettings
         "The vault that holds client credentials. Without it a connection needing one is refused "
         + "rather than stored in the database.");
 
+    /// <summary>
+    /// The tenant this product's own app registration lives in.
+    /// </summary>
+    /// <remarks>
+    /// Distinct from the sign-in tenant, which is "organizations" so that a client's people
+    /// can sign in from their own directory. That word is not a directory a credential can
+    /// be issued in, and the checker needs one: it is called with this product's own
+    /// identity rather than a client's, because no client credential ever worked against it
+    /// and an offline engagement has no credential at all.
+    /// </remarks>
+    public static readonly DeploymentSetting AzureAdHomeTenant = new(
+        "AzureAd:HomeTenantId",
+        ["ANALYZER_HOME_TENANT"],
+        "The directory this product's app registration lives in. Client credentials are issued there, which is "
+        + "what the Power Apps checker is called with.");
+
     /// <summary>Where an uploaded solution file goes.</summary>
     public static readonly DeploymentSetting UploadContainer = new(
         "Uploads:ContainerUri",
@@ -193,6 +209,7 @@ public static class DeploymentSettings
     [
         SqlConnection,
         KeyVaultUri,
+        AzureAdHomeTenant,
         UploadContainer,
         DataProtectionBlob,
         DataProtectionKey,

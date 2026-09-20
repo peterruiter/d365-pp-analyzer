@@ -350,17 +350,17 @@ public sealed class StageServicesFactory(
                         "is a data residency decision and is not defaulted.");
                 }
 
-                var client = await connections.ForCheckerAsync(source, token).ConfigureAwait(false);
+                var client = await ConnectionFactory.ForCheckerAsync(token).ConfigureAwait(false);
                 var checker = new CheckerClient(client, geography);
 
                 var ruleset = await checker.ResolveRulesetAsync("Solution Checker", token).ConfigureAwait(false);
 
-                if (ruleset is null)
+                if (ruleset.Id is null)
                 {
-                    return new CheckerOutcome(false, [], "The checker service did not return its ruleset list.");
+                    return new CheckerOutcome(false, [], ruleset.FailureReason);
                 }
 
-                var run = await checker.AnalyseAsync(file, "solution.zip", ruleset.Value, TimeSpan.FromMinutes(20), token)
+                var run = await checker.AnalyseAsync(file, "solution.zip", ruleset.Id.Value, TimeSpan.FromMinutes(20), token)
                     .ConfigureAwait(false);
 
                 return new CheckerOutcome(run.Succeeded, run.Issues, run.FailureReason);

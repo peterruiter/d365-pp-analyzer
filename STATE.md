@@ -1728,6 +1728,49 @@ There is still no default, and there should not be. Microsoft's own build tools 
 the environment's region; this product asks, because where a client's customisations are
 uploaded for analysis is their decision and the cost of asking is one list.
 
+## The checker had never run in any mode but one
+
+Setting a geography got past the refusal and into the service, which answered: five
+solutions, five times, "the checker service did not return its ruleset list".
+
+That sentence is true of an outage, a wrong geography, an expired credential and a token
+for the wrong resource. It distinguishes none of them, and it was the last one.
+
+The checker is its own resource — PowerApps-Advisor, `c9299480-c13a-49db-a7ae-cdfe54fe0313`
+— and not Dataverse. Following the three modes through:
+
+| Mode | What it sent | What happened |
+|---|---|---|
+| `servicePrincipal` | `.default` for the checker | Works, if that registration was granted something on it |
+| `delegated` | A **Dataverse** token | 401. The refresh path ignored the scope it was asked for and always redeemed the environment |
+| `offlineZip` | Nothing | Threw: "mode 'offlineZip' cannot produce a token" |
+
+So the mode that exists to get past a security review in week one could never run the
+checker at all, and the mode a consultant actually uses got a token for the wrong service.
+
+### It authenticates as the product now
+
+Nothing about analysing a file needs the client's identity. The product uploads a file it
+already holds and reads back a report about it; the client's environment is not touched. So
+the checker is called with this product's own registration and an application permission
+granted once, and every mode can use it — including the offline one, which cannot
+authenticate to anything.
+
+Where the file goes is still the connection's decision. The geography comes from the
+connection and there is still no default.
+
+This needed a new setting. Sign-in is `organizations` so that any tenant can sign in, and
+that word is not a directory a credential can be issued in, so `AzureAd:HomeTenantId` names
+the directory the registration actually lives in. Declared in the template and passed by the
+deployment script, not set by hand.
+
+### And the message says which failure it is
+
+A 401 is a different afternoon from a 503, and the product now says the status, the
+geography, what the service replied, and — for an unauthorised answer specifically — that a
+token for the environment is not a token for the checker. A ruleset list that comes back
+without "Solution Checker" in it is a third thing again, and says what it did offer.
+
 ## What was ported rather than invented
 
 | From | What |

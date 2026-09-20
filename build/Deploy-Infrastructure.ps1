@@ -241,6 +241,11 @@ $parameters = @(
     'administratorType=User'
     "clientIpAddress=$clientIp"
     "azureAdTenantId=$SignInAudience"
+
+    # The directory this deployment is running against, which is where the app registration
+    # lives and where a credential for it can be issued. Sign-in says "organizations"; this
+    # says which directory the product itself is.
+    "azureAdHomeTenantId=$($account.tenantId)"
 )
 
 if ($AzureAdClientId)

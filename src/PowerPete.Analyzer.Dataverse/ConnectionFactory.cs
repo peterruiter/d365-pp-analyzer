@@ -116,23 +116,60 @@ public sealed class ConnectionFactory(ISecretStore secrets)
         return client;
     }
 
-    /// <summary>An HTTP client for the Power Apps checker service.</summary>
-    /// <param name="connection">The connection whose credential to use.</param>
+    /// <summary>
+    /// An HTTP client for the Power Apps checker service, as this product rather than as a client.
+    /// </summary>
+    /// <remarks>
+    /// The product's own identity, which is a change from taking the connection's, and the
+    /// reason is that the connection's never worked.
+    ///
+    /// The checker is a separate resource, PowerApps-Advisor, not Dataverse. A service
+    /// principal connection could reach it if somebody had granted that registration a
+    /// permission on it. A delegated connection could not: its refresh token was redeemed
+    /// for the environment and sent to the checker, which answered 401, reported as "the
+    /// checker service did not return its ruleset list". And an offline connection has no
+    /// credential at all, so the mode that exists to get past a security review in week one
+    /// threw before it reached the network. The checker has never run in any mode but one.
+    ///
+    /// Nothing about analysing a file needs the client's identity. The product uploads a
+    /// file it already holds and reads back a report about it; the client's environment is
+    /// not touched. So it authenticates as itself, with an application permission granted
+    /// once in the tenant this product is deployed in, and every mode can use the checker —
+    /// including the offline one, which cannot authenticate to anything.
+    ///
+    /// Where the file goes is still the connection's decision: the geography comes from the
+    /// connection and there is no default.
+    /// </remarks>
     /// <param name="cancellationToken">Cancellation.</param>
-    public async Task<HttpClient> ForCheckerAsync(Connection connection, CancellationToken cancellationToken)
+    public static async Task<HttpClient> ForCheckerAsync(CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(connection);
+        var product = ProductRegistration();
 
-        var settings = Read(connection);
-        var token = await TokenAsync(connection, settings, "https://api.advisor.powerapps.com/.default", cancellationToken)
-            .ConfigureAwait(false);
+        // A real tenant, not "organizations". Sign-in accepts any tenant and says so with
+        // that word; client credentials are this product authenticating as itself and have
+        // to name the directory the registration lives in.
+        var home = Environment.GetEnvironmentVariable("AzureAd__HomeTenantId");
+
+        if (string.IsNullOrWhiteSpace(home))
+        {
+            throw new InvalidOperationException(
+                "The checker needs this product's own tenant, and AzureAd__HomeTenantId is not set. Sign-in uses "
+                + "'organizations' so that any tenant can sign in, which is not a directory a credential can be "
+                + "issued in.");
+        }
+
+        var credential = new ClientSecretCredential(home, product.ClientId, product.ClientSecret);
+
+        var token = await credential.GetTokenAsync(
+            new TokenRequestContext(["https://api.advisor.powerapps.com/.default"]),
+            cancellationToken).ConfigureAwait(false);
 
         var client = new HttpClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.Token);
 
         // The service needs a caller identifier and rejects the request without one, with a
-        // message that does not say so.
-        client.DefaultRequestHeaders.Add("x-ms-tenant-id", settings.TenantId ?? string.Empty);
+        // message that does not say so. This product's tenant, because this product's token.
+        client.DefaultRequestHeaders.Add("x-ms-tenant-id", home);
         client.DefaultRequestHeaders.Add("x-ms-correlation-id", Guid.NewGuid().ToString());
 
         return client;
