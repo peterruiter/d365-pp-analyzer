@@ -293,6 +293,11 @@ function SolutionPicker({ runId, onChosen }: { runId: string; onChosen: () => vo
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // The first real environment held 959 solutions. A list that long with no way to narrow
+  // it is a list nobody reads: they tick the three they recognise at the top and continue.
+  const [filter, setFilter] = useState('');
+  const [hideMicrosoft, setHideMicrosoft] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -338,6 +343,20 @@ function SolutionPicker({ runId, onChosen }: { runId: string; onChosen: () => vo
 
   const theirs = choice.solutions.filter((one) => !one.isFirstParty).length;
 
+  const needle = filter.trim().toLowerCase();
+
+  // Filtering changes what you can see, never what is ticked. Every bulk action below acts
+  // on what is shown, which is the only behaviour that is not a trap: "select all" with a
+  // filter on and a hidden selection would tick 959 things somebody could not see.
+  const shown = choice.solutions.filter((one) => {
+    if (hideMicrosoft && one.isFirstParty) return false;
+    if (needle.length === 0) return true;
+
+    return one.uniqueName.toLowerCase().includes(needle)
+      || (one.friendlyName ?? '').toLowerCase().includes(needle)
+      || (one.publisherName ?? '').toLowerCase().includes(needle);
+  });
+
   return (
     <section className="solution-picker">
       <div className="solution-picker-head">
@@ -346,7 +365,7 @@ function SolutionPicker({ runId, onChosen }: { runId: string; onChosen: () => vo
           <p>{t('runs.found-solutions', choice.solutions.length, theirs)}</p>
         </div>
         <span className="solution-picker-actions">
-          <button className="text-button" type="button" onClick={() => setTicked(new Set(choice.solutions.map((one) => one.uniqueName)))}>
+          <button className="text-button" type="button" onClick={() => setTicked(new Set(shown.map((one) => one.uniqueName)))}>
             {t('runs.select-all')}
           </button>
           <button className="text-button" type="button" onClick={() => only(false)}>
@@ -358,8 +377,26 @@ function SolutionPicker({ runId, onChosen }: { runId: string; onChosen: () => vo
         </span>
       </div>
 
+      <div className="solution-filter">
+        <input
+          type="search"
+          value={filter}
+          placeholder={t('runs.filter-solutions')}
+          onChange={(event) => setFilter(event.target.value)} />
+
+        <label className="solution-filter-toggle">
+          <input
+            type="checkbox"
+            checked={hideMicrosoft}
+            onChange={(event) => setHideMicrosoft(event.target.checked)} />
+          <span>{t('runs.hide-microsoft')}</span>
+        </label>
+
+        <span className="hint">{t('runs.showing-of', shown.length, choice.solutions.length, ticked.size)}</span>
+      </div>
+
       <ul className="solution-list">
-        {choice.solutions.map((solution) => (
+        {shown.map((solution) => (
           <li key={solution.uniqueName} className={`solution-item ${solution.isFirstParty ? 'first-party' : ''}`}>
             <label className="solution-label">
               <input

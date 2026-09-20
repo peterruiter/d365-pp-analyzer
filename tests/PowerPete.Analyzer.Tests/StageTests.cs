@@ -272,6 +272,56 @@ public class StageTests
         outcome.Error.Should().Contain("not assessed");
     }
 
+    [Fact]
+    public async Task SelectSolutions_does_not_lose_the_answer_when_the_run_resumes()
+    {
+        // What actually happened on the first real environment.
+        //
+        // Eleven solutions were ticked out of 959. The selection was recorded, the run
+        // resumed, and this stage listed the environment again and re-recorded it, which
+        // set every tick back to unanswered. The stage then read an empty selection, an
+        // empty selection means no scope, and the run read all 959 solutions and reported
+        // that none had been chosen.
+        //
+        // The fix is in the store, which merges and never writes the tick. What this holds
+        // is the property that matters to the stage: recording the list again must not be
+        // able to change what somebody chose.
+        var recorded = new List<string>();
+        var chosen = Chose("nwu_core");
+
+        var services = Services(
+            list: _ => Task.FromResult<IReadOnlyList<SolutionSummary>>(
+            [
+                new SolutionSummary("nwu_core", "Core", "1.0", false, "nwu", "Northwind", 140),
+                new SolutionSummary("msdyn_Sales", "Sales", "9.0", true, "msdyn", "Microsoft", 4000)
+            ]),
+            selection: chosen);
+
+        // The stage records the list and then reads the answer. Whatever order those happen
+        // in, the answer has to come back as it was given.
+        var watched = services with
+        {
+            RecordSolutions = (_, solutions, _) =>
+            {
+                recorded.AddRange(solutions.Select(solution => solution.UniqueName));
+                return Task.CompletedTask;
+            }
+        };
+
+        var state = State();
+        var outcome = await new SelectSolutionsStage(watched).RunAsync(state, null, CancellationToken.None);
+
+        recorded.Should().HaveCount(2, "the whole environment is recorded, chosen or not");
+
+        outcome.Status.Should().NotBe(
+            "awaitingSelection",
+            "the question was already answered, so resuming must not ask it again");
+
+        state.Chosen.Should().Equal(
+            ["nwu_core"],
+            "the tick survives the list being recorded again, which is what a resume does");
+    }
+
     /// <summary>An answer to the picker, with the mode's defaults left alone.</summary>
     /// <param name="solutions">What was ticked.</param>
     private static ChosenScope Chose(params string[] solutions) =>

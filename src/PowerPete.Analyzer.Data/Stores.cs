@@ -840,9 +840,15 @@ public sealed class WorkspaceStore(string connectionString)
     /// what was there and deliberately not read is the only thing that tells them apart
     /// afterwards.
     ///
-    /// Replaces rather than merges. A run listed twice, because somebody resumed it an hour
-    /// later, should describe the environment as it is now rather than the union of two
-    /// moments.
+    /// Merged rather than replaced, and the tick is what survives. This used to delete every
+    /// row and insert the list again, which was right about the environment and catastrophic
+    /// about the answer: the stage lists the environment on every attempt, so resuming a run
+    /// re-recorded all of it with IsSelected back to null and destroyed the selection that
+    /// had just been made. The run then read the whole environment, because an empty
+    /// selection means no scope, and reported that nothing had been chosen.
+    ///
+    /// Still authoritative about what exists. A solution that has gone from the environment
+    /// goes from the list, taking its tick with it, which is correct: it cannot be analysed.
     /// </remarks>
     /// <param name="runId">Which run.</param>
     /// <param name="solutions">What the environment reported, with the default tick.</param>
@@ -856,19 +862,50 @@ public sealed class WorkspaceStore(string connectionString)
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
 
-        await connection.ExecuteAsync(new CommandDefinition(
-            "DELETE FROM ops.RunSolution WHERE RunId = @runId;",
-            new { runId }, transaction, cancellationToken: cancellationToken));
-
         foreach (var solution in solutions)
         {
+            // IsSelected is absent from the update list on purpose. Everything else about a
+            // solution is refreshed from the environment; the tick belongs to the person who
+            // put it there and is never written by this method.
             await connection.ExecuteAsync(new CommandDefinition(
-                $"""
-                 INSERT INTO ops.RunSolution ({RunSolutionColumns})
-                 VALUES (@RunId, @UniqueName, @FriendlyName, @Version, @IsManaged, @PublisherPrefix,
-                         @PublisherName, @ComponentCount, @IsFirstParty, @IsSelected);
-                 """,
+                """
+                MERGE ops.RunSolution AS target
+                USING (SELECT @RunId AS RunId, @UniqueName AS UniqueName) AS source
+                    ON target.RunId = source.RunId AND target.UniqueName = source.UniqueName
+                WHEN MATCHED THEN UPDATE SET
+                    FriendlyName = @FriendlyName, Version = @Version, IsManaged = @IsManaged,
+                    PublisherPrefix = @PublisherPrefix, PublisherName = @PublisherName,
+                    ComponentCount = @ComponentCount, IsFirstParty = @IsFirstParty
+                WHEN NOT MATCHED THEN
+                    INSERT (RunId, UniqueName, FriendlyName, Version, IsManaged, PublisherPrefix,
+                            PublisherName, ComponentCount, IsFirstParty, IsSelected)
+                    VALUES (@RunId, @UniqueName, @FriendlyName, @Version, @IsManaged, @PublisherPrefix,
+                            @PublisherName, @ComponentCount, @IsFirstParty, NULL);
+                """,
                 solution with { RunId = runId }, transaction, cancellationToken: cancellationToken));
+        }
+
+        // Anything the environment no longer has. Done after the merge rather than before,
+        // so nothing is ever briefly absent from a list somebody might be reading.
+        //
+        // The difference is worked out here and the delete names only what goes, rather
+        // than passing the whole list to a NOT IN. The first environment this ran against
+        // had 959 solutions, and a parameter per solution is 959 of the 2100 a statement is
+        // allowed: it would have worked, and it would have failed on a tenant half again as
+        // large with an error about parameter counts rather than about solutions.
+        var present = solutions.Select(solution => solution.UniqueName).ToHashSet(StringComparer.Ordinal);
+
+        var stored = await connection.QueryAsync<string>(new CommandDefinition(
+            "SELECT UniqueName FROM ops.RunSolution WHERE RunId = @runId;",
+            new { runId }, transaction, cancellationToken: cancellationToken));
+
+        var gone = stored.Where(name => !present.Contains(name)).ToList();
+
+        foreach (var name in gone)
+        {
+            await connection.ExecuteAsync(new CommandDefinition(
+                "DELETE FROM ops.RunSolution WHERE RunId = @runId AND UniqueName = @name;",
+                new { runId, name }, transaction, cancellationToken: cancellationToken));
         }
 
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
@@ -933,11 +970,14 @@ public sealed class WorkspaceStore(string connectionString)
             "UPDATE ops.RunSolution SET IsSelected = 0 WHERE RunId = @runId;",
             new { runId }, transaction, cancellationToken: cancellationToken));
 
-        if (selected.Count > 0)
+        // In batches, because a statement is allowed 2100 parameters and "select all" on the
+        // first real environment would have sent 959 of them. It would have worked there and
+        // failed on a larger tenant with an error about parameters rather than solutions.
+        foreach (var batch in selected.Chunk(500))
         {
             await connection.ExecuteAsync(new CommandDefinition(
-                "UPDATE ops.RunSolution SET IsSelected = 1 WHERE RunId = @runId AND UniqueName IN @selected;",
-                new { runId, selected }, transaction, cancellationToken: cancellationToken));
+                "UPDATE ops.RunSolution SET IsSelected = 1 WHERE RunId = @runId AND UniqueName IN @batch;",
+                new { runId, batch }, transaction, cancellationToken: cancellationToken));
         }
 
         await connection.ExecuteAsync(new CommandDefinition(
