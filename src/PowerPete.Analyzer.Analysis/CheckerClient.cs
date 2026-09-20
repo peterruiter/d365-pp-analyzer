@@ -143,22 +143,17 @@ public sealed class CheckerClient
 
         try
         {
-            var sasUri = await UploadAsync(solution, fileName, cancellationToken).ConfigureAwait(false);
-            if (sasUri is null) return new CheckerRun(false, [], "The upload was refused by the checker service.");
+            var upload = await UploadAsync(solution, fileName, cancellationToken).ConfigureAwait(false);
+            if (upload.SasUri is null) return new CheckerRun(false, [], upload.FailureReason);
 
-            var statusUri = await StartAsync(sasUri, rulesetId, cancellationToken).ConfigureAwait(false);
-            if (statusUri is null) return new CheckerRun(false, [], "The checker service refused to start an analysis.");
+            var start = await StartAsync(upload.SasUri, rulesetId, cancellationToken).ConfigureAwait(false);
+            if (start.StatusUri is null) return new CheckerRun(false, [], start.FailureReason);
 
-            var resultUris = await PollAsync(statusUri, timeout, cancellationToken).ConfigureAwait(false);
-            if (resultUris is null)
-            {
-                return new CheckerRun(false, [],
-                    $"The checker did not finish within {timeout.TotalMinutes:0} minutes. Large solutions take longer; " +
-                    "the run can be resumed from the checker stage rather than re-extracted.");
-            }
+            var finished = await PollAsync(start.StatusUri, timeout, cancellationToken).ConfigureAwait(false);
+            if (finished.ResultUris is null) return new CheckerRun(false, [], finished.FailureReason);
 
             var issues = new List<CheckerIssue>();
-            foreach (var uri in resultUris)
+            foreach (var uri in finished.ResultUris)
             {
                 issues.AddRange(await DownloadAsync(uri, cancellationToken).ConfigureAwait(false));
             }
@@ -171,45 +166,128 @@ public sealed class CheckerClient
         }
     }
 
-    private async Task<string?> UploadAsync(Stream solution, string fileName, CancellationToken cancellationToken)
+    /// <summary>Where an uploaded file ended up, or why it did not.</summary>
+    /// <param name="SasUri">The blob the service can read it from.</param>
+    /// <param name="FailureReason">Why not.</param>
+    private sealed record Upload(string? SasUri, string? FailureReason);
+
+    /// <summary>
+    /// Puts the solution where the checker can read it.
+    /// </summary>
+    /// <remarks>
+    /// Three things here were wrong against Microsoft's published contract, and each on its
+    /// own is a refusal with no body to explain it.
+    ///
+    /// The version: everything but rulesets and rules is api-version 1.0, and this asked for
+    /// 2.0. The encoding: the service takes multipart form data with a Content-Disposition
+    /// naming the file, and this sent a bare octet stream with the name in the query string.
+    /// And the response: it is a plain array of URI strings, and this read it as an array of
+    /// objects with a sasUri property, so a successful upload would have been read as a
+    /// failure anyway.
+    /// </remarks>
+    /// <param name="solution">The file.</param>
+    /// <param name="fileName">What to call it, which the service uses in the result paths.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    private async Task<Upload> UploadAsync(Stream solution, string fileName, CancellationToken cancellationToken)
     {
-        using var content = new StreamContent(solution);
-        content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+        using var form = new MultipartFormDataContent();
+        using var file = new StreamContent(solution);
+
+        file.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+        form.Add(file, fileName, fileName);
 
         using var response = await client.PostAsync(
-            new Uri($"{Base}/upload?api-version=2.0&fileName={Uri.EscapeDataString(fileName)}"),
-            content,
+            new Uri($"{Base}/upload?api-version=1.0"),
+            form,
             cancellationToken).ConfigureAwait(false);
 
-        if (!response.IsSuccessStatusCode) return null;
+        var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
-        using var document = JsonDocument.Parse(
-            await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false));
+        if (!response.IsSuccessStatusCode)
+        {
+            // 413 has one cause and one answer, and the answer is not "try again".
+            var why = (int)response.StatusCode == 413
+                ? " The upload API takes thirty megabytes. A solution larger than that has to be staged in "
+                  + "storage this product owns and handed over as a URI, which it does not do yet."
+                : Detail(response, body);
 
-        return document.RootElement.EnumerateArray().FirstOrDefault().TryGetProperty("sasUri", out var uri)
-            ? uri.GetString()
+            return new Upload(null, string.Create(CultureInfo.InvariantCulture,
+                $"The checker at {geography} refused the upload of {fileName}: "
+                + $"{(int)response.StatusCode} {response.ReasonPhrase}.{why}"));
+        }
+
+        using var document = JsonDocument.Parse(body);
+
+        // An array of strings, as published. Not an array of objects.
+        var uri = document.RootElement.ValueKind == JsonValueKind.Array
+            ? document.RootElement.EnumerateArray().FirstOrDefault().GetString()
             : null;
+
+        return uri is { Length: > 0 }
+            ? new Upload(uri, null)
+            : new Upload(null, $"The checker at {geography} accepted {fileName} and returned no location for it.");
     }
 
-    private async Task<Uri?> StartAsync(string sasUri, Guid rulesetId, CancellationToken cancellationToken)
+    /// <summary>Where to watch an analysis, or why there is nothing to watch.</summary>
+    /// <param name="StatusUri">What to poll.</param>
+    /// <param name="FailureReason">Why not.</param>
+    private sealed record Started(Uri? StatusUri, string? FailureReason);
+
+    /// <summary>
+    /// Asks for the analysis.
+    /// </summary>
+    /// <remarks>
+    /// The property is sasUriList. This sent fileUrls, which the service does not read, so
+    /// the request was an analysis of nothing and came back as a bad request with no body.
+    /// Same api-version mistake as the upload.
+    /// </remarks>
+    /// <param name="sasUri">Where the file is.</param>
+    /// <param name="rulesetId">Which ruleset.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    private async Task<Started> StartAsync(string sasUri, Guid rulesetId, CancellationToken cancellationToken)
     {
         var request = new
         {
             ruleSets = new[] { new { id = rulesetId } },
-            fileUrls = new[] { sasUri }
+            sasUriList = new[] { sasUri }
         };
 
         using var response = await client.PostAsJsonAsync(
-            new Uri($"{Base}/analyze?api-version=2.0"),
+            new Uri($"{Base}/analyze?api-version=1.0"),
             request,
             cancellationToken).ConfigureAwait(false);
 
         // 202 with a Location header. Anything else means it did not start, and the caller
         // turns that into a not assessed record rather than an empty result set.
-        return response.StatusCode == System.Net.HttpStatusCode.Accepted ? response.Headers.Location : null;
+        if (response.StatusCode == System.Net.HttpStatusCode.Accepted && response.Headers.Location is { } location)
+        {
+            return new Started(location, null);
+        }
+
+        var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+        return new Started(null, string.Create(CultureInfo.InvariantCulture,
+            $"The checker at {geography} would not start an analysis: "
+            + $"{(int)response.StatusCode} {response.ReasonPhrase}.{Detail(response, body)}"));
     }
 
-    private async Task<IReadOnlyList<string>?> PollAsync(Uri statusUri, TimeSpan timeout, CancellationToken cancellationToken)
+    /// <summary>What an analysis produced, or why nothing.</summary>
+    /// <param name="ResultUris">Where to download the reports.</param>
+    /// <param name="FailureReason">Why not.</param>
+    private sealed record Finished(IReadOnlyList<string>? ResultUris, string? FailureReason);
+
+    /// <summary>
+    /// Waits for the analysis.
+    /// </summary>
+    /// <remarks>
+    /// Every unsuccessful answer used to be treated as "not yet" and polled again until the
+    /// timeout, so a 403 or a 404 cost twenty minutes and then reported a timeout. They are
+    /// terminal and say so now.
+    /// </remarks>
+    /// <param name="statusUri">What to poll.</param>
+    /// <param name="timeout">How long to wait.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    private async Task<Finished> PollAsync(Uri statusUri, TimeSpan timeout, CancellationToken cancellationToken)
     {
         var deadline = DateTimeOffset.UtcNow + timeout;
 
@@ -220,20 +298,48 @@ public sealed class CheckerClient
             await Task.Delay(TimeSpan.FromSeconds(20), cancellationToken).ConfigureAwait(false);
 
             using var response = await client.GetAsync(statusUri, cancellationToken).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode) continue;
 
             // Still running. The service keeps answering 202 until it is done.
             if (response.StatusCode == System.Net.HttpStatusCode.Accepted) continue;
 
-            using var document = JsonDocument.Parse(
-                await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false));
+            var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
-            if (!document.RootElement.TryGetProperty("resultFileUris", out var uris)) continue;
+            if (!response.IsSuccessStatusCode)
+            {
+                return new Finished(null, string.Create(CultureInfo.InvariantCulture,
+                    $"The checker at {geography} stopped answering about this analysis: "
+                    + $"{(int)response.StatusCode} {response.ReasonPhrase}.{Detail(response, body)}"));
+            }
 
-            return [.. uris.EnumerateArray().Select(uri => uri.GetString()).Where(uri => uri is not null).Select(uri => uri!)];
+            using var document = JsonDocument.Parse(body);
+
+            if (document.RootElement.TryGetProperty("resultFileUris", out var uris)
+                && uris.ValueKind == JsonValueKind.Array)
+            {
+                return new Finished(
+                    [.. uris.EnumerateArray().Select(uri => uri.GetString()).Where(uri => uri is not null).Select(uri => uri!)],
+                    null);
+            }
+
+            // Finished, with no files. The service says why in its status, and Failed is a
+            // different thing from an analysis that found nothing.
+            var status = document.RootElement.TryGetProperty("status", out var state) ? state.GetString() : null;
+
+            if (string.Equals(status, "Failed", StringComparison.OrdinalIgnoreCase))
+            {
+                return new Finished(null, $"The checker at {geography} failed while analysing this solution.");
+            }
+
+            if (status is not null && !string.Equals(status, "InProgress", StringComparison.OrdinalIgnoreCase))
+            {
+                return new Finished(null,
+                    $"The checker at {geography} finished with status '{status}' and produced no report.");
+            }
         }
 
-        return null;
+        return new Finished(null,
+            $"The checker did not finish within {timeout.TotalMinutes:0} minutes. Large solutions take longer; "
+            + "the run can be resumed from the checker stage rather than re-extracted.");
     }
 
     /// <summary>

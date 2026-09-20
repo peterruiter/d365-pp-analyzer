@@ -1764,6 +1764,31 @@ that word is not a directory a credential can be issued in, so `AzureAd:HomeTena
 the directory the registration actually lives in. Declared in the template and passed by the
 deployment script, not set by hand.
 
+### Then it reached the service, and the calls were wrong
+
+The consent landed, the token worked, the ruleset resolved, and the next sentence was "the
+upload was refused by the checker service" — five times, with no status and no body, which
+is the same meta-defect one step further along.
+
+Reading Microsoft's published contract instead of guessing found three mistakes in the
+upload alone, any one of which is a refusal with an empty body:
+
+| What | Was | Published |
+|---|---|---|
+| Version | `api-version=2.0` | 1.0 for everything but rulesets and rules |
+| Encoding | A bare octet stream, name in the query string | multipart/form-data with a Content-Disposition naming the file |
+| Response | Read as objects with a `sasUri` property | A plain array of URI strings |
+
+The third one matters on its own: a successful upload would have been read as a failure.
+
+Analyze had the same version mistake and sent `fileUrls` where the contract says
+`sasUriList`, so the request was an analysis of no files. And the status poll treated every
+unsuccessful answer as "not yet", so a 403 or a 404 cost the full twenty minute timeout and
+then reported a timeout.
+
+None of this had ever run. The whole checker path was written against documentation, from
+memory, and never executed once.
+
 ### And the message says which failure it is
 
 A 401 is a different afternoon from a 503, and the product now says the status, the
