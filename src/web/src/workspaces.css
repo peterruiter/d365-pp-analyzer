@@ -846,14 +846,28 @@
    them, so the two read as one object. */
 .filter-bar.small { margin-top: 18px; }
 
-/* Every state badge the same width, whatever the word inside it. Working,
-   Degraded and Failed are different lengths and a column of ragged coloured
-   blocks reads as a mistake rather than as a status. */
+/* The state badge runs the width of its row.
+   
+   It was a fixed 132px minimum with the word centred in it, which made a column
+   of coloured blocks that each stopped at a different place depending on how
+   much room the row had: five ragged rectangles reading as a layout fault
+   rather than as five statuses. Full width makes the colour the band across the
+   row it was always trying to be, and the word sits at the left where the
+   heading under it starts, so the two line up. */
 .health-row .tag {
-  min-width: 132px;
-  padding: 6px 10px;
-  text-align: center;
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  text-align: left;
 }
+
+/* .admin-row is a flex row and its content div never grew, so the badge above
+   stopped wherever the longest sentence in the row happened to end. */
+.health-row > div { flex: 1 1 auto; min-width: 0; }
+
+/* The name below the badge rather than beside it, which is what a full width
+   band makes of it anyway, and lined up with the word inside the band. */
+.health-row strong { display: grid; gap: 6px; }
 
 /* ================================================================ the plan ==
    Four hundred rows of "queue / Create / msdyn_name" answers no question. How
@@ -1493,3 +1507,6 @@
   .run-source-pick { width: 100%; }
   .run-source-pick select { flex: 1; min-width: 0; }
 }
+
+/* Watch and remove, on the same line, with the destructive one last. */
+.run-row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }

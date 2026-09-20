@@ -423,7 +423,11 @@ public sealed class SystemHealth(IConfiguration configuration)
 
             var stuck = await connection.ExecuteScalarAsync<int>(new CommandDefinition(
                 """
-                SELECT COUNT(*) FROM ops.MigrationRun
+                -- AnalysisRun. This read ops.MigrationRun, which is the migrator's table
+                -- and has never existed in this database, so the one check that watches for
+                -- a wedged run has reported "not working" since the day it was written and
+                -- the operations page has never been green.
+                SELECT COUNT(*) FROM ops.AnalysisRun
                 WHERE Status = 'running' AND StartedUtc < DATEADD(hour, -6, SYSUTCDATETIME());
                 """,
                 cancellationToken: cancellationToken));

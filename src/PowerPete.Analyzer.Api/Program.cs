@@ -83,6 +83,10 @@ builder.Services.AddSingleton(new WorkspaceStore(connectionString));
 builder.Services.AddSingleton(new AnalysisStore(connectionString));
 builder.Services.AddSingleton(new AccessStore(connectionString));
 builder.Services.AddSingleton(SecretStore.For(keyVaultUri));
+
+// The same factory the worker authenticates with, so testing a connection from the screen
+// and reading an environment on a run cannot disagree about whether a credential works.
+builder.Services.AddSingleton<ConnectionFactory>();
 builder.Services.AddSingleton<SystemHealth>();
 builder.Services.AddSingleton<ReportComposer>();
 
@@ -748,6 +752,52 @@ app.MapPost("/api/runs/{runId:guid}/selection",
     });
 }).RequireAuthorization();
 
+// ------------------------------------------------------------ removing one --
+
+// Housekeeping, and it matters for the estate rather than for the disk. An engagement
+// accumulates a run from every attempt, and while every findings screen reads exactly one
+// run, the list is what somebody scrolls when they are looking for the one they mean.
+app.MapDelete("/api/runs/{runId:guid}", async (HttpContext context, WorkspaceStore store, Guid runId) =>
+{
+    var run = await store.GetRunAsync(runId, context.RequestAborted);
+    if (run is null) return Results.NotFound();
+
+    // Admin, not Contributor. Starting a run is routine; removing the analysis a report was
+    // written from is not, and nothing here can undo it.
+    if (await Denied(context, run.EngagementId, EngagementRoles.Admin) is { } denied) return denied;
+
+    if (run.Status is "running" or "pending")
+    {
+        return Results.BadRequest(new
+        {
+            error = "This run is still going. Wait for it to stop, or cancel it, before removing it: a worker "
+                  + "part way through would carry on writing findings against a run that no longer exists."
+        });
+    }
+
+    try
+    {
+        var published = await store.DeleteRunAsync(runId, context.RequestAborted);
+
+        return Results.Ok(new
+        {
+            deleted = true,
+
+            // Said plainly. Removing the run removes this product's record of a publish and
+            // nothing at all in the client's board, and somebody who assumed otherwise would
+            // go looking for work items that are still sitting there.
+            note = published > 0
+                ? $"{published} work item(s) were published from this run. They are still in the target "
+                  + "project; only this product's record of them is gone."
+                : null
+        });
+    }
+    catch (InvalidOperationException refusal)
+    {
+        return Results.BadRequest(new { error = refusal.Message });
+    }
+}).RequireAuthorization();
+
 // --------------------------------------------------------------- run again --
 
 // From a stage rather than from the beginning, because a run that failed at the checker after
@@ -1134,6 +1184,116 @@ app.MapGet("/api/publish-targets", () =>
 // and for one the token cannot see, and from here the two are the same reply, so a typed
 // name fails in the one way nobody can diagnose. A list that came back through the same
 // token that will do the publishing cannot contain either.
+// ------------------------------------------------------- proving a connection --
+
+// The connections screen has said "not tested" since the day it was written and nothing
+// could ever change it. RecordConnectionTestAsync is called from inside the extract stage,
+// so a source could only be proved by analysing an estate with it and a publish target
+// could not be proved at all: the one thing a consultant wants to do before a client
+// meeting is the one thing the product did not offer.
+//
+// A read in every case. Testing Azure DevOps by creating a work item would be a product
+// that writes to a client's board to find out whether it can, so each target is proved by
+// listing what it can see, which is the same call the project picker makes.
+app.MapPost("/api/engagements/{engagementId:guid}/connections/{connectionId:guid}/test",
+    async (HttpContext context, WorkspaceStore store, DevOpsProjects projects, Guid engagementId, Guid connectionId) =>
+{
+    if (await Denied(context, engagementId, EngagementRoles.Contributor) is { } denied) return denied;
+
+    var connection = await store.GetConnectionAsync(connectionId, context.RequestAborted);
+
+    if (connection is null || connection.EngagementId != engagementId) return Results.NotFound();
+
+    var settings = ConnectionSettings(connection.SettingsJson);
+    var secrets = context.RequestServices.GetRequiredService<ISecretStore>();
+
+    var token = connection.SecretRef is { Length: > 0 } reference
+        ? await secrets.GetAsync(SecretNames.For(reference, "secret"), context.RequestAborted)
+        : null;
+
+    var succeeded = false;
+    string message;
+    string? identity = null;
+
+    try
+    {
+        switch (connection.Mode)
+        {
+            case "offlineZip":
+                // Nothing to authenticate against. Either a file was uploaded or it was not,
+                // and saying so is more use than refusing to answer.
+                settings.TryGetValue("uploadedFile", out var file);
+                succeeded = !string.IsNullOrWhiteSpace(file);
+                message = succeeded
+                    ? "A solution export is uploaded and will be read by the next run."
+                    : "No solution export has been uploaded to this connection yet.";
+                break;
+
+            case "jira":
+            {
+                settings.TryGetValue("siteUrl", out var site);
+                settings.TryGetValue("email", out var email);
+
+                var boards = context.RequestServices.GetRequiredService<JiraProjects>();
+
+                var found = await boards.ListAsync(
+                    site ?? string.Empty, email ?? string.Empty, token ?? string.Empty, context.RequestAborted);
+
+                succeeded = found.Error is null;
+                identity = email;
+
+                // The count, not just a tick. A token that authenticates and can see no
+                // project is the failure that looks like success until a publish runs.
+                message = found.Error
+                    ?? $"Authenticated as {email}, and {found.Projects.Count} project(s) are visible.";
+                break;
+            }
+
+            case "azureDevOps":
+            {
+                settings.TryGetValue("organisationUrl", out var organisation);
+
+                var found = await projects.ListAsync(
+                    organisation ?? string.Empty, token ?? string.Empty, context.RequestAborted);
+
+                succeeded = found.Error is null;
+                message = found.Error
+                    ?? $"Authenticated, and {found.Projects.Count} project(s) are visible.";
+                break;
+            }
+
+            default:
+            {
+                // servicePrincipal and delegated, through the same factory the worker uses.
+                // A second implementation of this would eventually disagree with the first
+                // about whether a client's credential works, and the screen would say one
+                // thing while the run did another.
+                var factory = context.RequestServices.GetRequiredService<ConnectionFactory>();
+                using var client = await factory.ForDataverseAsync(connection, context.RequestAborted);
+                var probe = await new DataverseReader(client).TestAsync(context.RequestAborted);
+
+                succeeded = probe.Succeeded;
+                identity = probe.Identity;
+                message = probe.Message;
+                break;
+            }
+        }
+    }
+    catch (Exception failure) when (failure is HttpRequestException or InvalidOperationException
+        or Azure.RequestFailedException or Azure.Identity.AuthenticationFailedException)
+    {
+        // Recorded as a failure rather than thrown. A test that throws a 500 tells the
+        // reader the product is broken when what is broken is the credential.
+        succeeded = false;
+        message = failure.Message;
+    }
+
+    await store.RecordConnectionTestAsync(
+        connectionId, succeeded, identity, message, null, context.RequestAborted);
+
+    return Results.Ok(new { succeeded, message, identity });
+}).RequireAuthorization();
+
 app.MapGet("/api/engagements/{engagementId:guid}/connections/{connectionId:guid}/projects",
     async (HttpContext context, WorkspaceStore store, DevOpsProjects projects, Guid engagementId, Guid connectionId) =>
 {

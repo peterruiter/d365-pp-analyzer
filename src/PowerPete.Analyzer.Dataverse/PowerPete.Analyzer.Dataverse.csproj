@@ -2,11 +2,22 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PowerPete.Analyzer.Domain\PowerPete.Analyzer.Domain.csproj" />
+
+    <!--
+      For the connection row and the secret store. ConnectionFactory lives here rather than
+      in the worker because the API needs it too: testing a connection from the connections
+      screen and reading an environment on a run are the same authentication, and two copies
+      of it would eventually disagree about which one a client's credential works with.
+    -->
+    <ProjectReference Include="..\PowerPete.Analyzer.Data\PowerPete.Analyzer.Data.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Azure.Identity" />
     <PackageReference Include="Microsoft.Extensions.Http" />
+
+    <!-- For the uploaded solution export, which a connection in the offline mode points at. -->
+    <PackageReference Include="Azure.Storage.Blobs" />
   </ItemGroup>
 
 </Project>

@@ -192,7 +192,11 @@ export function RunsPage({ engagementId }: { engagementId: string }) {
                 engagementId={engagementId}
                 run={run}
                 key={run.runId}
-                onWatch={() => setWatching(run.runId)} />
+                onWatch={() => setWatching(run.runId)}
+                onRemoved={() => {
+                  if (watching === run.runId) setWatching(null);
+                  void load();
+                }} />
             ))}
           </div>
         )}
@@ -211,10 +215,11 @@ export function RunsPage({ engagementId }: { engagementId: string }) {
  * Fetched when the row is opened rather than with the list. An engagement with forty runs
  * would otherwise make forty requests to draw a page nobody has expanded yet.
  */
-function RunRow({ engagementId, run, onWatch }: {
+function RunRow({ engagementId, run, onWatch, onRemoved }: {
   engagementId: string;
   run: Run;
   onWatch: () => void;
+  onRemoved: () => void;
 }) {
   const t = useT();
   const { culture } = useLanguage();
@@ -257,8 +262,9 @@ function RunRow({ engagementId, run, onWatch }: {
       <div className="run-body">
         {run.error && <p className="curation-message danger">{run.error}</p>}
 
-        <p className="panel-note">
+        <p className="panel-note run-row-actions">
           <button type="button" className="text-button" onClick={onWatch}>{t('runs.watch-this-run')}</button>
+          <RemoveRun runId={run.runId} status={run.status} onRemoved={onRemoved} />
         </p>
 
         {found === null ? (
@@ -301,5 +307,76 @@ function RunRow({ engagementId, run, onWatch }: {
         )}
       </div>
     </details>
+  );
+}
+
+/**
+ * Removing a run and everything it produced.
+ *
+ * Two steps, because it cannot be undone and because this repository has already deleted
+ * something of a client's by accident once. The confirmation says what goes and, more
+ * importantly, what does not: work items already written to a board stay exactly where they
+ * are and only this product's record of having written them is removed.
+ *
+ * Admin only on the server. The button is shown to anybody who can see the run and the
+ * refusal explains itself, because hiding it would leave a consultant wondering how the
+ * list is supposed to be tidied.
+ */
+function RemoveRun({ runId, status, onRemoved }: {
+  runId: string;
+  status: string;
+  onRemoved: () => void;
+}) {
+  const t = useT();
+  const canRemove = useCan('Admin');
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!canRemove) return null;
+
+  // A worker part way through would carry on writing findings against a run that no longer
+  // exists, so the server refuses and the button says so rather than offering it.
+  const moving = status === 'running' || status === 'pending';
+
+  async function remove() {
+    setBusy(true);
+    const result = await sendJson(`/api/runs/${runId}`, 'DELETE');
+    setError(result.error);
+    setBusy(false);
+
+    if (!result.error) {
+      setConfirming(false);
+      onRemoved();
+    }
+  }
+
+  if (confirming) {
+    return (
+      <span className="stage-confirm">
+        <span>{t('runs.remove-warning')}</span>
+        <button type="button" className="text-button" disabled={busy} onClick={() => void remove()}>
+          {busy ? t('runs.removing') : t('runs.yes-remove-it')}
+        </button>
+        <button type="button" className="text-button" disabled={busy} onClick={() => setConfirming(false)}>
+          {t('common.cancel')}
+        </button>
+        {error && <span className="stage-error">{error}</span>}
+      </span>
+    );
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        className="text-button danger-button"
+        disabled={moving}
+        title={moving ? t('runs.cannot-remove-while-running') : undefined}
+        onClick={() => setConfirming(true)}>
+        {t('runs.remove-this-run')}
+      </button>
+      {error && <span className="stage-error">{error}</span>}
+    </>
   );
 }

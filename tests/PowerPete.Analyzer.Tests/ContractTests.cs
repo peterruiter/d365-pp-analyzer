@@ -856,6 +856,7 @@ public class DataLayerTests
     [InlineData("CK_AnalysisRun_Status", @"'(?<value>[a-zA-Z]+)'", "Status")]
     [InlineData("CK_RunStage_Status", @"'(?<value>[a-zA-Z]+)'", "StageStatus")]
     [InlineData("CK_RunCommand_Command", @"'(?<value>[a-zA-Z]+)'", "Command")]
+    [InlineData("CK_Connection_Mode", @"'(?<value>[a-zA-Z]+)'", "ConnectionMode")]
     public void Never_writes_a_value_a_check_constraint_would_refuse(string constraint, string pattern, string kind)
     {
         // The most expensive defect this product has shipped, twice, in one family.
@@ -891,6 +892,15 @@ public class DataLayerTests
             // as a literal inside a VALUES list. The first version of this checked only the
             // helper, passed cleanly against the missing "resume" it was written to catch,
             // and had to be fixed before it meant anything.
+            // The two lists the API validates a connection against. It accepted "jira" and
+            // the constraint allowed four values that did not include it, so creating a Jira
+            // connection would have failed on the last step of the wizard exactly as the
+            // Discover button did, and there is no live Jira to have found it by trying.
+            "ConnectionMode" => Literals(@"(?:ExtractionModesList|PublishTargets)\(\)\s*=>\s*\[(?<value>[^\]]*)\]")
+                .SelectMany(list => Regex
+                    .Matches(list, @"""(?<value>[a-zA-Z]+)""", RegexOptions.None, TimeSpan.FromSeconds(5))
+                    .Select(match => match.Groups["value"].Value)),
+
             "Command" => Literals(@"QueueCommandAsync\([^,]+,\s*""(?<value>[a-zA-Z]+)""")
                 .Concat(Literals(@"INTO ops\.RunCommand[^;]*?VALUES\s*\([^)]*?'(?<value>[a-zA-Z]+)'")),
             "Status" => Literals(@"SetRunStatusAsync\([^,]+,\s*""(?<value>[a-zA-Z]+)""")

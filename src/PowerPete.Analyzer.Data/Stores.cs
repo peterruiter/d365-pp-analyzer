@@ -1061,6 +1061,66 @@ public sealed class WorkspaceStore(string connectionString)
     }
 
     /// <summary>
+    /// Removes a run and everything it produced.
+    /// </summary>
+    /// <remarks>
+    /// Almost every table hangs off the run with a cascade, so this is mostly one delete.
+    /// Two things do not, and both are deliberate.
+    ///
+    /// findings.Estimate has no cascade, so it is deleted explicitly. Left out, the delete
+    /// fails on a foreign key with a message naming a constraint rather than a reason.
+    ///
+    /// A run that another run was based on cannot go. A publish records what it wrote from
+    /// the assessment somebody approved, and removing that assessment would leave a record
+    /// of work items raised from nothing. The caller is told which run is holding it.
+    ///
+    /// What this cannot undo is a publish. Work items already in Azure DevOps or Jira stay
+    /// exactly where they are; only this product's record of having written them goes. The
+    /// count comes back so the caller can say so before anybody presses the button.
+    /// </remarks>
+    /// <param name="runId">Which run.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    /// <returns>How many published work items the deleted run had recorded.</returns>
+    /// <exception cref="InvalidOperationException">Another run is based on this one.</exception>
+    public async Task<int> DeleteRunAsync(Guid runId, CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+
+        var derived = await connection.QueryAsync<string>(new CommandDefinition(
+            """
+            SELECT CONVERT(nvarchar(36), RunId) FROM ops.AnalysisRun WHERE BasedOnRunId = @runId;
+            """,
+            new { runId }, transaction, cancellationToken: cancellationToken));
+
+        var blocking = derived.ToList();
+
+        if (blocking.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"{blocking.Count} later run(s) were made from this one and would be left describing "
+                + $"an assessment that no longer exists: {string.Join(", ", blocking)}. Remove those first.");
+        }
+
+        var published = await connection.ExecuteScalarAsync<int>(new CommandDefinition(
+            "SELECT COUNT(*) FROM findings.PublishedWorkItem WHERE RunId = @runId;",
+            new { runId }, transaction, cancellationToken: cancellationToken));
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            "DELETE FROM findings.Estimate WHERE RunId = @runId;",
+            new { runId }, transaction, cancellationToken: cancellationToken));
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            "DELETE FROM ops.AnalysisRun WHERE RunId = @runId;",
+            new { runId }, transaction, cancellationToken: cancellationToken));
+
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+
+        return published;
+    }
+
+    /// <summary>
     /// Asks the worker to do something to a run that already exists.
     /// </summary>
     /// <param name="runId">Which run.</param>

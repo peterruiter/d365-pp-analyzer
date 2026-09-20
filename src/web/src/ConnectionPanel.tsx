@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useCan } from './access';
 import { useT, useLanguage } from './i18n';
 import { ConnectionWizard } from './ConnectionWizard';
 import { ConnectorMark } from './ConnectorMark';
@@ -120,6 +121,17 @@ export function ConnectionPanel({
                 address meant adding a second one and leaving the wrong one in the picker.
               */}
               <div className="connection-item-actions">
+                {/*
+                  The screen has said "not tested" since it was written and nothing could
+                  ever change it: the only thing that recorded a test was the extract stage
+                  of a run, so a publish target could not be proved at all and a source
+                  could only be proved by analysing an estate with it.
+                */}
+                <TestConnection
+                  engagementId={engagementId}
+                  connectionId={connection.connectionId}
+                  onTested={reload} />
+
                 <button type="button" className="ghost-button" onClick={() => setEditing(connection)}>
                   {t('common.edit')}
                 </button>
@@ -175,5 +187,46 @@ export function ConnectionPanel({
         />
       )}
     </section>
+  );
+}
+
+/**
+ * Proving one connection, now, rather than finding out on the next run.
+ *
+ * A read in every case. Testing Azure DevOps by creating a work item would be a product
+ * that writes to a client's board to find out whether it can, so each target is proved by
+ * listing what it can see and each source by the same call the pipeline's connect stage
+ * makes.
+ *
+ * The answer is recorded on the connection, so the row beside this button updates and the
+ * next person to look knows when it was last proved and by what.
+ */
+function TestConnection({ engagementId, connectionId, onTested }: {
+  engagementId: string;
+  connectionId: string;
+  onTested: () => void;
+}) {
+  const t = useT();
+  const canTest = useCan('Contributor');
+  const [busy, setBusy] = useState(false);
+
+  if (!canTest) return null;
+
+  async function test() {
+    setBusy(true);
+
+    // The result is not shown here. It is written to the connection and the list reloads,
+    // so the message lands in the same place it would have come from a run, which is where
+    // somebody will look for it tomorrow.
+    await sendJson(`/api/engagements/${engagementId}/connections/${connectionId}/test`, 'POST');
+
+    setBusy(false);
+    onTested();
+  }
+
+  return (
+    <button type="button" className="ghost-button" disabled={busy} onClick={() => void test()}>
+      {busy ? t('connections.testing') : t('connections.test')}
+    </button>
   );
 }

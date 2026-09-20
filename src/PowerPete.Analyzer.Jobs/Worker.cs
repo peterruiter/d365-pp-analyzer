@@ -5,6 +5,7 @@ using System.Text.Json;
 using PowerPete.Analyzer.Analysis;
 using PowerPete.Analyzer.Data;
 using PowerPete.Analyzer.DevOps;
+using PowerPete.Analyzer.Dataverse;
 using PowerPete.Analyzer.Domain;
 using PowerPete.Analyzer.Extraction;
 using PowerPete.Analyzer.Estimation;
