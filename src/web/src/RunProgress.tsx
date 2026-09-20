@@ -55,6 +55,9 @@ type Choice = {
     environmentHealth: boolean;
     exportSolutions: boolean;
   };
+
+  /** Where the checker may run, or null when nobody has chosen. Null means it will refuse. */
+  checkerGeography: string | null;
 };
 
 /** The statuses that mean the worker has not finished, so the page keeps asking. */
@@ -527,7 +530,18 @@ function SolutionPicker({ runId, onChosen }: { runId: string; onChosen: () => vo
             type="checkbox"
             checked={checks.solutionChecker}
             onChange={(event) => setChecks({ ...checks, solutionChecker: event.target.checked })} />
-          <span><strong>{t('runs.check.solutionChecker')}</strong><small>{t('runs.check.solutionChecker-note')}</small></span>
+          <span>
+            <strong>{t('runs.check.solutionChecker')}</strong>
+            <small>{t('runs.check.solutionChecker-note')}</small>
+
+            {/* Said here rather than discovered later. The checker refuses without a
+                geography, deliberately, because where a client's solution is uploaded for
+                analysis is a data residency decision. On the run this was written for the
+                extraction took eight minutes and the checker refused in one second. */}
+            {checks.solutionChecker && !choice.checkerGeography && (
+              <small className="solution-check-warning">{t('runs.check.no-geography')}</small>
+            )}
+          </span>
         </label>
         <label className="solution-check">
           <input

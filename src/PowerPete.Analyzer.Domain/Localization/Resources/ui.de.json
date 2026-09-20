@@ -360,6 +360,7 @@
   "runs.check.exportSolutions-note": "Lädt jede gewählte Lösung aus der Umgebung, genau wie ein Klick auf Exportieren, und liest ihren Inhalt. Siebzehn Regeln brauchen diese Datei und laufen ohne sie nicht. Langsam: etwa eine Minute je Lösung.",
   "runs.check.modelEstimates": "Modellschätzungen",
   "runs.check.modelEstimates-note": "Schätzungen mit Begründung je Befund. Abgeschaltet greifen die Bandvorgaben, und der Bericht nennt, welche verwendet wurden.",
+  "runs.check.no-geography": "Diese Verbindung hat keine Checker-Region, also verweigert der Checker und jede davon abhängige Regel wird als nicht bewertet gemeldet. Legen Sie zuerst eine an der Verbindung fest: wohin eine Lösung zur Analyse hochgeladen wird, ist eine Entscheidung über Datenresidenz, und das Produkt trifft sie nicht für Sie.",
   "runs.check.solutionChecker": "Solution Checker",
   "runs.check.solutionChecker-note": "Microsofts eigene statische Analyse. Mit Abstand der langsamste Teil eines Laufs. Abgeschaltet wird jede darauf beruhende Regel als nicht bewertet gemeldet, nicht als bestanden.",
   "runs.choose-what-to-read": "Auswählen, was gelesen wird",

@@ -360,6 +360,7 @@
   "runs.check.exportSolutions-note": "Télécharge chaque solution choisie depuis l’environnement, exactement comme le ferait un clic sur Exporter, et lit son contenu. Dix-sept règles ont besoin de ce fichier et ne peuvent pas s’exécuter sans lui. Lent : environ une minute par solution.",
   "runs.check.modelEstimates": "Estimations par modèle",
   "runs.check.modelEstimates-note": "Estimations avec justification par constat. Désactivées, les estimations reviennent aux valeurs par défaut et le rapport indique lesquelles il a utilisées.",
+  "runs.check.no-geography": "Cette connexion n’a pas de région de checker, donc le checker refusera et chaque règle qui en dépend sera signalée comme non évaluée. Définissez-en une sur la connexion d’abord : l’endroit où une solution est téléversée pour analyse est une décision de résidence des données, et le produit ne la prend pas à votre place.",
   "runs.check.solutionChecker": "Solution checker",
   "runs.check.solutionChecker-note": "L’analyse statique de Microsoft. De loin la partie la plus lente d’une exécution. Désactivée, chaque règle qui en dépend est signalée comme non évaluée, jamais comme conforme.",
   "runs.choose-what-to-read": "Choisir ce qui sera lu",

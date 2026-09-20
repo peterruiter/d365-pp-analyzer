@@ -696,6 +696,20 @@ app.MapGet("/api/runs/{runId:guid}/solutions", async (HttpContext context, Works
     var selection = await store.GetSelectionAsync(runId, context.RequestAborted);
     var defaults = RunChecks.ForMode(run.Mode);
 
+    // Whether the checker can actually be submitted to, asked here rather than found out
+    // later.
+    //
+    // The checker refuses without a geography, on purpose: where a client's solution is
+    // uploaded for analysis is a data residency decision and must never be defaulted
+    // quietly. What was wrong was when they found out. On the run this was written for, the
+    // extraction took eight minutes, the checker refused in one second, and two rules came
+    // back as not assessed over a field nobody had been asked for.
+    var source = run.SourceConnectionId is null
+        ? null
+        : await store.GetConnectionAsync(run.SourceConnectionId.Value, context.RequestAborted);
+
+    var checkerGeography = source is null ? null : ConnectionFactory.Read(source).CheckerGeography;
+
     return Results.Ok(new
     {
         runId,
@@ -727,7 +741,11 @@ app.MapGet("/api/runs/{runId:guid}/solutions", async (HttpContext context, Works
             modelEstimates = selection?.Checks.ModelEstimates ?? defaults.ModelEstimates,
             environmentHealth = selection?.Checks.EnvironmentHealth ?? defaults.EnvironmentHealth,
             exportSolutions = selection?.Checks.ExportSolutions ?? defaults.ExportSolutions
-        }
+        },
+
+        // Null means the checker will refuse. The screen says so beside the box rather than
+        // letting somebody tick it and find out after the extraction.
+        checkerGeography
     });
 }).RequireAuthorization();
 

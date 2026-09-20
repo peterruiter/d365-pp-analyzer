@@ -1482,6 +1482,10 @@
 .solution-check span { display: grid; gap: 2px; }
 .solution-check strong { color: var(--brand-ink); font-size: 13px; font-weight: 600; }
 .solution-check small { color: var(--cp-text-muted); font-size: 11px; line-height: 1.5; }
+
+/* A check that is ticked and cannot run. Orange rather than red: nothing is broken and
+   nothing is lost, but the box above it is promising something it will not deliver. */
+.solution-check-warning { color: var(--brand-orange); }
 .solution-picker-foot { margin-top: 18px; }
 
 @media (max-width: 680px) {

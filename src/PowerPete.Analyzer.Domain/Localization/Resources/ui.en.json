@@ -360,6 +360,7 @@
   "runs.check.exportSolutions-note": "Downloads each chosen solution from the environment, exactly as clicking Export would, and reads what is inside it. Seventeen rules need the file and cannot run without it. Slow: roughly a minute per solution.",
   "runs.check.modelEstimates": "Model estimates",
   "runs.check.modelEstimates-note": "Estimates with a rationale per finding. Turned off, estimates fall back to band defaults and the report says which it used.",
+  "runs.check.no-geography": "This connection has no checker geography, so the checker will refuse and every rule that depends on it will be reported as not assessed. Set one on the connection first: where a solution is uploaded for analysis is a data residency decision and the product will not choose for you.",
   "runs.check.solutionChecker": "Solution checker",
   "runs.check.solutionChecker-note": "Microsoft’s own static analysis. The slowest part of a run by a wide margin. Turned off, every rule that depends on it is reported as not assessed rather than as passing.",
   "runs.choose-what-to-read": "Choose what to read",

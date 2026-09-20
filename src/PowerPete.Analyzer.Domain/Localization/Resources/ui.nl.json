@@ -360,6 +360,7 @@
   "runs.check.exportSolutions-note": "Haalt elke gekozen oplossing uit de omgeving, precies zoals klikken op Exporteren zou doen, en leest wat erin zit. Zeventien regels hebben dat bestand nodig en kunnen zonder niet draaien. Traag: ongeveer een minuut per oplossing.",
   "runs.check.modelEstimates": "Modelramingen",
   "runs.check.modelEstimates-note": "Ramingen met een onderbouwing per bevinding. Uitgezet vallen ramingen terug op bandstandaarden en het rapport vermeldt welke gebruikt zijn.",
+  "runs.check.no-geography": "Deze verbinding heeft geen checkerregio, dus de checker weigert en elke regel die daarvan afhangt wordt gerapporteerd als niet beoordeeld. Stel er eerst een in op de verbinding: waar een oplossing voor analyse naartoe wordt geüpload is een beslissing over dataresidentie en het product kiest die niet voor u.",
   "runs.check.solutionChecker": "Solution checker",
   "runs.check.solutionChecker-note": "De statische analyse van Microsoft zelf. Verreweg het traagste onderdeel van een run. Uitgezet wordt elke regel die ervan afhangt gerapporteerd als niet beoordeeld, niet als geslaagd.",
   "runs.choose-what-to-read": "Kies wat er gelezen wordt",

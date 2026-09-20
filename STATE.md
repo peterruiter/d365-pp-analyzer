@@ -44,7 +44,7 @@ that a different tenant would not have. The next one will find its own.
 The analysis engine is finished in the sense that every rule in the catalogue now has a
 handler, the reference graph is built, the scorer computes the numbers, the estimator has
 its three layers and the publisher has its gate. All of that compiles under warnings as
-errors and 121 tests exercise it.
+errors and 158 tests exercise it.
 
 It has read nine real exports from a live tenant, and each sweep of them found defects that
 the synthetic sample could not: a component type nobody read, a read count that overstated
@@ -680,28 +680,40 @@ remembering: none of it failed a build and all of it failed a screen.
 
 ## The thing that most needs doing next
 
-**Sign in to a real environment interactively.** Everything else below the sign-in page has
-now been exercised. The sample solution proves the readers
-and the rules agree with a file this repository wrote; it cannot prove they agree with one
-Dynamics wrote, and the category numbers, the isolation codes, the web resource types and
-the connection reference element names all still come from documentation rather than from a
-file somebody exported.
+**This section said "sign in to a real environment interactively" for weeks after that had
+been done.** It is rewritten here from the state of the deployed product on 20 September
+2026, and the point of the rewrite is that a stale "what next" is worse than none: it sends
+somebody to do work that is finished and hides the work that is not.
 
-Two specific things nobody has yet checked against a real environment:
+Interactive sign-in works, a live environment has been read end to end, solutions are
+exported and unpacked, and work items have been published to Azure DevOps and read back.
+The most recent live run read 908 components across eleven solutions and reported five
+checks it could not run, down from seventeen before the export existed.
 
-1. A plug-in assembly registered outside the sandbox, read from a genuine export. That is
-   the last of the codes a file can settle.
-2. The flowrun read. Its shape comes from documentation, and the reader refuses the whole
-   read on a status it does not recognise rather than counting it as a success, so the
-   failure mode is a rule reporting as not assessed. That is safe and it is not proof.
+What is actually left, in order:
+
+1. **A second client.** One estate is one shape. This one is on the Basic process in Azure
+   DevOps, has no Jira, and gave up one 400 from a polymorphic lookup that a different
+   tenant would not have. Every defect found by using the product has been found on one
+   tenant.
+2. **Runtime evidence.** Three rules — `lifecycle.classicWorkflowDormant`,
+   `performance.plugSyncSlow`, `quality.flowFailureRate` — need run history or trace logs,
+   which are not in the Dataverse Web API at all. They report as not assessed and say why,
+   which is honest and is not the same as assessing them.
+3. **Live readers for what the metadata read still skips.** Custom APIs, Copilot agents,
+   forms and model-driven apps are in these solutions and no reader produces them. The
+   export softened this — a form's definition is in the zip — but nothing has confirmed
+   which of them the zip actually covers on a real estate.
+4. **Jira.** Still unverified against a live site. Tested against a recorder, which proves
+   the shape of the requests and nothing about the service.
 
 The build gates, for reference:
 
 1. `./build/Test-Contracts.ps1` — reads the contracts, connects to nothing. Passes.
 2. `./build/Test-Generators.ps1` — generates into a throwaway folder and checks the output.
    Passes.
-3. `./build/Invoke-CodeGen.ps1` — generates and builds. Twelve of twelve, no warnings.
-4. `dotnet test` — 121 tests, all passing.
+3. `./build/Invoke-CodeGen.ps1` — generates and builds. Clean, no warnings.
+4. `dotnet test` — 158 tests, all passing.
 5. `./build/New-SampleSolution.ps1` then `analyse samples/SampleSolution.zip` — sixteen
    planted defects, twelve found and four correctly not assessed.
 
@@ -1634,6 +1646,37 @@ Now: the findings endpoint resolves both namespaces in the reader's own language
 language, not the engagement's, because a report is a document for the client and a screen
 is being read right now by whoever is looking at it — and the workbook and the report both
 name the rule.
+
+## What the first run after the export actually found
+
+Worth recording because it is the first measurement of whether any of this worked, rather
+than a statement that it should.
+
+A live run on 20 September 2026: 908 components across the chosen solutions, 40 findings, 22
+backlog items, **five** checks not assessed where seventeen had been. The extraction took
+eight minutes, which is the exports.
+
+The five that remain split into two kinds, and only one of them is a limitation:
+
+- **Three need runtime evidence** — dormant classic workflows, slow synchronous plug-ins,
+  flow failure rates. Run history and trace logs are not in the Dataverse Web API. Nothing
+  in this product can read them today and it says so per rule.
+- **Two need the checker**, and the checker refused: *"No checker geography is set on this
+  connection."* That refusal is correct and deliberate — where a client's solution is
+  uploaded for analysis is a data residency decision and must never be defaulted quietly —
+  but the timing was not. The extraction took eight minutes, the checker refused in one
+  second, and two rules came back unassessed over a field nobody had been asked for.
+
+So the picker now says it, beside the checker's own box, before the run starts. The refusal
+has not changed and will not: the product still will not choose a geography. What changed is
+that somebody finds out while they can still do something about it.
+
+Also measured, and expected: all forty estimates on that run are band defaults. It ran
+before the model was connected. The next one is the first that will not be.
+
+Three failed reads, each correct and each already documented: dataflows do not travel in a
+solution, a flow run came back with no readable status, and plug-in step registrations are
+not in a solution export in a form the zip reader can use.
 
 ## What was ported rather than invented
 
