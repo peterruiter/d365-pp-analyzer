@@ -585,6 +585,15 @@ public sealed class PipelineTests
             return Task.CompletedTask;
         }
 
+        /// <summary>The last thing each stage said it was doing.</summary>
+        public Dictionary<string, string?> Progress { get; } = new(StringComparer.Ordinal);
+
+        public Task SetStageProgressAsync(Guid runId, string stageId, string? note, CancellationToken cancellationToken)
+        {
+            Progress[stageId] = note;
+            return Task.CompletedTask;
+        }
+
         public Task<IReadOnlyDictionary<string, string?>> GetCompletedStagesAsync(Guid runId, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyDictionary<string, string?>>(Completed);
     }
@@ -602,6 +611,22 @@ public sealed class PipelineTests
         }
     }
 
+    /// <summary>A stage that says what it is doing, the way a real one does.</summary>
+    /// <param name="id">Which stage.</param>
+    /// <param name="note">What it reports while it runs.</param>
+    private sealed class Talking(string id, StageNote note) : IStage
+    {
+        public string Id => id;
+
+        public bool RunsIn(string mode) => true;
+
+        public Task<StageOutcome> RunAsync(RunState state, string? checkpoint, CancellationToken cancellationToken)
+        {
+            state.Progress.Report(note);
+            return Task.FromResult(StageOutcome.Succeeded());
+        }
+    }
+
     private sealed class Throwing(string id) : IStage
     {
         public string Id => id;
@@ -612,6 +637,48 @@ public sealed class PipelineTests
 
     private static RunState State(string mode = "assessment") =>
         new() { RunId = Guid.NewGuid(), EngagementId = Guid.NewGuid(), Mode = mode };
+
+    [Fact]
+    public async Task A_note_lands_on_the_row_of_the_stage_that_wrote_it()
+    {
+        // The whole point of the note is that somebody watching can tell a slow stage from a
+        // stopped one. A note attributed to the wrong stage is worse than no note: it says
+        // the run is somewhere it is not.
+        var journal = new Journal();
+
+        await new PipelineRunner(
+            [
+                new Talking("extract", new StageNote("exporting", "nwu_core", 3, 11)),
+                new Talking("checker", new StageNote("checking", "nwu_core", 1, 11)),
+            ],
+            journal,
+            new Dictionary<string, bool>()).RunAsync(State(), default);
+
+        // Reported from inside the stage, so this has to have been written while the stage
+        // was running rather than when it ended.
+        journal.Progress.Should().ContainKey("extract");
+        journal.Progress["extract"].Should().Contain("exporting").And.Contain("nwu_core");
+
+        journal.Progress.Should().ContainKey("checker");
+        journal.Progress["checker"].Should().Contain("checking");
+    }
+
+    [Fact]
+    public async Task A_stage_that_has_finished_cannot_still_be_talking()
+    {
+        // A reporter left pointing at a stage that has returned would let a slow background
+        // write land on a finished row, and a finished row that says "exporting" is a run
+        // that looks stuck at the end of something it completed.
+        var state = State();
+        var journal = new Journal();
+
+        await new PipelineRunner(
+            [new Talking("extract", new StageNote("exporting", "nwu_core", 1, 1))],
+            journal,
+            new Dictionary<string, bool>()).RunAsync(state, default);
+
+        state.Progress.Should().BeOfType<NoProgress>("the pipeline silences a stage when it ends");
+    }
 
     [Fact]
     public async Task A_stage_that_already_succeeded_is_not_run_again()

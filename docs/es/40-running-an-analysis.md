@@ -55,6 +55,11 @@ cada una y en cuál se encuentra ahora:
 9. **Backlog** — convierte hallazgos en elementos de trabajo que alguien refinaría de verdad.
 10. **Publicar** — escribe en Azure DevOps o Jira. Solo en modo publicación, solo tras la aprobación.
 
+La fase en curso dice qué está haciendo mientras lo hace — qué solución está exportando, cuál
+tiene el checker, por dónde va en el entorno — y la pantalla se actualiza sola. Una fase que
+lee el patrimonio de un cliente tarda minutos, y sin eso una lenta y una parada se ven
+exactamente igual.
+
 Una fase puede volver a ejecutarse por separado desde la pantalla de ejecución. Al hacerlo
 también se descarta toda fase posterior, cosa que el botón le dice antes de hacerlo: una
 ejecución cuyos hallazgos vienen de una extracción y cuya puntuación viene de otra parecería

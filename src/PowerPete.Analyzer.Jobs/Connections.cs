@@ -3,6 +3,7 @@ namespace PowerPete.Analyzer.Jobs;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Azure;
 using Azure.Core;
 using Azure.Identity;
 using Azure.Storage.Blobs;
@@ -29,7 +30,36 @@ public sealed class StageServicesFactory(
     WorkspaceStore workspace,
     WorkerSettings settings)
 {
+    /// <summary>
+    /// Where a run's export of one solution is kept.
+    /// </summary>
+    /// <remarks>
+    /// Under a prefix the whole run shares, so deleting the run deletes its files with one
+    /// call, and so the lifecycle rule on the account can find them. The unique name is
+    /// escaped because a solution's name is a publisher's to choose and a blob path treats a
+    /// slash as a folder.
+    /// </remarks>
+    /// <param name="runId">The run.</param>
+    /// <param name="uniqueName">The solution.</param>
+    public static string ExportBlobName(Guid runId, string uniqueName) =>
+        $"exports/{runId}/{Uri.EscapeDataString(uniqueName)}.zip";
+
+    /// <summary>Opens a blob that is expected to be there.</summary>
+    /// <remarks>
+    /// Every caller has already established that it exists, so absence here is the file
+    /// having gone between one stage and the next. That is a failure worth a sentence
+    /// somebody can act on rather than a null reference two frames further in.
+    /// </remarks>
+    /// <param name="container">The container.</param>
+    /// <param name="blobName">The blob.</param>
+    private static Func<CancellationToken, Task<Stream>> OpenOrFail(Uri? container, string blobName) =>
+        async token => await ConnectionFactory.OpenUploadAsync(container, blobName, token).ConfigureAwait(false)
+            ?? throw new InvalidOperationException(
+                $"The solution file '{blobName}' is no longer in the storage account. It was there when this run "
+                + "started reading, so it has been removed since. Run the analysis again.");
+
     /// <summary>Builds the services for one run.</summary>
+    /// <param name="runId">Which run. Names the folder its exported solutions are written to.</param>
     /// <param name="engagementId">Which engagement.</param>
     /// <param name="engagementName">Its name, for the work item tags.</param>
     /// <param name="source">What to read. Null for an engagement with no live connection.</param>
@@ -41,6 +71,7 @@ public sealed class StageServicesFactory(
     /// </param>
     /// <param name="cancellationToken">Cancellation.</param>
     public async Task<StageServices> BuildAsync(
+        Guid runId,
         Guid engagementId,
         string engagementName,
         Connection? source,
@@ -73,44 +104,72 @@ public sealed class StageServicesFactory(
             // copy of the same solutions. The extraction-sources contract has always
             // declared solutionZip and checker as fully reached by a live mode; nothing had
             // ever implemented it.
-            OpenSolutionFiles: async (chosen, token) =>
+            OpenSolutionFiles: async (chosen, progress, token) =>
             {
                 var files = new List<SolutionFile>();
 
-                if (blobName is not null)
+                if (blobName is not null && await ConnectionFactory
+                    .BlobExistsAsync(uploads, blobName, token).ConfigureAwait(false))
                 {
-                    await using var uploaded = await ConnectionFactory
-                        .OpenUploadAsync(uploads, blobName, token).ConfigureAwait(false);
-
-                    if (uploaded is not null)
-                    {
-                        using var buffer = new MemoryStream();
-                        await uploaded.CopyToAsync(buffer, token).ConfigureAwait(false);
-                        files.Add(new SolutionFile(blobName, buffer.ToArray()));
-                    }
+                    var uploaded = blobName;
+                    files.Add(new SolutionFile(uploaded, OpenOrFail(uploads, uploaded)));
                 }
 
-                if (source is null || source.Mode == "offlineZip" || chosen.Count == 0) return files;
+                if (source is null || source.Mode == "offlineZip" || chosen.Count == 0 || uploads is null)
+                {
+                    return files;
+                }
 
                 var client = await connections.ForDataverseAsync(source, token).ConfigureAwait(false);
                 var reader = new DataverseReader(client);
+                var done = 0;
 
                 foreach (var name in chosen)
                 {
                     token.ThrowIfCancellationRequested();
 
+                    // Said before it starts, not after. A minute of silence per solution is
+                    // what made a working export indistinguishable from a stuck one.
+                    progress.Report(new StageNote("exporting", name, ++done, chosen.Count));
+
+                    // One blob per solution per run. Per run rather than per solution,
+                    // because a solution changes and a report is about the estate as it was
+                    // on the day it was read.
+                    var export = ExportBlobName(runId, name);
+
                     try
                     {
-                        // One at a time and slowly. An export took seventy seconds against a
-                        // real environment, so a dozen is a quarter of an hour, and asking
-                        // for them in parallel is how a client's environment starts
-                        // throttling everything else somebody is doing in it.
-                        var exported = await reader.ExportSolutionAsync(name, token).ConfigureAwait(false);
+                        // Already there, from an earlier attempt at this same run. A stage
+                        // that failed after the export is retried by hand, and paying a
+                        // quarter of an hour again to fetch files that have not changed
+                        // since is how retrying a run stops being something anybody does.
+                        if (await ConnectionFactory.BlobExistsAsync(uploads, export, token).ConfigureAwait(false))
+                        {
+                            files.Add(new SolutionFile(name, OpenOrFail(uploads, export)));
+                            continue;
+                        }
 
-                        if (exported is not null) files.Add(new SolutionFile(name, exported));
+                        bool exported;
+
+                        // Out of the environment and into the storage account in one pass:
+                        // the worker never holds the file. One at a time and slowly, because
+                        // an export took seventy seconds against a real environment and
+                        // asking for a dozen at once is how a client's environment starts
+                        // throttling everything else somebody is doing in it.
+                        var destination = await ConnectionFactory
+                            .CreateBlobAsync(uploads, export, token).ConfigureAwait(false);
+
+                        await using (destination.ConfigureAwait(false))
+                        {
+                            exported = await reader.ExportSolutionAsync(name, destination, token)
+                                .ConfigureAwait(false);
+                        }
+
+                        if (exported) files.Add(new SolutionFile(name, OpenOrFail(uploads, export)));
                         else Console.Error.WriteLine($"The environment would not export '{name}'.");
                     }
                     catch (Exception failure) when (failure is HttpRequestException or JsonException
+                        or IOException or FormatException or RequestFailedException
                         or InvalidOperationException or TaskCanceledException)
                     {
                         // One solution that will not export is not a reason to lose the other
@@ -239,7 +298,7 @@ public sealed class StageServicesFactory(
                     selection.Checks.ExportSolutions);
             },
 
-            ReadEnvironment: async (chosen, includeRuntime, token) =>
+            ReadEnvironment: async (chosen, includeRuntime, progress, token) =>
             {
                 if (source is null || source.Mode == "offlineZip") return null;
 
@@ -260,7 +319,7 @@ public sealed class StageServicesFactory(
                         $"The connection '{source.Name}' did not authenticate: {test.Message}");
                 }
 
-                var result = await reader.ReadAsync(chosen, includeRuntime, token).ConfigureAwait(false);
+                var result = await reader.ReadAsync(chosen, includeRuntime, progress, token).ConfigureAwait(false);
 
                 return new EnvironmentRead(
                     result.Components,

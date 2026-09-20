@@ -1,3 +1,4 @@
+using Azure;
 using Azure.Identity;
 using System.Security.Claims;
 using System.Text.Json;
@@ -654,6 +655,11 @@ app.MapGet("/api/runs/{runId:guid}", async (HttpContext context, WorkspaceStore 
                 startedUtc = state?.StartedUtc,
                 completedUtc = state?.CompletedUtc,
                 error = state?.Error,
+
+                // What it is doing right now, as a key and its arguments. Only ever set on a
+                // running stage: the worker clears it when the stage stops, so a finished row
+                // cannot still claim to be exporting something.
+                progress = state?.Progress,
                 stage.Retryable
             };
         })
@@ -768,7 +774,8 @@ app.MapPost("/api/runs/{runId:guid}/selection",
 // Housekeeping, and it matters for the estate rather than for the disk. An engagement
 // accumulates a run from every attempt, and while every findings screen reads exactly one
 // run, the list is what somebody scrolls when they are looking for the one they mean.
-app.MapDelete("/api/runs/{runId:guid}", async (HttpContext context, WorkspaceStore store, Guid runId) =>
+app.MapDelete("/api/runs/{runId:guid}",
+    async (HttpContext context, WorkspaceStore store, SolutionUploads uploads, Guid runId) =>
 {
     var run = await store.GetRunAsync(runId, context.RequestAborted);
     if (run is null) return Results.NotFound();
@@ -790,9 +797,28 @@ app.MapDelete("/api/runs/{runId:guid}", async (HttpContext context, WorkspaceSto
     {
         var published = await store.DeleteRunAsync(runId, context.RequestAborted);
 
+        // The solutions this run exported from the client's environment. After the database
+        // rather than before it: a failure here leaves files that the account's lifecycle
+        // rule removes anyway, while a failure there would have left findings pointing at
+        // solutions that were no longer anywhere.
+        var files = 0;
+
+        try
+        {
+            files = await uploads.RemoveAsync($"exports/{runId}/", context.RequestAborted);
+        }
+        catch (RequestFailedException storage)
+        {
+            // Said, not thrown. The run is gone either way, and that is what was asked for.
+            app.Logger.LogWarning(
+                "Removed run {RunId} but could not remove its exported solutions: {Reason}",
+                runId, storage.Message);
+        }
+
         return Results.Ok(new
         {
             deleted = true,
+            exportsRemoved = files,
 
             // Said plainly. Removing the run removes this product's record of a publish and
             // nothing at all in the client's board, and somebody who assumed otherwise would

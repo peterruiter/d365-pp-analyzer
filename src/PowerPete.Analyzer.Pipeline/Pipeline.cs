@@ -75,6 +75,16 @@ public sealed class RunState
     /// <summary>Which optional checks this run was told to do, resolved against the mode.</summary>
     public RunChecks Checks { get; set; } = RunChecks.ForMode("assessment");
 
+    /// <summary>
+    /// Where a stage says what it is doing.
+    /// </summary>
+    /// <remarks>
+    /// Replaced by the pipeline before each stage, so a note lands on the row of the stage
+    /// that wrote it. Silent by default, which is what a test gets and what any code holding
+    /// a state it did not build gets: reporting progress is never a precondition for work.
+    /// </remarks>
+    public IProgress<StageNote> Progress { get; set; } = NoProgress.Instance;
+
     /// <summary>Findings with their estimates.</summary>
     public List<(Finding Finding, Estimate Estimate)> Findings { get; } = [];
 
@@ -255,6 +265,20 @@ public interface IRunJournal
     /// <param name="cancellationToken">Cancellation.</param>
     Task SetStageAsync(Guid runId, string stageId, string status, string? failure, string? checkpoint, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Records what a stage is doing right now.
+    /// </summary>
+    /// <remarks>
+    /// Written while a stage runs rather than when it ends, which is the whole point of it:
+    /// a screen that only learns something when a stage finishes cannot tell a slow export
+    /// from a stopped worker, and the two call for opposite responses.
+    /// </remarks>
+    /// <param name="runId">Which run.</param>
+    /// <param name="stageId">Which stage.</param>
+    /// <param name="note">What it is doing, as JSON the screen translates.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    Task SetStageProgressAsync(Guid runId, string stageId, string? note, CancellationToken cancellationToken);
+
     /// <summary>Which stages already succeeded, with their checkpoints.</summary>
     /// <param name="runId">Which run.</param>
     /// <param name="cancellationToken">Cancellation.</param>
@@ -314,6 +338,10 @@ public sealed class PipelineRunner(IReadOnlyList<IStage> stages, IRunJournal jou
 
             await journal.SetStageAsync(state.RunId, stage.Id, "running", null, null, cancellationToken).ConfigureAwait(false);
 
+            // Pointed at this stage's row, so a note appears against the stage that wrote it
+            // rather than against whichever one ran last.
+            state.Progress = new StageProgress(journal, state.RunId, stage.Id);
+
             StageOutcome outcome;
 
             try
@@ -333,6 +361,11 @@ public sealed class PipelineRunner(IReadOnlyList<IStage> stages, IRunJournal jou
             {
                 outcome = StageOutcome.Failed(exception.Message);
             }
+
+            // Silenced before the row is closed. The statement behind a note only touches a
+            // running stage, so a late one cannot reopen a finished row, but a stage that
+            // has returned has nothing left to say and should not be able to say it.
+            state.Progress = NoProgress.Instance;
 
             await journal.SetStageAsync(state.RunId, stage.Id, outcome.Status, outcome.Error, outcome.Checkpoint, cancellationToken)
                 .ConfigureAwait(false);

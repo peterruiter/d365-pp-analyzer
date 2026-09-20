@@ -171,40 +171,58 @@ public sealed class DataverseReader(HttpClient client)
     /// environment, so a dozen is a quarter of an hour: this belongs behind a switch the
     /// person starting the run can see, not in the quick scan that promises an answer in
     /// fifteen minutes.
+    ///
+    /// Nothing is held. The response is a zip base64 encoded inside a JSON string, and it is
+    /// piped through <see cref="Base64Property"/> into the destination as it arrives, so a
+    /// solution of any size costs a read buffer rather than three copies of itself.
     /// </remarks>
     /// <param name="uniqueName">The solution's unique name.</param>
+    /// <param name="destination">Where the zip is written. Streamed, never held. Left open.</param>
     /// <param name="cancellationToken">Cancellation.</param>
-    /// <returns>The zip, or null when the environment refused to produce one.</returns>
-    public async Task<byte[]?> ExportSolutionAsync(string uniqueName, CancellationToken cancellationToken = default)
+    /// <returns>Whether a file was written. False means the environment refused to produce one.</returns>
+    public async Task<bool> ExportSolutionAsync(
+        string uniqueName,
+        Stream destination,
+        CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(destination);
+
         // Unmanaged. A managed export strips the customisations the rules read, so it would
         // come back looking like an estate nobody had built anything in.
-        var request = new { SolutionName = uniqueName, Managed = false };
+        var payload = new { SolutionName = uniqueName, Managed = false };
 
-        using var content = new StringContent(
-            JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
+        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri($"{Api}ExportSolution", UriKind.Relative))
+        {
+            Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"),
+        };
 
+        // Headers rather than content, which is the difference between streaming a file and
+        // not. PostAsync does not return until it has buffered the whole response, so the
+        // entire solution would be in memory before a single byte reached the destination:
+        // exactly what writing it to a blob is meant to avoid.
         using var response = await client
-            .PostAsync(new Uri($"{Api}ExportSolution", UriKind.Relative), content, cancellationToken)
+            .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
             .ConfigureAwait(false);
 
-        if (!response.IsSuccessStatusCode) return null;
+        if (!response.IsSuccessStatusCode) return false;
 
-        using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        return document.RootElement.TryGetProperty("ExportSolutionFile", out var file)
-            && file.GetString() is { Length: > 0 } encoded
-                ? Convert.FromBase64String(encoded)
-                : null;
+        var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        await using (stream.ConfigureAwait(false))
+        {
+            return await Base64Property
+                .CopyAsync(stream, "ExportSolutionFile", destination, cancellationToken)
+                .ConfigureAwait(false);
+        }
     }
 
     /// <param name="solutionUniqueNames">Which solutions are in scope. Empty reads every unmanaged solution.</param>
     /// <param name="includeRuntime">Whether to read run history and trace logs, which need more than a reader.</param>
+    /// <param name="progress">Where to say how far through it is. This takes minutes against a real estate.</param>
     /// <param name="cancellationToken">Cancellation.</param>
     public async Task<Result> ReadAsync(
         IReadOnlyList<string> solutionUniqueNames,
         bool includeRuntime,
+        IProgress<StageNote>? progress = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(solutionUniqueNames);
@@ -222,24 +240,36 @@ public sealed class DataverseReader(HttpClient client)
         // of a client environment therefore always covered everything, including forty-odd
         // solutions of Microsoft's, which is the slowest possible way to produce a report
         // about somebody else's product.
-        var scope = await ScopeAsync(solutionUniqueNames, cancellationToken).ConfigureAwait(false);
+        var scope = await ScopeAsync(solutionUniqueNames, progress, cancellationToken).ConfigureAwait(false);
 
         var identity = (await TestAsync(cancellationToken).ConfigureAwait(false)).Identity;
 
-        await Attempt(reads, "solution", () => ReadSolutionsAsync(components, cancellationToken)).ConfigureAwait(false);
-        await Attempt(reads, "table", () => ReadTablesAsync(components, cancellationToken)).ConfigureAwait(false);
-        await Attempt(reads, "classicWorkflowBackground", () => ReadProcessesAsync(components, links, cancellationToken)).ConfigureAwait(false);
-        await Attempt(reads, "pluginAssembly", () => ReadPluginAssembliesAsync(components, cancellationToken)).ConfigureAwait(false);
-        await Attempt(reads, "pluginStep", () => ReadPluginStepsAsync(components, links, cancellationToken)).ConfigureAwait(false);
-        await Attempt(reads, "securityRole", () => ReadRolesAsync(components, cancellationToken)).ConfigureAwait(false);
-        await Attempt(reads, "connectionReference", () => ReadConnectionReferencesAsync(components, cancellationToken)).ConfigureAwait(false);
-        await Attempt(reads, "environmentVariable", () => ReadEnvironmentVariablesAsync(components, cancellationToken)).ConfigureAwait(false);
-        await Attempt(reads, "serviceEndpoint", () => ReadServiceEndpointsAsync(components, cancellationToken)).ConfigureAwait(false);
-        await Attempt(reads, "report", () => ReadReportsAsync(components, cancellationToken)).ConfigureAwait(false);
+        // Eleven entity reads, twelve with run history. Named here rather than counted in a
+        // constant, because a reader added below and a total left up here is how a progress
+        // bar ends up saying twelve of eleven.
+        var total = includeRuntime ? 12 : 11;
+        var done = 0;
+
+        Task Step(string componentTypeId, Func<Task<int>> read)
+        {
+            progress?.Report(new StageNote("reading", componentTypeId, ++done, total));
+            return Attempt(reads, componentTypeId, read);
+        }
+
+        await Step("solution", () => ReadSolutionsAsync(components, cancellationToken)).ConfigureAwait(false);
+        await Step("table", () => ReadTablesAsync(components, cancellationToken)).ConfigureAwait(false);
+        await Step("classicWorkflowBackground", () => ReadProcessesAsync(components, links, cancellationToken)).ConfigureAwait(false);
+        await Step("pluginAssembly", () => ReadPluginAssembliesAsync(components, cancellationToken)).ConfigureAwait(false);
+        await Step("pluginStep", () => ReadPluginStepsAsync(components, links, cancellationToken)).ConfigureAwait(false);
+        await Step("securityRole", () => ReadRolesAsync(components, cancellationToken)).ConfigureAwait(false);
+        await Step("connectionReference", () => ReadConnectionReferencesAsync(components, cancellationToken)).ConfigureAwait(false);
+        await Step("environmentVariable", () => ReadEnvironmentVariablesAsync(components, cancellationToken)).ConfigureAwait(false);
+        await Step("serviceEndpoint", () => ReadServiceEndpointsAsync(components, cancellationToken)).ConfigureAwait(false);
+        await Step("report", () => ReadReportsAsync(components, cancellationToken)).ConfigureAwait(false);
 
         if (includeRuntime)
         {
-            await Attempt(reads, "flowRun", () => ReadFlowRunStatisticsAsync(components, cancellationToken)).ConfigureAwait(false);
+            await Step("flowRun", () => ReadFlowRunStatisticsAsync(components, cancellationToken)).ConfigureAwait(false);
         }
         else
         {
@@ -311,8 +341,11 @@ public sealed class DataverseReader(HttpClient client)
     /// </remarks>
     /// <param name="solutionUniqueNames">The chosen solutions.</param>
     /// <param name="cancellationToken">Cancellation.</param>
+    /// <param name="progress">Where to say which solution it is on.</param>
     private async Task<Dictionary<Guid, string>?> ScopeAsync(
-        IReadOnlyList<string> solutionUniqueNames, CancellationToken cancellationToken)
+        IReadOnlyList<string> solutionUniqueNames,
+        IProgress<StageNote>? progress,
+        CancellationToken cancellationToken)
     {
         if (solutionUniqueNames.Count == 0) return null;
 
@@ -339,8 +372,15 @@ public sealed class DataverseReader(HttpClient client)
         // One request per solution rather than one filter listing them all. A filter naming
         // nineteen solutions is a URL long enough to be refused, and the refusal reads as a
         // bad request rather than as a URL length.
+        var scoped = 0;
+
         foreach (var (solutionId, uniqueName) in solutionIds)
         {
+            // One solution's components can be tens of thousands of rows. Saying which one
+            // is the difference between a run that is working through a large estate and one
+            // that has stopped on the first.
+            progress?.Report(new StageNote("scoping", uniqueName, ++scoped, solutionIds.Count));
+
             await foreach (var component in PageAsync(
                 $"solutioncomponents?$select=objectid&$filter=_solutionid_value eq {solutionId}",
                 cancellationToken).ConfigureAwait(false))

@@ -55,6 +55,11 @@ which one it is on now:
 9. **Backlog** — turns findings into work items somebody would actually groom.
 10. **Publish** — writes to Azure DevOps or Jira. Only in publish mode, only after approval.
 
+The stage that is running says what it is doing while it does it — which solution it is
+exporting, which one the checker has, how far through the environment it is — and the screen
+updates on its own. A stage that reads a client's estate takes minutes, and without that a
+slow one and a stopped one look exactly the same.
+
 A stage can be run again on its own, from the run screen. Doing so also discards every stage
 after it, which the button tells you before it does it: a run whose findings came from one
 extraction and whose score came from another would look perfectly healthy and be wrong.

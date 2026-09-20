@@ -15,6 +15,9 @@ export type RunStage = {
   startedUtc: string | null;
   completedUtc: string | null;
   error: string | null;
+
+  /** What the stage is doing right now, as {"key","args"} JSON. Only ever set while it runs. */
+  progress: string | null;
   retryable: boolean;
 };
 
@@ -61,8 +64,16 @@ const Moving = new Set(['pending', 'running']);
  * One run, watched while it happens.
  *
  * Polled rather than pushed. A run reads a client's whole estate and takes minutes to hours,
- * so a few seconds of staleness costs nothing and a socket held open for the duration costs
- * more than it is worth.
+ * and a socket held open for that is more than this is worth. What was worth fixing is what
+ * the poll used to find: nothing, until a stage finished. A stage that reads an environment
+ * takes minutes and the screen said "running" for all of them, so a slow export and a dead
+ * worker looked the same, and the usual response to that is restarting the one that was
+ * working.
+ *
+ * So two things changed. The worker says what it is on, every second or so, and the page
+ * shows it. And the clock ticks here rather than only when an answer arrives, because a
+ * number that moves is the difference between watching something work and watching
+ * something that might have stopped.
  *
  * The stage list comes from the pipeline contract by way of the API, so a stage added to
  * analysis-stages.json appears here without anybody editing this file.
@@ -88,9 +99,24 @@ export function RunProgress({ runId, onChanged }: { runId: string; onChanged?: (
     // an answer that cannot change.
     if (!detail || !Moving.has(detail.run.status)) return undefined;
 
-    const timer = window.setInterval(() => { void load(); }, 5000);
+    // Two seconds while it moves. The note underneath a running stage changes about that
+    // often, and asking for it more slowly than it changes is how a progress indicator ends
+    // up feeling like a slideshow.
+    const timer = window.setInterval(() => { void load(); }, 2000);
     return () => window.clearInterval(timer);
   }, [detail, load]);
+
+  // A second hand. The elapsed time on a running stage is computed from its start, so it
+  // only moved when a poll landed: every five seconds it jumped by five. This re-renders
+  // between polls and nothing else.
+  const [, tick] = useState(0);
+
+  useEffect(() => {
+    if (!detail || !Moving.has(detail.run.status)) return undefined;
+
+    const timer = window.setInterval(() => tick((count) => count + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [detail]);
 
   if (!detail) {
     return <p className="dashboard-empty">{error ?? t('common.loading')}</p>;
@@ -164,10 +190,13 @@ function StageRow({ stage, culture, retry }: {
 }) {
   const t = useT();
   const [open, setOpen] = useState(false);
+  const note = progressNote(t, stage);
+  const share = progressShare(stage);
 
-  // A stage that is running has no percentage to show, because most stages only learn their
-  // total by finishing. A half filled bar would be inventing a number.
-  const filled = stage.status === 'running' ? 50
+  // Half, unless the stage said otherwise. Most stages only learn their total by finishing,
+  // and a half filled bar is honest about that; the ones that are working through a list of
+  // solutions know exactly where they are and say so.
+  const filled = stage.status === 'running' ? (share ?? 50)
     : stage.status === 'pending' ? 0
     : 100;
 
@@ -181,6 +210,7 @@ function StageRow({ stage, culture, retry }: {
             {elapsed(t, stage)}
             {stage.attempt > 1 ? ` · ${t('runs.attempt', stage.attempt)}` : ''}
           </small>
+          {note && <small className="stage-note">{note}</small>}
         </span>
         <span className="stage-bar" aria-hidden="true"><span style={{ width: `${filled}%` }} /></span>
         <span className={`tag ${statusTag[stage.status] ?? 'muted'}`}>{t(`runs.status.${stage.status}`)}</span>
@@ -199,6 +229,57 @@ function StageRow({ stage, culture, retry }: {
       )}
     </li>
   );
+}
+
+/**
+ * What a running stage says it is doing, in the reader's language.
+ *
+ * The worker writes a key and its arguments rather than a sentence, because the sentence
+ * belongs in whichever of the six languages somebody is reading and the worker has no idea
+ * which that is. The arguments are the parts that are nobody's to translate: a solution's
+ * unique name and a pair of counts.
+ */
+function progressNote(t: Translate, stage: RunStage): string | null {
+  const parsed = parseNote(stage);
+  if (!parsed) return null;
+
+  return t(`runs.progress.${parsed.key}`, ...parsed.args);
+}
+
+/** How far through a stage that counts its work is, as a percentage, or null when it cannot say. */
+function progressShare(stage: RunStage): number | null {
+  const parsed = parseNote(stage);
+  if (!parsed || parsed.args.length < 3) return null;
+
+  const done = Number(parsed.args[1]);
+  const total = Number(parsed.args[2]);
+
+  if (!Number.isFinite(done) || !Number.isFinite(total) || total <= 0) return null;
+
+  // Never full and never empty. A stage still has to write what it read, so a bar at a
+  // hundred percent beside a spinner is a stage that looks stuck at the finish.
+  return Math.min(95, Math.max(5, Math.round((done / total) * 100)));
+}
+
+/** The note as the worker wrote it, or null when there is none or it is not one of ours. */
+function parseNote(stage: RunStage): { key: string; args: string[] } | null {
+  if (stage.status !== 'running' || !stage.progress) return null;
+
+  try {
+    const parsed: unknown = JSON.parse(stage.progress);
+
+    if (typeof parsed !== 'object' || parsed === null) return null;
+
+    const { key, args } = parsed as { key?: unknown; args?: unknown };
+
+    if (typeof key !== 'string' || key.length === 0) return null;
+
+    return { key, args: Array.isArray(args) ? args.map(String) : [] };
+  } catch {
+    // A note that will not parse is a note nobody sees. It is the least important thing on
+    // the page and it is not worth an error boundary.
+    return null;
+  }
 }
 
 /** How long a stage took, or has been taking. */

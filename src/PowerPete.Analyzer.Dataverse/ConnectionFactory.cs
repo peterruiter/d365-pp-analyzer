@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using Azure.Core;
 using Azure.Identity;
 using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using PowerPete.Analyzer.Data;
 
 /// <summary>
@@ -84,6 +85,14 @@ public sealed class ConnectionFactory(ISecretStore secrets)
         var token = await TokenAsync(connection, settings, scope, cancellationToken).ConfigureAwait(false);
 
         var client = new HttpClient { BaseAddress = new Uri(settings.EnvironmentUrl) };
+
+        // Ten minutes, against a default of one hundred seconds. Every metadata read here
+        // answers in under a second, but ExportSolution is the platform packaging a zip on
+        // demand and one small solution took seventy two: the default would have failed on
+        // the first client whose solution was twice that size, as a timeout that reads like
+        // an outage.
+        client.Timeout = TimeSpan.FromMinutes(10);
+
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         client.DefaultRequestHeaders.Add("OData-MaxVersion", "4.0");
         client.DefaultRequestHeaders.Add("OData-Version", "4.0");
@@ -264,12 +273,86 @@ public sealed class ConnectionFactory(ISecretStore secrets)
 
         if (!await blob.ExistsAsync(cancellationToken).ConfigureAwait(false)) return null;
 
-        // Into memory rather than streamed. The zip reader seeks, a blob stream does not, and
-        // a solution export is measured in megabytes rather than gigabytes.
-        var buffer = new MemoryStream();
-        await blob.DownloadToAsync(buffer, cancellationToken).ConfigureAwait(false);
-        buffer.Position = 0;
+        // Streamed, not downloaded. The comment that stood here said a blob stream does not
+        // seek and so the file had to come into memory first. It does seek: the stream reads
+        // ranges on demand, which is precisely what a zip needs, because the directory that
+        // says what is in the file is at the end of it.
+        //
+        // Four megabytes of buffer, so the directory read at the end and the entries read
+        // from the front are a handful of requests rather than one per entry.
+        return await blob.OpenReadAsync(
+            new BlobOpenReadOptions(allowModifications: false) { BufferSize = 4 * 1024 * 1024 },
+            cancellationToken).ConfigureAwait(false);
+    }
 
-        return buffer;
+    /// <summary>
+    /// Opens a blob to write to, replacing whatever is there.
+    /// </summary>
+    /// <remarks>
+    /// Used by the export: a solution comes out of the environment and goes straight here,
+    /// so the largest thing the worker holds is a buffer rather than a client's estate.
+    /// </remarks>
+    /// <param name="containerUri">The container.</param>
+    /// <param name="blobName">The blob.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public static async Task<Stream> CreateBlobAsync(
+        Uri containerUri, string blobName, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(containerUri);
+
+        var container = new BlobContainerClient(containerUri, new DefaultAzureCredential());
+
+        return await container.GetBlobClient(blobName).OpenWriteAsync(
+            overwrite: true,
+            new BlobOpenWriteOptions { BufferSize = 4 * 1024 * 1024 },
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Whether a blob is there.</summary>
+    /// <param name="containerUri">The container.</param>
+    /// <param name="blobName">The blob.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public static async Task<bool> BlobExistsAsync(
+        Uri? containerUri, string blobName, CancellationToken cancellationToken)
+    {
+        if (containerUri is null) return false;
+
+        var container = new BlobContainerClient(containerUri, new DefaultAzureCredential());
+
+        return await container.GetBlobClient(blobName).ExistsAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Deletes every blob under a prefix.
+    /// </summary>
+    /// <remarks>
+    /// Deleting a run deletes its findings, and a client's exported solutions are the most
+    /// sensitive thing this product ever writes down. Leaving them behind after somebody
+    /// asked for the run to go would be keeping a copy of their estate they did not ask us
+    /// to keep.
+    /// </remarks>
+    /// <param name="containerUri">The container.</param>
+    /// <param name="prefix">What the blobs' names start with.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    /// <returns>How many were removed.</returns>
+    public static async Task<int> DeleteBlobsAsync(
+        Uri? containerUri, string prefix, CancellationToken cancellationToken)
+    {
+        if (containerUri is null || string.IsNullOrWhiteSpace(prefix)) return 0;
+
+        var container = new BlobContainerClient(containerUri, new DefaultAzureCredential());
+        var removed = 0;
+
+        await foreach (var blob in container
+            .GetBlobsAsync(prefix: prefix, cancellationToken: cancellationToken)
+            .ConfigureAwait(false))
+        {
+            await container.DeleteBlobIfExistsAsync(blob.Name, cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
+
+            removed++;
+        }
+
+        return removed;
     }
 }

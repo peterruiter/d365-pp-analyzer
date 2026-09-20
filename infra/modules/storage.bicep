@@ -74,6 +74,45 @@ resource uploads 'Microsoft.Storage/storageAccounts/blobServices/containers@2023
   }
 }
 
+// Two kinds of file live in that container and the prefix is what tells them apart.
+//
+// At the root, a solution somebody uploaded for an offline engagement. Under exports/, a
+// solution the worker asked a live environment for, because fourteen rules read the file
+// and three need Microsoft's checker, which takes one. Same kind of file, same audience,
+// same access policy; one arrives from a consultant and the other from the platform.
+//
+// The exported ones are deleted with the run that produced them. This is the net for the
+// runs nobody deletes: a week is long enough to retry a run and short enough that a copy of
+// a client's estate is not sitting here after the engagement ended.
+resource lifecycle 'Microsoft.Storage/storageAccounts/managementPolicies@2023-05-01' = {
+  parent: account
+  name: 'default'
+  properties: {
+    policy: {
+      rules: [
+        {
+          name: 'expire-solution-exports'
+          enabled: true
+          type: 'Lifecycle'
+          definition: {
+            filters: {
+              blobTypes: ['blockBlob']
+              prefixMatch: ['${uploads.name}/exports/']
+            }
+            actions: {
+              baseBlob: {
+                delete: {
+                  daysAfterCreationGreaterThan: 7
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+
 // Where the API keeps its data protection keys.
 //
 // Those keys are what sign an interactive sign-in's state parameter. ASP.NET creates them

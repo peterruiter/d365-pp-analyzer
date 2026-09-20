@@ -136,13 +136,15 @@ public sealed record RunSelection(RunCheckChoices Checks, IReadOnlyList<string> 
 /// <param name="StartedUtc">When it started.</param>
 /// <param name="CompletedUtc">When it finished.</param>
 /// <param name="Error">Why it did not.</param>
+/// <param name="Progress">What it is doing right now, as a note the screen translates. Null when it is not running.</param>
 public sealed record RunStageState(
     string StageId,
     string Status,
     int Attempt,
     DateTime? StartedUtc,
     DateTime? CompletedUtc,
-    string? Error);
+    string? Error,
+    string? Progress);
 
 /// <summary>
 /// Engagements, connections and runs.
@@ -625,6 +627,7 @@ public sealed class WorkspaceStore(string connectionString)
                 Status = @status,
                 Error = @error,
                 CheckpointJson = COALESCE(@checkpointJson, target.CheckpointJson),
+                Progress = NULL,
                 Attempt = CASE WHEN @status = 'running' THEN target.Attempt + 1 ELSE target.Attempt END,
                 StartedUtc = CASE WHEN @status = 'running' THEN SYSUTCDATETIME() ELSE target.StartedUtc END,
                 CompletedUtc = CASE WHEN @status IN ('succeeded','partial','failed','skipped') THEN SYSUTCDATETIME() ELSE target.CompletedUtc END
@@ -633,6 +636,38 @@ public sealed class WorkspaceStore(string connectionString)
                 VALUES (@runId, @stageId, @status, 1, SYSUTCDATETIME(), @checkpointJson);
             """,
             new { runId, stageId, status, error = failure, checkpointJson },
+            cancellationToken: cancellationToken));
+    }
+
+    /// <summary>
+    /// Records what a stage is doing, without touching anything else about it.
+    /// </summary>
+    /// <remarks>
+    /// Its own statement rather than a parameter on the one above, because this is written
+    /// every second or two while a stage runs and that one decides attempts and timestamps.
+    /// A progress note must never be able to advance an attempt counter.
+    ///
+    /// Guarded on the status, so a note that arrives from a stage which has already finished
+    /// cannot bring a completed row back to life on screen.
+    /// </remarks>
+    /// <param name="runId">Which run.</param>
+    /// <param name="stageId">Which stage.</param>
+    /// <param name="note">What it is doing, as JSON the screen translates.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task SetStageProgressAsync(
+        Guid runId,
+        string stageId,
+        string? note,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            UPDATE ops.RunStage SET Progress = @note
+            WHERE RunId = @runId AND StageId = @stageId AND Status = 'running';
+            """,
+            new { runId, stageId, note },
             cancellationToken: cancellationToken));
     }
 
@@ -1294,7 +1329,7 @@ public sealed class WorkspaceStore(string connectionString)
 
         var rows = await connection.QueryAsync<RunStageState>(new CommandDefinition(
             """
-            SELECT StageId, Status, Attempt, StartedUtc, CompletedUtc, Error
+            SELECT StageId, Status, Attempt, StartedUtc, CompletedUtc, Error, Progress
             FROM ops.RunStage WHERE RunId = @runId;
             """,
             new { runId },

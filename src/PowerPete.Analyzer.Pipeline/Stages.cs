@@ -13,7 +13,7 @@ using PowerPete.Analyzer.Extraction;
 /// one thing and nothing at all for the rest. A stage that reaches into a container is a
 /// stage that can only be exercised by starting the product.
 /// </remarks>
-/// <param name="OpenSolutionFiles">Every solution file this run can read: the uploaded export, or the chosen solutions exported from the environment.</param>
+/// <param name="OpenSolutionFiles">Every solution file this run can read: the uploaded export, or the chosen solutions exported from the environment. Reports each export as it happens, because it is a minute a solution.</param>
 /// <param name="CheckConnections">Authenticates every configured source and says what each reaches.</param>
 /// <param name="ListSolutions">Every solution the environment has, whether or not it is in scope.</param>
 /// <param name="ReadEnvironment">Reads a live environment, scoped to the chosen solutions.</param>
@@ -29,10 +29,10 @@ using PowerPete.Analyzer.Extraction;
 /// <param name="ComplexityRules">The complexity rules, from the contract.</param>
 /// <param name="RoadmapPositions">Where each rule sits on the grid, from the contract.</param>
 public sealed record StageServices(
-    Func<IReadOnlyList<string>, CancellationToken, Task<IReadOnlyList<SolutionFile>>> OpenSolutionFiles,
+    Func<IReadOnlyList<string>, IProgress<StageNote>, CancellationToken, Task<IReadOnlyList<SolutionFile>>> OpenSolutionFiles,
     Func<CancellationToken, Task<IReadOnlyList<ConnectionCheck>>> CheckConnections,
     Func<CancellationToken, Task<IReadOnlyList<SolutionSummary>>> ListSolutions,
-    Func<IReadOnlyList<string>, bool, CancellationToken, Task<EnvironmentRead?>> ReadEnvironment,
+    Func<IReadOnlyList<string>, bool, IProgress<StageNote>, CancellationToken, Task<EnvironmentRead?>> ReadEnvironment,
     Func<Guid, IReadOnlyList<SolutionSummary>, CancellationToken, Task> RecordSolutions,
     Func<Guid, CancellationToken, Task<ChosenScope?>> ReadSelection,
     Func<Stream, CancellationToken, Task<CheckerOutcome>> RunChecker,
@@ -49,17 +49,21 @@ public sealed record StageServices(
 /// One solution's zip, in memory.
 /// </summary>
 /// <remarks>
-/// Bytes rather than a stream because two stages read the same file: extract unpacks it and
-/// the checker uploads it. A stream would have to be produced twice, which for a live
-/// connection means exporting twice, and one export took seventy seconds.
+/// A way to open it rather than the file itself. Two stages read the same solution — extract
+/// unpacks it and the checker submits it — and each opens it when it needs it.
 ///
-/// In memory rather than on disk, which bounds how large an estate this can handle. An
-/// unmanaged solution is customisations rather than data and these are tens of kilobytes,
-/// but a client with a hundred megabyte solution will find this before anything else does.
+/// This was bytes for one afternoon, and bytes meant the whole of a client's estate sat in
+/// the worker's memory for the length of a run: every chosen solution at once, held from the
+/// extract stage until the checker had finished with it. A dozen small solutions is nothing
+/// and a dozen large ones is the worker restarting, which reads as a lost run.
+///
+/// So the file lives in the storage account, which is where this product already puts an
+/// uploaded solution, and both stages read it from there. Opening it twice costs two reads
+/// of a blob rather than two exports of a solution.
 /// </remarks>
 /// <param name="Name">The solution's unique name, or the uploaded file's name.</param>
-/// <param name="Content">The zip.</param>
-public sealed record SolutionFile(string Name, byte[] Content);
+/// <param name="Open">Opens the zip for reading. Seekable, because a zip is read from its end.</param>
+public sealed record SolutionFile(string Name, Func<CancellationToken, Task<Stream>> Open);
 
 /// <summary>
 /// What somebody told a paused run to do.
@@ -384,12 +388,16 @@ public sealed class ExtractStage(StageServices services) : StageBase(services)
         // Every solution this run can read as a file. For an offline engagement that is the
         // one somebody uploaded; for a live one it is each chosen solution, exported.
         var files = await Services
-            .OpenSolutionFiles(state.Checks.ExportSolutions ? state.Chosen : [], cancellationToken)
+            .OpenSolutionFiles(state.Checks.ExportSolutions ? state.Chosen : [], state.Progress, cancellationToken)
             .ConfigureAwait(false);
+
+        var unpacked = 0;
 
         foreach (var solutionFile in files)
         {
-            await using (var file = new MemoryStream(solutionFile.Content, writable: false))
+            state.Progress.Report(new StageNote("unpacking", solutionFile.Name, ++unpacked, files.Count));
+
+            await using (var file = await solutionFile.Open(cancellationToken).ConfigureAwait(false))
             {
                 var result = SolutionZipReader.Read(file);
 
@@ -429,7 +437,7 @@ public sealed class ExtractStage(StageServices services) : StageBase(services)
         // slowest part of a run and the part that produces findings about somebody else's
         // product.
         var live = await Services
-            .ReadEnvironment(state.Chosen, state.Mode != "quickScan", cancellationToken)
+            .ReadEnvironment(state.Chosen, state.Mode != "quickScan", state.Progress, cancellationToken)
             .ConfigureAwait(false);
 
         if (live is not null)
@@ -546,7 +554,7 @@ public sealed class CheckerStage(StageServices services) : StageBase(services)
         }
 
         var files = await Services
-            .OpenSolutionFiles(state.Checks.ExportSolutions ? state.Chosen : [], cancellationToken)
+            .OpenSolutionFiles(state.Checks.ExportSolutions ? state.Chosen : [], state.Progress, cancellationToken)
             .ConfigureAwait(false);
 
         if (files.Count == 0)
@@ -563,12 +571,18 @@ public sealed class CheckerStage(StageServices services) : StageBase(services)
         // solutions is twelve files: submitting only the first would report the other eleven
         // as checked when nothing looked at them.
         var refusals = new List<string>();
+        var submitted = 0;
 
         foreach (var solutionFile in files)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            await using var file = new MemoryStream(solutionFile.Content, writable: false);
+            // Reported before the wait rather than after it. This is the slowest stage there
+            // is, and somebody watching it needs to be told which of twelve solutions
+            // Microsoft is currently thinking about.
+            state.Progress.Report(new StageNote("checking", solutionFile.Name, ++submitted, files.Count));
+
+            await using var file = await solutionFile.Open(cancellationToken).ConfigureAwait(false);
 
             var each = await Services.RunChecker(file, cancellationToken).ConfigureAwait(false);
 

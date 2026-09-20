@@ -1407,6 +1407,90 @@ three. Both were verified by reintroducing the defect: a mode claiming an export
 does not do, and a check declared in the contract with nothing behind it. Each failed, which
 is the only evidence that a guard guards anything.
 
+## The export went to the storage account, not into the worker
+
+The first version held every exported solution in memory for the length of a run: each
+chosen solution as a byte array, from the extract stage until the checker had finished with
+it, because two stages read the same file and producing it twice would mean exporting it
+twice.
+
+That is fine for a dozen small solutions and it is the worker restarting for a dozen large
+ones, which reads as a lost run. There is already a storage account, it already holds the
+solution somebody uploads for an offline engagement, and an exported one is the same kind of
+file with the same audience.
+
+So the export streams out of the environment and into a blob without ever being held, and
+both stages open it from there. `SolutionFile` carries a way to open the file rather than
+the file.
+
+### Three places it would still have been in memory
+
+Fixing the obvious one leaves the others, and each of them was the whole file.
+
+**`PostAsync` does not return until it has buffered the response.** The export had to be
+sent with `HttpCompletionOption.ResponseHeadersRead` or the file was in memory before a byte
+of it reached anywhere.
+
+**The response is a zip, base64 encoded, inside a JSON string.** `JsonDocument` buffers the
+response, materialises the base64 as a string and then `Convert.FromBase64String` allocates
+the decoded bytes beside it: about 2.3 times the file, on the large object heap, per
+solution. `Base64Property` scans the response as it arrives and pipes the value through a
+base64 transform straight into the blob. Peak memory is a 64KB buffer.
+
+**Reading a blob back was a `MemoryStream`.** The comment in `OpenUploadAsync` said a blob
+stream does not seek and so the file had to be downloaded first. It does seek: it reads
+ranges on demand, which is exactly what a zip wants, because the directory saying what is in
+the file is at the end of it.
+
+### A scanner is a thing that fails on a boundary
+
+`Base64Property` is a state machine over a byte stream, and the way one of those fails is on
+the join between two reads, in production, on the first file large enough to need more than
+one. So every case in its tests runs twice: once through a `MemoryStream`, which always
+fills the buffer it is given, and once through a stream that hands over three bytes at a
+time, which is what a network does.
+
+Verified by reintroducing two defects: a scanner that assumes a token never spans two reads,
+and one that does not know JSON may write a forward slash as `\/` — a quarter of the base64
+alphabet, so it would have failed on some solutions and not others. Six of the eight tests
+caught them.
+
+### And the files do not stay
+
+They are deleted with the run that produced them, because an exported solution is a copy of
+a client's estate and deleting the findings while keeping the files would be keeping the
+most sensitive thing this product writes down after somebody asked for it to go. A lifecycle
+rule on the account removes anything under `uploads/exports/` after seven days, for the runs
+nobody deletes.
+
+## A stage that says what it is doing
+
+The run screen polled every five seconds and learned nothing until a stage finished. A stage
+that reads a client's estate takes minutes; for all of them the screen said "running" and
+the elapsed time went up, so a slow export and a hung worker looked identical. The usual
+response to that is restarting something that was working, which had already happened once.
+
+Three changes, and all three were needed.
+
+**The worker says what it is on.** Exporting a named solution, three of eleven. Waiting for
+the checker on one. Working out what is in a solution. Reading the environment, five of
+twelve. Written at most once a second, dropped rather than queued when one is already in
+flight, and never able to fail a run: a progress note is the least important thing here and
+it must not be able to break the most important.
+
+**The note is a key and its arguments, not a sentence.** The worker does not know what
+language somebody is reading in. It writes `exporting` with a solution name and two numbers;
+the screen makes that a sentence in one of six languages. The arguments are the parts nobody
+translates: a unique name is a publisher's choice and a count is a count.
+
+**The clock ticks locally.** The elapsed time is computed from the start, so it only moved
+when a poll landed and then jumped by five seconds. A second hand in the browser is the
+difference between watching something work and watching something that might have stopped.
+
+The stage bar also fills properly now for the stages that know their total, which is the
+ones working through a list of solutions. It stops at 95 percent: a stage still has to write
+what it read, and a full bar beside a spinner looks stuck at the finish.
+
 ## What was ported rather than invented
 
 | From | What |

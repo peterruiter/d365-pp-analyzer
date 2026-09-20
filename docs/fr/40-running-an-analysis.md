@@ -56,6 +56,11 @@ temps chacune a pris et sur laquelle elle travaille :
 9. **Backlog** — transforme les constats en éléments de travail que quelqu'un affinerait vraiment.
 10. **Publier** — écrit dans Azure DevOps ou Jira. Seulement en mode publication, seulement après approbation.
 
+L'étape en cours dit ce qu'elle fait pendant qu'elle le fait — quelle solution elle exporte,
+laquelle est chez le checker, où elle en est dans l'environnement — et l'écran se met à jour
+tout seul. Une étape qui lit le patrimoine d'un client prend des minutes, et sans cela une
+étape lente et une étape arrêtée se ressemblent exactement.
+
 Une étape peut être relancée seule depuis l'écran d'exécution. Cela écarte aussi toutes les
 étapes qui la suivent, ce que le bouton vous dit avant de le faire : une exécution dont les
 constats viennent d'une extraction et dont le score vient d'une autre paraîtrait parfaitement

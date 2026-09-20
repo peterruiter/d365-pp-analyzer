@@ -55,6 +55,11 @@ en met welke hij nu bezig is:
 9. **Backlog** — maakt van bevindingen werkitems die iemand echt zou groomen.
 10. **Publiceren** — schrijft naar Azure DevOps of Jira. Alleen in publicatiemodus, alleen na goedkeuring.
 
+De fase die draait vertelt wat hij aan het doen is terwijl hij het doet — welke oplossing hij
+exporteert, welke de checker onder handen heeft, hoe ver hij in de omgeving is — en het scherm
+werkt zichzelf bij. Een fase die het landschap van een klant leest duurt minuten, en zonder dat
+zien een trage en een gestopte fase er precies hetzelfde uit.
+
 Een fase kan los opnieuw worden uitgevoerd vanaf het runscherm. Daarbij wordt ook elke fase
 erna weggegooid, wat de knop u zegt voordat hij het doet: een run waarvan de bevindingen uit
 de ene extractie komen en de score uit een andere, ziet er volkomen gezond uit en klopt niet.

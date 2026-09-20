@@ -55,6 +55,11 @@ durata ciascuna e su quale si trova ora:
 9. **Backlog** — trasforma i rilievi in elementi di lavoro che qualcuno curerebbe davvero.
 10. **Pubblicazione** — scrive in Azure DevOps o Jira. Solo in modalità pubblicazione, solo dopo l'approvazione.
 
+La fase in corso dice cosa sta facendo mentre lo fa — quale soluzione sta esportando, quale ha
+il checker, a che punto è nell'ambiente — e la schermata si aggiorna da sola. Una fase che
+legge il patrimonio di un cliente richiede minuti, e senza questo una lenta e una ferma
+sembrano esattamente uguali.
+
 Una fase può essere rieseguita da sola dalla schermata dell'esecuzione. Facendolo si scarta
 anche ogni fase successiva, cosa che il pulsante vi dice prima di farlo: un'esecuzione i cui
 rilievi vengono da un'estrazione e il cui punteggio viene da un'altra sembrerebbe

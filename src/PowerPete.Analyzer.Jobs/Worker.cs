@@ -107,6 +107,9 @@ internal sealed class StoreJournal(WorkspaceStore store) : IRunJournal
     public Task SetStageAsync(Guid runId, string stageId, string status, string? failure, string? checkpoint, CancellationToken cancellationToken) =>
         store.SetStageAsync(runId, stageId, status, failure, checkpoint, cancellationToken);
 
+    public Task SetStageProgressAsync(Guid runId, string stageId, string? note, CancellationToken cancellationToken) =>
+        store.SetStageProgressAsync(runId, stageId, note, cancellationToken);
+
     public Task<IReadOnlyDictionary<string, string?>> GetCompletedStagesAsync(Guid runId, CancellationToken cancellationToken) =>
         store.GetCompletedStagesAsync(runId, cancellationToken);
 }
@@ -291,6 +294,7 @@ public sealed class Worker(WorkerSettings settings)
             .ConfigureAwait(false);
 
         var services = await factory.BuildAsync(
+            run.RunId,
             run.EngagementId,
             engagement?.Name ?? run.EngagementId.ToString(),
             source,

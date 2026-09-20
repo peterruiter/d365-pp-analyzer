@@ -137,6 +137,10 @@
 .stage-failed .stage-marker { background: var(--cp-danger); }
 .stage-title strong { display: block; color: var(--brand-ink); font-size: 13px; }
 .stage-title small { color: var(--cp-text-muted); font-size: 11px; }
+
+/* What a running stage is doing now. Its own line and its own colour, because it answers a
+   different question from the elapsed time beside it: not how long, but on what. */
+.stage-title .stage-note { display: block; margin-top: 2px; color: var(--brand-ink); font-size: 11px; }
 .stage-bar { display: block; height: 4px; background: var(--cp-surface-soft); }
 .stage-bar span { display: block; height: 100%; background: var(--brand-cyan); }
 .stage-head .tag { margin: 0; }

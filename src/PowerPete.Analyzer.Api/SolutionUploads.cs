@@ -165,6 +165,38 @@ public sealed class SolutionUploads(Uri? containerUri)
         return signature is 0x04034B50 or 0x06054B50;
     }
 
+    /// <summary>
+    /// Removes every file under a prefix.
+    /// </summary>
+    /// <remarks>
+    /// Used when a run is deleted. A live run exports each solution it was told to read into
+    /// this container, under a folder named after the run, and those files are a copy of a
+    /// client's estate: the most sensitive thing the product ever writes down. Deleting the
+    /// findings and leaving the files would be keeping it after somebody asked us not to.
+    /// </remarks>
+    /// <param name="prefix">What the blobs' names start with.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    /// <returns>How many were removed.</returns>
+    public async Task<int> RemoveAsync(string prefix, CancellationToken cancellationToken)
+    {
+        if (containerUri is null || string.IsNullOrWhiteSpace(prefix)) return 0;
+
+        var container = new BlobContainerClient(containerUri, new DefaultAzureCredential());
+        var removed = 0;
+
+        await foreach (var blob in container
+            .GetBlobsAsync(prefix: prefix, cancellationToken: cancellationToken)
+            .ConfigureAwait(false))
+        {
+            await container.DeleteBlobIfExistsAsync(blob.Name, cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
+
+            removed++;
+        }
+
+        return removed;
+    }
+
     /// <summary>Blob metadata takes ASCII, so anything else is dropped rather than failing the upload.</summary>
     /// <param name="value">The browser's file name.</param>
     private static string Sanitise(string? value)

@@ -66,7 +66,7 @@ public class FlowRunTests
     {
         var reader = Reader($$"""{"value":[{{Run("Succeeded")}},{{Run("Succeeded")}},{{Run("Failed", "Timed out.")}},{{Run("Failed")}}]}""");
 
-        var result = await reader.ReadAsync([], includeRuntime: true, CancellationToken.None);
+        var result = await reader.ReadAsync([], includeRuntime: true, progress: null, CancellationToken.None);
 
         var flow = result.Components.Single(component => component.TypeId == "cloudFlow");
 
@@ -85,7 +85,7 @@ public class FlowRunTests
         // not. Counting it either way moves a number somebody quotes.
         var reader = Reader($$"""{"value":[{{Run("Succeeded")}},{{Run("Failed")}},{{Run("Running", end: "")}},{{Run("Cancelled")}}]}""");
 
-        var result = await reader.ReadAsync([], includeRuntime: true, CancellationToken.None);
+        var result = await reader.ReadAsync([], includeRuntime: true, progress: null, CancellationToken.None);
         var flow = result.Components.Single(component => component.TypeId == "cloudFlow");
 
         flow.Attribute<int?>("runCount30d").Should().Be(2);
@@ -99,7 +99,7 @@ public class FlowRunTests
         // counted as a success turns a failing flow into a healthy one.
         var reader = Reader($$"""{"value":[{{Run("Succeeded")}},{{Run("Bananas")}}]}""");
 
-        var result = await reader.ReadAsync([], includeRuntime: true, CancellationToken.None);
+        var result = await reader.ReadAsync([], includeRuntime: true, progress: null, CancellationToken.None);
 
         var read = result.Reads.Single(entry => entry.ComponentTypeId == "flowRun");
 
@@ -119,7 +119,7 @@ public class FlowRunTests
         // and "no rows kept" would both read as a dormant flow.
         var reader = Reader("""{"value":[]}""");
 
-        var result = await reader.ReadAsync([], includeRuntime: true, CancellationToken.None);
+        var result = await reader.ReadAsync([], includeRuntime: true, progress: null, CancellationToken.None);
         var flow = result.Components.Single(component => component.TypeId == "cloudFlow");
 
         flow.Has("runCount30d").Should().BeFalse();
@@ -130,7 +130,7 @@ public class FlowRunTests
     {
         var reader = Reader("""{"value":[]}""");
 
-        var result = await reader.ReadAsync([], includeRuntime: false, CancellationToken.None);
+        var result = await reader.ReadAsync([], includeRuntime: false, progress: null, CancellationToken.None);
         var read = result.Reads.Single(entry => entry.ComponentTypeId == "flowRun");
 
         read.Succeeded.Should().BeFalse();
@@ -147,7 +147,7 @@ public class FlowRunTests
             ]}
             """);
 
-        var result = await reader.ReadAsync([], includeRuntime: true, CancellationToken.None);
+        var result = await reader.ReadAsync([], includeRuntime: true, progress: null, CancellationToken.None);
         var flow = result.Components.Single(component => component.TypeId == "cloudFlow");
 
         flow.Attribute<int?>("averageDurationMs").Should().Be(20_000);

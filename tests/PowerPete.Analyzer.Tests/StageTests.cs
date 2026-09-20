@@ -36,10 +36,10 @@ public class StageTests
         Func<CancellationToken, Task<IReadOnlyList<SolutionSummary>>>? list = null,
         ChosenScope? selection = null) =>
         new(
-            OpenSolutionFiles: (_, _) => Task.FromResult<IReadOnlyList<SolutionFile>>([]),
+            OpenSolutionFiles: (_, _, _) => Task.FromResult<IReadOnlyList<SolutionFile>>([]),
             CheckConnections: check ?? (_ => Task.FromResult<IReadOnlyList<ConnectionCheck>>([])),
             ListSolutions: list ?? (_ => Task.FromResult<IReadOnlyList<SolutionSummary>>([])),
-            ReadEnvironment: (_, _, _) => Task.FromResult<EnvironmentRead?>(null),
+            ReadEnvironment: (_, _, _, _) => Task.FromResult<EnvironmentRead?>(null),
             RecordSolutions: (_, _, _) => Task.CompletedTask,
             ReadSelection: (_, _) => Task.FromResult(selection),
             RunChecker: (_, _) => Task.FromResult(new CheckerOutcome(false, [], null)),

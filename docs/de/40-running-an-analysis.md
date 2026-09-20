@@ -56,6 +56,11 @@ gedauert hat und in welcher er gerade steckt:
 9. **Backlog** — macht aus Befunden Arbeitselemente, die jemand tatsächlich pflegen würde.
 10. **Veröffentlichen** — schreibt nach Azure DevOps oder Jira. Nur im Veröffentlichungsmodus, nur nach Freigabe.
 
+Die laufende Phase sagt, woran sie gerade arbeitet — welche Lösung sie exportiert, welche der
+Checker hat, wie weit sie in der Umgebung ist — und der Bildschirm aktualisiert sich von
+selbst. Eine Phase, die das Anwendungsland eines Kunden liest, dauert Minuten, und ohne das
+sehen eine langsame und eine stehengebliebene genau gleich aus.
+
 Eine Phase kann vom Laufbildschirm aus einzeln erneut ausgeführt werden. Dabei wird auch jede
 Phase danach verworfen, was die Schaltfläche Ihnen sagt, bevor sie es tut: ein Lauf, dessen
 Befunde aus der einen Extraktion und dessen Bewertung aus einer anderen stammen, sähe völlig
