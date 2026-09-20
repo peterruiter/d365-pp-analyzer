@@ -1591,10 +1591,20 @@ every Entra tenant there is, so it has a guard:
 somebody creates a user row. Verified by making `RecordDisplayNameAsync` a MERGE, which is
 the well meant version of the mistake.
 
-Still to do by hand, in this order, because doing them the other way round locks everybody
-out: the app registration has to become `AzureADMultipleOrgs`, and only then
-`AzureAd__TenantId` on the API becomes `organizations`. The deployment script now takes a
-`-SignInAudience` parameter defaulting to `organizations`, so a redeploy does not undo it.
+Both halves are live as of 20 September 2026. The app registration is
+`AzureADMultipleOrgs` and `AzureAd__TenantId` on the API is `organizations`; the API now
+redirects sign-in to `https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize`,
+which was checked rather than assumed. The order matters if this is ever rebuilt: the
+registration first, the setting second, or nobody can sign in at all including the people
+who could before. The deployment script takes a `-SignInAudience` parameter defaulting to
+`organizations`, so a redeploy does not undo it.
+
+The worker needed nothing. Its delegated token refresh already asks `organizations` outright,
+and the tenant it holds per connection is the client's, not the product's.
+
+What is still unproven is a browser actually completing it from a second tenant, and the
+first person from any new tenant will meet a consent prompt for the app — which some tenants
+only let an administrator answer.
 
 ## The screens never translated anything
 
