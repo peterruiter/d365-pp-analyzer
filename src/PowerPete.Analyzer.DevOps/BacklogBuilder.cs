@@ -123,6 +123,10 @@ public sealed class BacklogBuilder
                 $"<p>Everything found in the {Title(category.Key)} category by the Power Platform Solution Analyzer.</p>" +
                 $"<p>Estimated at {epicLow:0.#} to {epicHigh:0.#} hours across {category.Count()} findings. " +
                 "The range is the sum of the individual estimates. Each child item carries its own rationale.</p>" +
+
+                // Which solutions this category actually touches. An epic that says only how
+                // many findings it holds gives a delivery lead nothing to plan around.
+                Touches(category) +
                 $"<p>{runContext}</p>",
                 "Every child item is closed or explicitly rejected with a reason recorded.",
                 "None at this level. The tests are on the children, where the changes are.",
@@ -153,6 +157,10 @@ public sealed class BacklogBuilder
                         (definition.FalsePositive is null
                             ? string.Empty
                             : $"<h3>Where this rule is known to be wrong</h3><p>{Escape(definition.FalsePositive)}</p>") +
+
+                        // Every component under this feature, with its solution. It said how
+                        // many and named none of them.
+                        Covers(rule) +
                         $"<p>{runContext}</p>",
                         "Every child item is closed or explicitly rejected with a reason recorded.",
                         "On the children.",
@@ -218,6 +226,114 @@ public sealed class BacklogBuilder
             [entry.Finding.FindingId]);
     }
 
+    /// <summary>Which solutions a category's findings are spread across.</summary>
+    /// <remarks>
+    /// A count on its own does not help anybody plan. "Forty findings" is a number; "forty
+    /// findings across three solutions, thirty-one of them in one" is a shape somebody can
+    /// allocate people to.
+    /// </remarks>
+    /// <param name="entries">Everything in the category.</param>
+    private string Touches(
+        IEnumerable<(Finding Finding, Estimate Estimate, DiscoveredComponent? Component)> entries)
+    {
+        var bySolution = entries
+            .GroupBy(entry => entry.Component?.SolutionUniqueName ?? text["backlog.unattributed", "Not attributed"],
+                StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(group => group.Count())
+            .ToList();
+
+        if (bySolution.Count == 0) return string.Empty;
+
+        var builder = new StringBuilder();
+
+        builder.Append(CultureInfo.InvariantCulture,
+            $"<h3>{Escape(text["backlog.whereItIs", "Where it is"])}</h3><ul>");
+
+        foreach (var group in bySolution)
+        {
+            builder.Append("<li><b>").Append(Escape(group.Key)).Append("</b>: ")
+                .Append(CultureInfo.InvariantCulture, $"{group.Count()} ")
+                .Append(Escape(text["backlog.findings", "findings"]))
+                .Append("</li>");
+        }
+
+        builder.Append("</ul>");
+
+        return builder.ToString();
+    }
+
+    /// <summary>
+    /// The components a rolled-up item covers, with the solution each one is in.
+    /// </summary>
+    /// <remarks>
+    /// A story names one component and is self explanatory. An epic, a feature and a batched
+    /// task each stand for several, and they said how many and nothing else: a delivery team
+    /// picked up "Missing description (14 components)" with no way to find the fourteen.
+    ///
+    /// A table rather than a list, because the solution is the column somebody sorts by when
+    /// they are deciding who owns the work, and a managed component is somebody else's to
+    /// fix and has to be visible before anybody estimates around it.
+    /// </remarks>
+    /// <param name="entries">What the item rolls up.</param>
+    private string Covers(
+        IEnumerable<(Finding Finding, Estimate Estimate, DiscoveredComponent? Component)> entries)
+    {
+        var rows = entries
+            .OrderBy(entry => entry.Component?.SolutionUniqueName ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(entry => entry.Finding.ComponentName ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var builder = new StringBuilder();
+
+        builder.Append(CultureInfo.InvariantCulture,
+            $"<h3>{Escape(text["backlog.covers", "What this covers"])}</h3>");
+
+        builder.Append("<table><thead><tr>")
+            .Append(CultureInfo.InvariantCulture, $"<th>{Escape(text["backlog.component", "Component"])}</th>")
+            .Append(CultureInfo.InvariantCulture, $"<th>{Escape(text["backlog.type", "Type"])}</th>")
+            .Append(CultureInfo.InvariantCulture, $"<th>{Escape(text["backlog.solution", "Solution"])}</th>")
+            .Append(CultureInfo.InvariantCulture, $"<th>{Escape(text["backlog.detail", "Detail"])}</th>")
+            .Append("</tr></thead><tbody>");
+
+        foreach (var entry in rows)
+        {
+            builder.Append("<tr><td>")
+                .Append(Escape(entry.Finding.ComponentName ?? text["backlog.solutionWideFinding", "A solution wide finding"]))
+
+                // Said in the row it applies to. A team that discovers halfway through a
+                // sprint that four of fourteen are managed has lost the sprint.
+                .Append(entry.Component?.IsManaged == true
+                    ? $" <i>({Escape(text["backlog.managed", "managed"])})</i>"
+                    : string.Empty)
+                .Append("</td><td>")
+                .Append(Escape(entry.Component?.Type?.Name ?? entry.Component?.TypeId ?? string.Empty))
+                .Append("</td><td>")
+                .Append(Escape(entry.Component?.SolutionUniqueName ?? text["backlog.unattributed", "Not attributed"]))
+                .Append("</td><td>")
+
+                // The evidence that fired, not the rule restated. It is different per row
+                // and it is the reason this row is in the list at all.
+                .Append(Escape(Detail(entry.Finding)))
+                .Append("</td></tr>");
+        }
+
+        builder.Append("</tbody></table>");
+
+        return builder.ToString();
+    }
+
+    /// <summary>The evidence for one finding, in one line.</summary>
+    /// <param name="finding">The finding.</param>
+    private static string Detail(Finding finding)
+    {
+        var values = finding.Evidence
+            .Where(pair => pair.Value is not null)
+            .Select(pair => $"{pair.Key}: {pair.Value}")
+            .ToList();
+
+        return values.Count == 0 ? string.Empty : string.Join("; ", values);
+    }
+
     private BacklogItem BuildBatch(
         AnalysisRule rule,
         (Finding Finding, Estimate Estimate, DiscoveredComponent? Component)[] batch,
@@ -225,16 +341,19 @@ public sealed class BacklogBuilder
         string category,
         string runContext)
     {
-        var names = string.Join("</li><li>", batch.Select(entry => Escape(entry.Finding.ComponentName ?? "solution")));
         var criterion = Criterion(rule, batch[0].Component, batch[0].Finding);
 
         return new BacklogItem(
             StableKeys.ForWorkItem(engagementId, $"batch:{rule.Id}:{batch[0].Finding.StableKey}"),
             "task",
             Truncate($"{RuleName(rule)} ({batch.Length} {text["backlog.components", "components"]})"),
-            $"<h3>What was found</h3><p>{Escape(rule.Why)}</p>" +
-            $"<h3>Components</h3><ul><li>{names}</li></ul>" +
-            $"<h3>Recommended approach</h3><p>{Escape(rule.Recommendation)}</p>" +
+            $"<h3>What was found</h3><p>{Escape(rules[$"finding.{rule.Id}.why", rule.Why])}</p>" +
+
+            // A list of bare names was all this had, so a team picking up "Missing
+            // description (14 components)" could not find the fourteen, could not tell which
+            // solution any of them was in, and could not see that some were managed.
+            Covers(batch) +
+            $"<h3>Recommended approach</h3><p>{Escape(rules[$"finding.{rule.Id}.recommendation", rule.Recommendation])}</p>" +
             $"<h3>Estimate</h3><p>{batch.Sum(entry => entry.Estimate.LowHours):0.#} to " +
             $"{batch.Sum(entry => entry.Estimate.HighHours):0.#} hours for all {batch.Length}.</p>" +
             $"<p>{runContext}</p>",
