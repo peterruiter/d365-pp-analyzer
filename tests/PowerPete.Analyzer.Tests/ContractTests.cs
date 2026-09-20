@@ -703,6 +703,42 @@ public class DataLayerTests
                 + "still polls");
     }
 
+    [Fact]
+    public void Can_pass_every_template_parameter_that_is_cleared_by_omitting_it()
+    {
+        // A parameter defaulting to an empty string is not optional, it is destructive: the
+        // template writes the empty value over whatever is deployed. Every one of those has
+        // to be reachable from the deployment script, or the only way to set it is by hand
+        // and the next deployment silently takes it away again.
+        //
+        // The first global administrator and the support contact were exactly that. The
+        // template took them, the container was given them, nothing read them under the name
+        // they were written under, and the script had no parameter for either, so there was
+        // no supported way to set them and no way to notice.
+        var root = Directory.GetParent(Solution())!.FullName;
+        var template = File.ReadAllText(Path.Combine(root, "infra", "main.bicep"));
+        var script = File.ReadAllText(Path.Combine(root, "build", "Deploy-Infrastructure.ps1"));
+
+        var clearedByOmission = Regex
+            .Matches(
+                template,
+                @"^param (?<name>[A-Za-z][A-Za-z0-9]*) string = ''",
+                RegexOptions.Multiline,
+                TimeSpan.FromSeconds(5))
+            .Select(match => match.Groups["name"].Value)
+            .ToList();
+
+        clearedByOmission.Should().NotBeEmpty("the template has parameters that default to empty");
+
+        var unreachable = clearedByOmission
+            .Where(name => !script.Contains($"{name}=$", StringComparison.Ordinal))
+            .ToList();
+
+        unreachable.Should().BeEmpty(
+            "the template overwrites these with an empty value when they are not passed, so a "
+            + "parameter the deployment script cannot pass is one that cannot survive a deployment");
+    }
+
     /// <summary>Every environment variable name the container definition sets.</summary>
     private static List<string> WrittenByTheInfrastructure()
     {

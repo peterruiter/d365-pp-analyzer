@@ -72,6 +72,32 @@
     The key is version locked to the Syncfusion packages pinned in
     Directory.Packages.props. A major upgrade means asking for a new key.
 
+.PARAMETER ContainerImage
+    The image the API and the worker run. Almost never passed: without it the script reads
+    what is already deployed and redeploys that.
+
+    That read-back exists because the template's default is empty and empty does not mean
+    "leave it alone", it means the quickstart container from Microsoft. A deployment run to
+    change one address would otherwise replace the product with a hello world page, on both
+    apps, with every health probe green.
+
+.PARAMETER InitialGlobalAdminUpn
+    Sign-in name of the first global administrator, seeded on every start. Without it, if
+    nobody has been admitted yet then nobody can be: the product will not let anybody in,
+    and the only person who can grant access is somebody who already has it.
+
+    It only ever grants. Removing a role is done from the administration screen by a
+    person, so passing this cannot demote anybody.
+
+    The template's default is empty, and empty means nobody is seeded. This script had no
+    parameter for it at all until the deployment it was missing from: the container was
+    given an empty value, the API read a different name entirely, and neither the setting
+    nor the fault was visible from anywhere.
+
+.PARAMETER AdminContactEmail
+    The address shown to somebody the product will not let in. Without it they get a
+    refusal with nobody to write to.
+
 .PARAMETER SkipFirewall
     Do not add a firewall rule for this machine's public IP. Use when deploying from a
     build agent that will never connect to the database itself.
@@ -107,6 +133,12 @@ param(
     [string] $AzureAdClientSecretExpiresUtc,
 
     [string] $SyncfusionLicenseKey,
+
+    [string] $ContainerImage,
+
+    [string] $InitialGlobalAdminUpn,
+
+    [string] $AdminContactEmail,
 
     [switch] $SkipFirewall
 )
@@ -232,6 +264,62 @@ else
 if ($AzureAdClientSecretExpiresUtc)
 {
     $parameters += "azureAdClientSecretExpiresUtc=$AzureAdClientSecretExpiresUtc"
+}
+
+# Read back rather than defaulted to empty, because empty here does not mean "leave the
+# image alone", it means "run Microsoft's quickstart container". A deployment run to change
+# an admin address would otherwise replace the product with a hello world page, and the apps
+# would be healthy and green the whole time.
+if (-not $ContainerImage)
+{
+    $ContainerImage = az containerapp show --name "$NamePrefix-api" --resource-group $ResourceGroup `
+        --query 'properties.template.containers[0].image' --output tsv 2>$null
+
+    if ($ContainerImage -and $ContainerImage -notlike '*k8se/quickstart*')
+    {
+        Write-Host "Keeping the image already deployed: $ContainerImage"
+        Write-Host ''
+    }
+    else
+    {
+        # A first deployment, which is the one case where the quickstart image is right:
+        # there is nothing built yet and the apps have to exist before anything can be
+        # pushed to them.
+        $ContainerImage = ''
+        Write-Host 'No image is deployed yet. The apps will start on the quickstart image until'
+        Write-Host './build/Publish-Container.ps1 points them at a real one.'
+        Write-Host ''
+    }
+}
+
+if ($ContainerImage)
+{
+    $parameters += "containerImage=$ContainerImage"
+}
+
+if ($InitialGlobalAdminUpn)
+{
+    $parameters += "initialGlobalAdminUpn=$InitialGlobalAdminUpn"
+}
+else
+{
+    # Same hazard as the two above: the template's default is empty, so omitting this clears
+    # whatever is deployed rather than leaving it alone. Quieter than the secret because the
+    # consequence is reversible by anybody who is already an administrator, and louder than
+    # nothing because if nobody is, nobody can be.
+    Write-Warning 'No initial global administrator passed, so this deployment will clear the one'
+    Write-Warning 'that is set. If nobody has been admitted yet, nobody will be able to be.'
+    Write-Host ''
+}
+
+if ($AdminContactEmail)
+{
+    $parameters += "adminContactEmail=$AdminContactEmail"
+}
+else
+{
+    Write-Warning 'No admin contact passed, so somebody refused entry will be told to contact nobody.'
+    Write-Host ''
 }
 
 if ($SyncfusionLicenseKey)
