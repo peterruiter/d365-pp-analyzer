@@ -1231,6 +1231,84 @@ vault to do it. A deployment from `main.bicep` creates the key through ARM inste
 no such role, so that assignment is not in the template and is not needed by anything. It
 can be removed.
 
+## Six things reported from the deployed product in one sitting
+
+Every one was found by somebody using it rather than by a test, and four of the six had never
+worked at all rather than having broken.
+
+### The Discover button had never queued a run
+
+`RunsPage.tsx` was ported from the migrator, where `discover` is one of five real modes. Here
+the four are `quickScan`, `assessment`, `publish` and `compare`. The page kept the string.
+
+Every click inserted a row that `CK_AnalysisRun_Mode` refused, the API threw, and the response
+was a problem document rather than the `{error}` shape the page reads, so the button did
+nothing at all, visibly, from the day it was written. The live database confirmed it: not one
+run had ever been queued from it.
+
+It also sent no source connection, so once the mode was fixed the run failed at connect with
+"stopped at check connections", which reads as a broken connection rather than one that was
+never chosen. The engagement has an uploaded export and a live environment; they produce
+different reports, so it is a question now and the API refuses a run that names neither.
+
+### One CSS class name, two symptoms
+
+`.run-progress` already existed as a 4px bar with a descendant rule painting every span inside
+it brand blue. The new timeline reused the name for its container. The container was therefore
+4px tall, so the panel below it overlapped the stages, and every tag and bar inside it was a
+solid blue block.
+
+Neither the vocabulary checker nor the type system can see this: both class names are defined
+and both are spelled correctly. Renamed to `.run-watch`.
+
+### A German report carried sixteen lines of English
+
+The not-assessed reasons were composed in English by the rule engine and stored finished, so
+the report could only echo them, and thirteen more sentences were hardcoded in the renderer
+beside labels that were translated. The same page read in two languages.
+
+Every lookup carries its English as a fallback, which is exactly why this was invisible: the
+document renders perfectly in all six languages and was only right in one.
+
+The reasons are keys now, resolved when the document is written, so the same stored run reads
+correctly in every language and a translation corrected next month applies to runs that
+already exist. `Writes_no_sentence_into_a_document_without_asking_the_translator` holds the
+renderer to it.
+
+### The guides were never translated at all
+
+The documentation screen has always fetched `/documentation/{language}/{file}` and fallen back
+per guide. There was nothing to fall back from. Forty files exist now: eight guides in five
+languages, and the two English originals that were stale enough to mislead were corrected
+first.
+
+### A Jira connection could not have been stored
+
+The API offers `jira` and treats it as a publish target throughout. `CK_Connection_Mode`
+allowed four values that did not include it, so creating one would have failed on the wizard's
+last step exactly as the Discover button did. Found by reading the constraint, because there
+is no live Jira to have found it by trying.
+
+### The operations page has never been green
+
+Its stuck-run check read `ops.MigrationRun`, the migrator's table, which has never existed in
+this database. "Runs: not working, invalid object name" was the product reporting its own
+ported query.
+
+### What holds the family down now
+
+Four of the six are the same defect: a literal in one place that a constraint or a list in
+another place does not accept, failing as silence rather than as an error.
+
+`Never_writes_a_value_a_check_constraint_would_refuse` reads every check constraint out of the
+migrations and every literal the code writes into those columns, and fails when they disagree.
+It covers run modes, run statuses, stage statuses, worker commands and connection modes. Its
+first version checked only values written through a helper and passed cleanly against the
+missing `resume` it had been written to catch, which is recorded here because a test that
+passes against its own defect is worse than no test.
+
+Every guard added in this session was checked by reintroducing the defect it exists for.
+
 ## What was ported rather than invented
 
 | From | What |
