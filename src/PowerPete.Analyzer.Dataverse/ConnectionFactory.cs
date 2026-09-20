@@ -27,15 +27,27 @@ public sealed class ConnectionFactory(ISecretStore secrets)
     /// <param name="TenantId">Which tenant.</param>
     /// <param name="ClientId">Which app registration.</param>
     /// <param name="EnvironmentUrl">Which environment.</param>
-    /// <param name="Organisation">Which Azure DevOps organisation.</param>
-    /// <param name="Project">Which project.</param>
     /// <param name="BlobName">Which uploaded file, for the offline mode. Named uploadedFile in the settings, because that is what the extraction contract calls it and the contract names the fields the wizard collects.</param>
     /// <param name="CheckerGeography">Where the checker runs. Data residency, so never a silent default.</param>
+    /// <param name="Organisation">Which Azure DevOps organisation, as its address.</param>
+    /// <param name="Project">Which project the worker's publish mode writes to.</param>
+    /// <remarks>
+    /// Every name here has to be one the contract declares, or nothing collects it. That is
+    /// not a convention, it is the defect that kept the checker from ever running:
+    /// CheckerGeography was read here, refused the checker when absent, and appeared in no
+    /// mode's settings, so no screen ever asked for it and no connection could have one.
+    ///
+    /// Organisation was the same defect wearing a different name. It read a setting called
+    /// "organisation" and the wizard collects "organisationUrl", so the worker's publish
+    /// mode would have thrown "No Azure DevOps organisation is set" against a connection
+    /// that plainly had one. Project was worse: nothing collected it under any name. Both
+    /// are bound to what the contract declares now.
+    /// </remarks>
     public sealed record Settings(
         string? TenantId,
         string? ClientId,
         string? EnvironmentUrl,
-        string? Organisation,
+        [property: JsonPropertyName("organisationUrl")] string? Organisation,
         string? Project,
         [property: JsonPropertyName("uploadedFile")] string? BlobName,
         string? CheckerGeography);

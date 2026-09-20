@@ -1,9 +1,11 @@
 namespace PowerPete.Analyzer.Tests;
 
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using FluentAssertions;
 using PowerPete.Analyzer.Data;
+using PowerPete.Analyzer.Dataverse;
 using PowerPete.Analyzer.Domain;
 using PowerPete.Analyzer.Pipeline;
 using Xunit;
@@ -990,6 +992,65 @@ public class DataLayerTests
             "every table with a foreign key into a run's rows has to be emptied before the rows it points "
             + "at, or cascade from them. Otherwise deleting a run fails on the constraint, and it fails "
             + "the same way however many times somebody presses the button");
+    }
+
+    [Fact]
+    public void Every_connection_setting_the_code_reads_is_one_a_screen_collects()
+    {
+        // The defect this exists for cost the checker its entire life.
+        //
+        // ConnectionFactory.Settings read CheckerGeography. The worker refused to submit
+        // anything to Microsoft's checker without it, and said so, clearly, in the run. No
+        // mode in extraction-sources.json declared it, and the wizard renders exactly what
+        // the contract declares, so no screen ever asked for it and no connection could
+        // possibly have one. The checker could never have run against a live environment.
+        //
+        // The same shape twice more in the same record: Organisation read a setting named
+        // "organisation" while the wizard collected "organisationUrl", and Project was
+        // collected under no name at all, so the worker's publish mode would have refused
+        // a connection that visibly had both.
+        //
+        // None of it is visible to a compiler. Every one of those is a nullable string that
+        // is simply always null, and the code handles null politely and tells somebody to
+        // go and set a field that does not exist.
+        var declared = Contracts.Read("extraction-sources");
+
+        var collected = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var group in new[] { "modes", "targets" })
+        {
+            foreach (var entry in declared.GetProperty(group).EnumerateArray())
+            {
+                foreach (var setting in entry.GetProperty("auth").GetProperty("settings").EnumerateArray())
+                {
+                    collected.Add(setting.GetString()!);
+                }
+            }
+        }
+
+        collected.Should().NotBeEmpty("the contract has to be readable for this to mean anything");
+
+        // What each property binds to on the wire, which is the camel cased name unless it
+        // says otherwise. That attribute is the only thing standing between a property and
+        // a setting nobody collects, so it is read rather than assumed.
+        var read = typeof(ConnectionFactory.Settings).GetProperties()
+            .Select(property =>
+            {
+                var renamed = property
+                    .GetCustomAttributes(typeof(JsonPropertyNameAttribute), inherit: false)
+                    .OfType<JsonPropertyNameAttribute>()
+                    .FirstOrDefault();
+
+                return renamed?.Name ?? char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
+            })
+            .ToList();
+
+        read.Should().NotBeEmpty();
+
+        read.Where(setting => !collected.Contains(setting))
+            .Should().BeEmpty(
+                "a setting this code reads and no mode declares is one the wizard never renders, so no "
+                + "connection can have it. The code then refuses to work and names a field nobody can find");
     }
 
     [Fact]

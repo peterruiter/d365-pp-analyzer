@@ -18,7 +18,8 @@
         "settings": [
           "tenantId",
           "clientId",
-          "environmentUrl"
+          "environmentUrl",
+          "checkerGeography"
         ],
         "secretRef": "Key Vault. No credential is ever stored in the product database.",
         "leastPrivilege": "A custom role granting read on the solution, component, workflow, plugin, web resource and process tables, plus read on the tables being analysed. The role definition ships with the product so a client's security team reviews a file rather than a description."
@@ -40,7 +41,8 @@
       "auth": {
         "type": "authorizationCode",
         "settings": [
-          "environmentUrl"
+          "environmentUrl",
+          "checkerGeography"
         ],
         "secretRef": "A refresh token in Key Vault, obtained when the consultant signed in to the environment and scoped to that one organisation. Rotated on every use and revoked when the engagement closes.",
         "leastPrivilege": "Whatever the person holds, which is usually more than a reader and is the reason this mode is not the default. A run made as a system administrator cannot tell you what a service principal would have been able to see."
@@ -63,7 +65,8 @@
         "settings": [
           "uploadedFile",
           "declaredEnvironmentName",
-          "exportedOnUtc"
+          "exportedOnUtc",
+          "checkerGeography"
         ],
         "secretRef": null,
         "leastPrivilege": "None required. Somebody at the client exports a solution and sends it."
@@ -105,7 +108,8 @@
       "auth": {
         "type": "personalAccessToken",
         "settings": [
-          "organisationUrl"
+          "organisationUrl",
+          "project"
         ],
         "secretRef": "A personal access token in Key Vault, scoped to work items read and write on one organisation. Nothing about it reaches the database.",
         "leastPrivilege": "Work Items: Read & write. Nothing else. The token does not need code, builds, releases or project administration, and a token that has them is a token somebody has to explain in a security review."
@@ -127,6 +131,88 @@
         "leastPrivilege": "Browse projects and Create issues on the one project the backlog lands in. An Atlassian API token carries the whole account rather than a scope, so the account it belongs to is the thing to keep small: a service account on that project beats a consultant’s own login."
       },
       "note": "The project is chosen per publish, the same as Azure DevOps. The issue types are read from the project rather than assumed, because a team managed project and a company managed one do not offer the same ones and neither always has Epic."
+    }
+  ],
+  "checkerGeographies": [
+    {
+      "id": "europe",
+      "name": "Europe"
+    },
+    {
+      "id": "unitedstates",
+      "name": "United States"
+    },
+    {
+      "id": "unitedkingdom",
+      "name": "United Kingdom"
+    },
+    {
+      "id": "france",
+      "name": "France"
+    },
+    {
+      "id": "germany",
+      "name": "Germany"
+    },
+    {
+      "id": "switzerland",
+      "name": "Switzerland"
+    },
+    {
+      "id": "norway",
+      "name": "Norway"
+    },
+    {
+      "id": "sweden",
+      "name": "Sweden"
+    },
+    {
+      "id": "poland",
+      "name": "Poland"
+    },
+    {
+      "id": "italy",
+      "name": "Italy"
+    },
+    {
+      "id": "canada",
+      "name": "Canada"
+    },
+    {
+      "id": "southamerica",
+      "name": "South America"
+    },
+    {
+      "id": "asia",
+      "name": "Asia"
+    },
+    {
+      "id": "india",
+      "name": "India"
+    },
+    {
+      "id": "japan",
+      "name": "Japan"
+    },
+    {
+      "id": "korea",
+      "name": "Korea"
+    },
+    {
+      "id": "singapore",
+      "name": "Singapore"
+    },
+    {
+      "id": "australia",
+      "name": "Australia"
+    },
+    {
+      "id": "unitedarabemirates",
+      "name": "United Arab Emirates"
+    },
+    {
+      "id": "southafrica",
+      "name": "South Africa"
     }
   ]
 }

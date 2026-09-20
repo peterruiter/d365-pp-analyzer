@@ -1678,6 +1678,56 @@ Three failed reads, each correct and each already documented: dataflows do not t
 solution, a flow run came back with no readable status, and plug-in step registrations are
 not in a solution export in a form the zip reader can use.
 
+## The checker geography could not be set, by anybody, ever
+
+Reported as "what is this nonsense with geography, I cannot even set it anywhere". Correct,
+and it was worse than it looked.
+
+`ConnectionFactory.Settings` read `CheckerGeography`. The worker refused to submit anything
+to Microsoft's checker without it and said so clearly in the run. It appeared in no mode's
+`auth.settings` in extraction-sources.json, and the wizard renders exactly what the contract
+declares, so no screen had ever asked for it and no connection could possibly have one.
+
+**The checker could never have run against a live environment.** Every rule depending on it
+reported as not assessed, for months, with a reason naming a field nobody could find.
+
+### The same record held two more
+
+Reading it properly found the shape twice again, in the same seven fields:
+
+| Property | Read for | Why it was always null |
+|---|---|---|
+| `CheckerGeography` | Submitting to the checker | Declared by no mode |
+| `Organisation` | The worker's publish mode | Bound to `organisation`; the wizard collects `organisationUrl` |
+| `Project` | The worker's publish mode | Collected under no name at all |
+
+The worker's publish mode would have refused with "No Azure DevOps organisation is set"
+against a connection that visibly had one. It had never run, so nobody had seen it.
+
+None of this is visible to a compiler: each is a nullable string that is simply always null,
+and the code handles null politely and tells somebody to go and set a field that does not
+exist. That is the whole family of defects this product keeps producing, and this is the
+fourth, fifth and sixth instance of it.
+
+### What holds it down now
+
+`Every_connection_setting_the_code_reads_is_one_a_screen_collects` reflects over
+`ConnectionFactory.Settings`, resolves each property to the name it binds to on the wire —
+reading `JsonPropertyName` rather than assuming camel case, because that attribute is the
+only thing standing between a property and a setting nobody collects — and fails if the
+contract declares no such setting anywhere. Verified by taking `checkerGeography` back out
+of the contract.
+
+The geographies themselves are in the contract too, from Microsoft's own table, and the
+wizard renders a list rather than a text box: a text box accepts "Europe" or "eu" and
+produces a hostname that does not resolve. The government and China endpoints are left out
+deliberately — they are on different domains and `CheckerClient` builds one, so offering
+them would offer a value that quietly points nowhere.
+
+There is still no default, and there should not be. Microsoft's own build tools default to
+the environment's region; this product asks, because where a client's customisations are
+uploaded for analysis is their decision and the cost of asking is one list.
+
 ## What was ported rather than invented
 
 | From | What |

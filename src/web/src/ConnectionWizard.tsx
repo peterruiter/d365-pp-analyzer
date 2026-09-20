@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useT } from './i18n';
 import { sendJson, type Connection, type ExtractionMode } from './workspace';
+import sources from '../../../build/contracts/extraction-sources.json';
 
 type Step = 'mode' | 'settings' | 'done';
 
@@ -21,8 +22,27 @@ const fields: Record<string, { type: string; placeholder?: string }> = {
   clientId: { type: 'text', placeholder: '00000000-0000-0000-0000-000000000000' },
   environmentUrl: { type: 'url', placeholder: 'https://contoso.crm4.dynamics.com' },
   declaredEnvironmentName: { type: 'text', placeholder: 'Contoso production' },
-  exportedOnUtc: { type: 'date' }
+  exportedOnUtc: { type: 'date' },
+  organisationUrl: { type: 'url', placeholder: 'https://dev.azure.com/contoso' },
+  project: { type: 'text', placeholder: 'Contoso Platform' }
 };
+
+/**
+ * Where the checker may run.
+ *
+ * From the contract rather than from a list here, and the contract's list is Microsoft's
+ * own, minus the government and China endpoints: those live on different domains and the
+ * client this product builds addresses one, so offering them would offer a value that
+ * quietly produces a URL pointing nowhere.
+ *
+ * This setting existed for months and could not be set. The worker read it, refused the
+ * checker without it, and said so in the run; no screen had ever asked for it, because it
+ * was in no mode's settings in the contract and the wizard renders exactly what the
+ * contract declares. So the checker could never run against a live environment, every rule
+ * that depends on it reported as not assessed, and the reason given was a field nobody
+ * could find.
+ */
+const geographies: { id: string; name: string }[] = sources.checkerGeographies;
 
 /**
  * The connection wizard.
@@ -251,6 +271,25 @@ export function ConnectionWizard({
                           ? t('connections.file-chosen', uploaded)
                           : t('field.uploadedFile.hint')}
                     </span>
+                  </>
+                ) : setting === 'checkerGeography' ? (
+                  <>
+                    {/*
+                      A list, because this is a choice from a fixed set and a text box would
+                      accept "Europe" or "eu" and produce a hostname that does not resolve.
+                      No default selected: where a client's solution is uploaded for analysis
+                      is theirs to decide and the product picking the nearest one for them is
+                      exactly the silent default this refuses to make.
+                    */}
+                    <select
+                      value={values[setting] ?? ''}
+                      onChange={(event) => setValues({ ...values, [setting]: event.target.value })}>
+                      <option value="">{t('connections.choose-a-geography')}</option>
+                      {geographies.map((geography) => (
+                        <option key={geography.id} value={geography.id}>{geography.name}</option>
+                      ))}
+                    </select>
+                    <span className="hint">{t('field.checkerGeography.hint')}</span>
                   </>
                 ) : (
                   <>
