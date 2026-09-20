@@ -45,7 +45,7 @@ public class StageTests
             RunChecker: (_, _) => Task.FromResult(new CheckerOutcome(false, [], null)),
             Estimator: null!,
             BacklogBuilder: null!,
-            Publish: (_, _, _) => Task.FromResult(0),
+            Publish: (_, _, _, _) => Task.FromResult(0),
             Persist: null!,
             FixedCosts: [],
             Bands: EstimateCatalogue.Bands,

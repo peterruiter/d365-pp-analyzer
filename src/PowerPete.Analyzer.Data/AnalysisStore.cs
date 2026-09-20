@@ -388,13 +388,29 @@ public sealed class AnalysisStore(string connectionString)
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>Records what a publish created, so a publish into the wrong project can be found rather than hunted.</summary>
+    /// <summary>
+    /// Records what a publish created, so a publish into the wrong project can be found
+    /// rather than hunted.
+    /// </summary>
+    /// <remarks>
+    /// Keyed by the deterministic key rather than by the backlog item's identifier.
+    ///
+    /// The caller works entirely in keys: the publisher finds an existing work item by its
+    /// key, returns results keyed by it, and never sees a backlog item's row identifier. It
+    /// therefore had nothing to pass here and passed the run's identifier instead, which
+    /// compiled because both are a Guid and failed at run time on
+    /// FK_PublishedWorkItem_Backlog, after the work items had already been created in the
+    /// client's project. The publish worked and the product then reported a 500.
+    ///
+    /// Resolved in the insert, so the shape the caller has is the shape this takes.
+    /// </remarks>
     /// <param name="runId">Which run.</param>
-    /// <param name="published">What was created or updated.</param>
+    /// <param name="published">What was created or updated, by deterministic key.</param>
     /// <param name="cancellationToken">Cancellation.</param>
+    /// <exception cref="InvalidOperationException">A key matched no backlog item on this run.</exception>
     public async Task WritePublishedAsync(
         Guid runId,
-        IReadOnlyList<(Guid BacklogItemId, string Organisation, string Project, int WorkItemId, string Url, string Action)> published,
+        IReadOnlyList<(string Key, string Organisation, string Project, int WorkItemId, string Url, string Action)> published,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(published);
@@ -402,17 +418,18 @@ public sealed class AnalysisStore(string connectionString)
 
         await using var connection = Connect();
 
-        await connection.ExecuteAsync(new CommandDefinition(
+        var written = await connection.ExecuteAsync(new CommandDefinition(
             """
             INSERT INTO findings.PublishedWorkItem
                 (PublishedWorkItemId, RunId, BacklogItemId, Organisation, Project, WorkItemId, Url, Action)
-            VALUES
-                (NEWID(), @runId, @BacklogItemId, @Organisation, @Project, @WorkItemId, @Url, @Action);
+            SELECT NEWID(), @runId, b.BacklogItemId, @Organisation, @Project, @WorkItemId, @Url, @Action
+            FROM findings.BacklogItem b
+            WHERE b.RunId = @runId AND b.DeterministicKey = @Key;
             """,
             published.Select(entry => new
             {
                 runId,
-                entry.BacklogItemId,
+                entry.Key,
                 entry.Organisation,
                 entry.Project,
                 entry.WorkItemId,
@@ -420,6 +437,17 @@ public sealed class AnalysisStore(string connectionString)
                 entry.Action
             }),
             cancellationToken: cancellationToken));
+
+        if (written == published.Count) return;
+
+        // Said rather than swallowed. A select that matches nothing inserts nothing and
+        // reports success, so a record of a publish could go quietly missing and the only
+        // sign would be a work item in a client's project that this product does not know
+        // it made.
+        throw new InvalidOperationException(
+            $"{published.Count - written} of {published.Count} published work item(s) could not be recorded "
+            + "against this run's backlog. The work items exist in the target project; this product's record "
+            + "of them is incomplete.");
     }
 
     // ------------------------------------------------------------------ reading --

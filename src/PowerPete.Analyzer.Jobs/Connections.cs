@@ -248,7 +248,7 @@ public sealed class StageServicesFactory(
             Estimator: estimator,
             BacklogBuilder: new BacklogBuilder(engagementId, engagementName, criteria, backlogLanguage),
 
-            Publish: async (items, approvedHash, token) =>
+            Publish: async (runId, items, approvedHash, token) =>
             {
                 if (target is null)
                 {
@@ -265,8 +265,11 @@ public sealed class StageServicesFactory(
                 var published = await publisher.PublishAsync(items, approvedHash, approvedHash,
                     dryRun: false, confirmedCount: items.Count, token).ConfigureAwait(false);
 
-                await analysis.WritePublishedAsync(Guid.Empty,
-                    [.. published.Select(entry => (Guid.Empty, devOpsSettings.Organisation!, devOpsSettings.Project!,
+                // The run and the key, not Guid.Empty twice. This recorded a publish against
+                // no run and no backlog item, which the foreign key would have refused had
+                // this path ever run: the worker's publish has never been exercised.
+                await analysis.WritePublishedAsync(runId,
+                    [.. published.Select(entry => (entry.Key, devOpsSettings.Organisation!, devOpsSettings.Project!,
                         entry.WorkItemId, entry.Url, entry.Action))],
                     token).ConfigureAwait(false);
 

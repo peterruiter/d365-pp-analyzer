@@ -22,7 +22,7 @@ using PowerPete.Analyzer.Extraction;
 /// <param name="RunChecker">Calls the Power Apps checker.</param>
 /// <param name="Estimator">The three layer estimator.</param>
 /// <param name="BacklogBuilder">Turns findings into work items.</param>
-/// <param name="Publish">Writes to Azure DevOps. The only thing here that writes anywhere.</param>
+/// <param name="Publish">Writes to Azure DevOps or Jira, for one run. The only thing here that writes anywhere.</param>
 /// <param name="Persist">Where everything is recorded.</param>
 /// <param name="FixedCosts">Per engagement costs, from the contract.</param>
 /// <param name="Bands">The estimate bands, from the contract.</param>
@@ -38,7 +38,7 @@ public sealed record StageServices(
     Func<Stream, CancellationToken, Task<CheckerOutcome>> RunChecker,
     Estimator Estimator,
     BacklogBuilder BacklogBuilder,
-    Func<IReadOnlyList<BacklogItem>, string, CancellationToken, Task<int>> Publish,
+    Func<Guid, IReadOnlyList<BacklogItem>, string, CancellationToken, Task<int>> Publish,
     IRunPersistence Persist,
     IReadOnlyList<FixedCost> FixedCosts,
     IReadOnlyDictionary<string, EstimateBand> Bands,
@@ -795,7 +795,7 @@ public sealed class PublishStage(StageServices services) : StageBase(services)
                 entry.Finding.ComponentKey is null ? null : byKey.GetValueOrDefault(entry.Finding.ComponentKey)))],
             $"Published from run {state.RunId}.");
 
-        var created = await Services.Publish(items, approved, cancellationToken).ConfigureAwait(false);
+        var created = await Services.Publish(state.RunId, items, approved, cancellationToken).ConfigureAwait(false);
 
         return StageOutcome.Succeeded(Checkpoint.Write(new { created }));
     }

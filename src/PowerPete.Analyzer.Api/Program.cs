@@ -1575,7 +1575,7 @@ app.MapPost("/api/engagements/{engagementId:guid}/publish",
         if (!request.DryRun)
         {
             await analysis.WritePublishedAsync(run.Value,
-                [.. published.Select(entry => (run.Value, host, request.Project,
+                [.. published.Select(entry => (entry.Key, host, request.Project,
 
                     // The identifier column is an integer, which Azure DevOps work item
                     // identifiers are and Jira issue keys are not. A Jira key carries its
