@@ -805,6 +805,19 @@ app.MapDelete("/api/runs/{runId:guid}", async (HttpContext context, WorkspaceSto
     {
         return Results.BadRequest(new { error = refusal.Message });
     }
+    catch (SqlException failure)
+    {
+        // A database failure here reached the browser as a bare 500, which says nothing a
+        // person can act on. The commonest one was a timeout on a run that had read a whole
+        // environment, and "press it again" is genuinely the right advice: the delete works
+        // in batches and resumes where it stopped.
+        return Results.BadRequest(new
+        {
+            error = "The run was not fully removed: " + failure.Message
+                  + " Removing a large run can take more than one attempt. Press it again and it will "
+                  + "carry on from where it stopped."
+        });
+    }
 }).RequireAuthorization();
 
 // --------------------------------------------------------------- run again --

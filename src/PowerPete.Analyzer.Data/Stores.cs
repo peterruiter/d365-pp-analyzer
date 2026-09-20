@@ -1164,13 +1164,10 @@ public sealed class WorkspaceStore(string connectionString)
     {
         await using var connection = Connect();
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
-        await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
 
         var derived = await connection.QueryAsync<string>(new CommandDefinition(
-            """
-            SELECT CONVERT(nvarchar(36), RunId) FROM ops.AnalysisRun WHERE BasedOnRunId = @runId;
-            """,
-            new { runId }, transaction, cancellationToken: cancellationToken));
+            "SELECT CONVERT(nvarchar(36), RunId) FROM ops.AnalysisRun WHERE BasedOnRunId = @runId;",
+            new { runId }, cancellationToken: cancellationToken));
 
         var blocking = derived.ToList();
 
@@ -1183,20 +1180,77 @@ public sealed class WorkspaceStore(string connectionString)
 
         var published = await connection.ExecuteScalarAsync<int>(new CommandDefinition(
             "SELECT COUNT(*) FROM findings.PublishedWorkItem WHERE RunId = @runId;",
-            new { runId }, transaction, cancellationToken: cancellationToken));
+            new { runId }, cancellationToken: cancellationToken));
 
-        await connection.ExecuteAsync(new CommandDefinition(
-            "DELETE FROM findings.Estimate WHERE RunId = @runId;",
-            new { runId }, transaction, cancellationToken: cancellationToken));
+        // In batches, and not inside one transaction.
+        //
+        // The first version deleted the run row and let the cascades do the rest, in a
+        // single transaction on the default thirty second command timeout. That is fine for
+        // a run of a few hundred components and it timed out on a real one: a run that had
+        // read a whole environment held 92,059 components with their findings, estimates and
+        // reads hanging off them, and the delete failed with an execution timeout that
+        // reached the browser as a 500.
+        //
+        // Batched, because one statement deleting a hundred thousand rows escalates to a
+        // table lock and blocks every other run on the same tables while it works.
+        //
+        // Not transactional, deliberately, and this is the uncomfortable half. A delete that
+        // stops halfway leaves a run partly gone, which is not a state anybody wants. It is
+        // recoverable and the alternative is not: one transaction over a hundred thousand
+        // rows either completes or rolls back after holding locks for minutes, and on a
+        // large enough run it never completes at all. Pressing the button again finishes the
+        // job, because every statement here is "delete what is left".
+        //
+        // Children before parents, largest first. The cascades would handle the order; doing
+        // it explicitly is what lets each one be batched.
+        string[] tables =
+        [
+            "findings.Estimate",
+            "findings.Finding",
+            "findings.BacklogItem",
+            "inv.Component",
+            "inv.UnresolvedReference",
+            "stg.EntityRead",
+            "inv.NotAssessed",
+            "inv.Solution",
+        ];
 
+        foreach (var table in tables)
+        {
+            int removed;
+
+            do
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                removed = await connection.ExecuteAsync(new CommandDefinition(
+                    $"DELETE TOP (5000) FROM {table} WHERE RunId = @runId;",
+                    new { runId },
+                    commandTimeout: (int)DeleteTimeout.TotalSeconds,
+                    cancellationToken: cancellationToken));
+            }
+            while (removed > 0);
+        }
+
+        // Whatever is left cascades: the score, the approval, the commands, the solutions
+        // the picker recorded, and the run itself.
         await connection.ExecuteAsync(new CommandDefinition(
             "DELETE FROM ops.AnalysisRun WHERE RunId = @runId;",
-            new { runId }, transaction, cancellationToken: cancellationToken));
-
-        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+            new { runId },
+            commandTimeout: (int)DeleteTimeout.TotalSeconds,
+            cancellationToken: cancellationToken));
 
         return published;
     }
+
+    /// <summary>
+    /// How long one batch of a delete may take.
+    /// </summary>
+    /// <remarks>
+    /// Generous, because the batch is bounded at five thousand rows and a serverless database
+    /// that has been asleep takes about a minute to wake before it does anything at all.
+    /// </remarks>
+    private static TimeSpan DeleteTimeout { get; } = TimeSpan.FromMinutes(2);
 
     /// <summary>
     /// Asks the worker to do something to a run that already exists.
