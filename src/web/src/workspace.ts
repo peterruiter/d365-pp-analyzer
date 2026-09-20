@@ -149,6 +149,9 @@ export type Run = {
 export type Backlog = {
   runId: string | null;
   items: BacklogItem[];
+
+  /** Whether this exact backlog has been approved, and whether it has moved since. */
+  approval?: { given: boolean; stale: boolean };
 };
 
 /**

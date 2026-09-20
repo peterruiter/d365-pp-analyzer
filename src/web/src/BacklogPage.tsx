@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useT, type Translate } from './i18n';
 import { getJson, sendJson, range, type Backlog, type BacklogItem, type Connection } from './workspace';
 import { useCan } from './access';
@@ -209,17 +209,13 @@ export function BacklogPage({ engagementId }: { engagementId: string }) {
     });
   }
 
-  useEffect(() => {
-    let cancelled = false;
-
-    void getJson<Backlog>(`/api/engagements/${engagementId}/backlog`).then((result) => {
-      if (cancelled) return;
-      if (result.data) setBacklog(result.data);
-      else setError(result.error);
-    });
-
-    return () => { cancelled = true; };
+  const load = useCallback(async () => {
+    const result = await getJson<Backlog>(`/api/engagements/${engagementId}/backlog`);
+    if (result.data) setBacklog(result.data);
+    else setError(result.error);
   }, [engagementId]);
+
+  useEffect(() => { void load(); }, [load]);
 
   if (error) return <p className="error">{error}</p>;
 
@@ -293,6 +289,9 @@ export function BacklogPage({ engagementId }: { engagementId: string }) {
           total={backlog.items.length}
           onClear={() => setSelected(new Set())}
           t={t}
+          runId={backlog.runId}
+          approval={backlog.approval}
+          onApproved={() => void load()}
         />
       )}
 
@@ -322,12 +321,21 @@ type Project = { id: string; name: string; value: string; description: string | 
  * the default thing to press, because the mistake this screen can make is putting several
  * hundred work items into a client's project, and that mistake is not undoable from here.
  */
-function PublishPanel({ engagementId, selected, total, onClear, t }: {
+function PublishPanel({ engagementId, selected, total, onClear, t, runId, approval, onApproved }: {
   engagementId: string;
   selected: Set<string>;
   total: number;
   onClear: () => void;
   t: Translate;
+
+  /** Which run the backlog came from, which is what an approval binds to. */
+  runId: string | null;
+
+  /** Whether it has been approved, and whether it has moved since. */
+  approval?: { given: boolean; stale: boolean };
+
+  /** Reload, so the panel stops asking once it has been approved. */
+  onApproved: () => void;
 }) {
   const [targets, setTargets] = useState<Connection[]>([]);
   const [connectionId, setConnectionId] = useState('');
@@ -458,16 +466,88 @@ function PublishPanel({ engagementId, selected, total, onClear, t }: {
       </p>
 
       <div className="field-row">
+        {/*
+          The dry run needs no approval and says so. It authenticates, reads the project and
+          reports what would be created, which is how somebody checks the connection and
+          sees what would land before deciding whether to approve. The API refused it for
+          want of an approval, which made the gate a door with the handle on the far side.
+        */}
         <button type="button" className="secondary-button" disabled={!ready} onClick={() => void publish(true)}>
           {t('backlog.publish.dry-run')}
         </button>
-        <button type="button" className="primary-button" disabled={!ready} onClick={() => void publish(false)}>
+        <button
+          type="button"
+          className="primary-button"
+          disabled={!ready || !approval?.given || approval.stale}
+          onClick={() => void publish(false)}>
           {t('backlog.publish.go', count)}
         </button>
       </div>
 
+      {/*
+        The approval itself. The endpoint has always existed and nothing called it, so the
+        publish refused for want of something no screen offered.
+      */}
+      <Approval runId={runId} approval={approval} total={total} onApproved={onApproved} />
+
       {error && <p className="error">{error}</p>}
       {result && <p className="curation-message">{result}</p>}
+    </div>
+  );
+}
+
+/**
+ * Recording that somebody read the backlog before it reached a client's project.
+ *
+ * Admin only on the server, and the button says so rather than disappearing: a Contributor
+ * who cannot see why publishing is blocked will ask somebody, and the sentence is the
+ * answer.
+ *
+ * The hash is computed by the API from what is stored. It used to arrive in the request
+ * body, which asked a browser to reproduce a SHA256 of a canonical form it cannot see.
+ */
+function Approval({ runId, approval, total, onApproved }: {
+  runId: string | null;
+  approval?: { given: boolean; stale: boolean };
+  total: number;
+  onApproved: () => void;
+}) {
+  const t = useT();
+  const canApprove = useCan('Admin');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!runId || total === 0) return null;
+
+  async function approve() {
+    setBusy(true);
+    const result = await sendJson(`/api/runs/${runId}/approve`, 'POST', {});
+    setError(result.error);
+    setBusy(false);
+    if (!result.error) onApproved();
+  }
+
+  if (approval?.given && !approval.stale) {
+    return <p className="curation-message">{t('backlog.approval.given')}</p>;
+  }
+
+  return (
+    <div className="approval-gate">
+      <p>
+        {approval?.stale
+          ? t('backlog.approval.stale')
+          : t('backlog.approval.needed', total)}
+      </p>
+
+      {canApprove ? (
+        <button type="button" className="secondary-button" disabled={busy} onClick={() => void approve()}>
+          {busy ? t('backlog.approval.approving') : t('backlog.approval.approve', total)}
+        </button>
+      ) : (
+        <p className="hint">{t('backlog.approval.admin-only')}</p>
+      )}
+
+      {error && <p className="error">{error}</p>}
     </div>
   );
 }
