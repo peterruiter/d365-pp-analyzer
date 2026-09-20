@@ -1060,7 +1060,7 @@
    with the sentence cut in half. */
 .findings-page > * { min-width: 0; }
 .findings-page .table-wrap { overflow-x: auto; }
-.findings-page > .findings-table { margin: 0; }
+.findings-page .findings-table { margin: 0; }
 
 /* The filters are a row of controls, not a row of columns. */
 .filters { display: flex; flex-wrap: wrap; align-items: end; gap: 18px; padding: 16px 20px; background: var(--cp-surface); border: 1px solid var(--cp-border); }
