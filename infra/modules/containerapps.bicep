@@ -46,7 +46,13 @@ param sqlConnectionString string
 @description('Where credentials live. Without it the product refuses to store one rather than putting it in the database.')
 param keyVaultUri string
 
-@description('The blob container an exported solution file is uploaded to.')
+@description('The blob the API keeps its data protection keys in.')
+param dataProtectionBlobUri string = ''
+
+@description('The vault key those keys are wrapped with before they are written.')
+param dataProtectionKeyUri string = ''
+
+@description('Where an uploaded solution file goes.')
 param uploadContainerUri string = ''
 
 @description('Entra tenant for sign in. Empty leaves authentication off, which is only ever right on a developer machine.')
@@ -133,6 +139,12 @@ var commonEnv = [
   { name: 'KeyVault__Uri', value: keyVaultUri }
   // The API writes an uploaded solution here and the worker reads it back, so both need it.
   { name: 'ANALYZER_UPLOAD_CONTAINER', value: uploadContainerUri }
+  // Where the API keeps the keys that sign an interactive sign-in's state, and the vault
+  // key they are wrapped with. Without both, ASP.NET writes them inside the container:
+  // they die with the replica, they are not shared between the three the API scales to,
+  // and a sign-in returning to a different replica than it started on cannot be read.
+  { name: 'DataProtection__BlobUri', value: dataProtectionBlobUri }
+  { name: 'DataProtection__KeyUri', value: dataProtectionKeyUri }
   { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
   { name: 'AzureAd__TenantId', value: azureAdTenantId }
   { name: 'AzureAd__ClientId', value: azureAdClientId }

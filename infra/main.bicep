@@ -94,6 +94,11 @@ module keyVault 'modules/keyvault.bicep' = {
       { objectId: administratorObjectId, principalType: administratorType }
       { objectId: identity.properties.principalId, principalType: 'ServicePrincipal' }
     ]
+    // The containers and nobody else. A person has no reason to wrap anything with this
+    // key: it protects the product's own sign-in state, not anything a consultant reads.
+    cryptoKeyUsers: [
+      { objectId: identity.properties.principalId, principalType: 'ServicePrincipal' }
+    ]
     purgeProtection: vaultPurgeProtection
   }
 }
@@ -133,6 +138,8 @@ module containers 'modules/containerapps.bicep' = {
     sqlConnectionString: '${sql.outputs.connectionString}Authentication=Active Directory Default;Connect Timeout=90;'
     keyVaultUri: keyVault.outputs.vaultUri
     uploadContainerUri: storage.outputs.uploadContainerUri
+    dataProtectionBlobUri: storage.outputs.dataProtectionBlobUri
+    dataProtectionKeyUri: keyVault.outputs.dataProtectionKeyUri
     azureAdTenantId: azureAdTenantId
     azureAdClientId: azureAdClientId
     azureAdClientSecret: azureAdClientSecret
@@ -161,6 +168,10 @@ output keyVaultName string = keyVault.outputs.vaultName
 
 @description('What goes in KeyVault:Uri. Without it the product refuses to store a credential rather than putting one in the database.')
 output keyVaultUri string = keyVault.outputs.vaultUri
+
+@description('Where the API keeps the keys that sign a sign-in, and the vault key they are wrapped with.')
+output dataProtectionBlobUri string = storage.outputs.dataProtectionBlobUri
+output dataProtectionKeyUri string = keyVault.outputs.dataProtectionKeyUri
 
 @description('Where an uploaded solution file goes.')
 output uploadContainerUri string = storage.outputs.uploadContainerUri

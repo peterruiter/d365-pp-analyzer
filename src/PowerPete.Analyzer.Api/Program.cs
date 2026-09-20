@@ -1,3 +1,4 @@
+using Azure.Identity;
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authentication;
@@ -94,7 +95,52 @@ builder.Services.AddSingleton(new SolutionUploads(
 
 // Interactive sign-in needs the product's own app registration, because it is the product
 // asking for consent to read somebody's environment, not a registration per client.
-builder.Services.AddDataProtection();
+//
+// The keys that sign its state parameter are kept in blob storage and wrapped with a vault
+// key. Left to itself ASP.NET writes them to /root/.aspnet/DataProtection-Keys inside the
+// container: unencrypted, gone when the replica is replaced, and shared with none of the
+// other replicas the API scales to. A sign-in begun on one and returned to another could
+// not be unprotected, and the failure reads as a tampered request rather than as a missing
+// key, which is close to undiagnosable from the outside.
+//
+// SetApplicationName is load bearing, not decoration. It is what makes the keys written by
+// one revision readable by the next; without it every deployment would silently start a new
+// ring in the same blob and invalidate every sign-in in flight.
+var dataProtection = builder.Services.AddDataProtection().SetApplicationName("PowerPete.Analyzer");
+
+var keyBlob = Setting(DeploymentSettings.DataProtectionBlob);
+var keyWrap = Setting(DeploymentSettings.DataProtectionKey);
+
+if (!string.IsNullOrWhiteSpace(keyBlob))
+{
+    var credential = new DefaultAzureCredential();
+
+    dataProtection.PersistKeysToAzureBlobStorage(new Uri(keyBlob), credential);
+
+    if (!string.IsNullOrWhiteSpace(keyWrap))
+    {
+        dataProtection.ProtectKeysWithAzureKeyVault(new Uri(keyWrap), credential);
+    }
+    else
+    {
+        // Said out loud rather than accepted quietly. Persisting the keys without wrapping
+        // them writes the material that signs every sign-in into a container whose role is
+        // scoped to the whole storage account, which is a worse position than the one this
+        // is fixing, not a better one.
+        Console.Error.WriteLine(
+            "DataProtection__BlobUri is set and DataProtection__KeyUri is not. The keys that sign a "
+            + "sign-in will be written to blob storage unencrypted. Set both, or neither.");
+    }
+}
+else
+{
+    // A local run, where the default is right: keys in the profile directory, one process,
+    // nothing to share them with.
+    Console.WriteLine(
+        "No data protection blob is configured, so sign-in keys stay in this container. "
+        + "Correct locally; on a deployment it means a sign-in breaks whenever a replica is replaced.");
+}
+
 builder.Services.AddHttpClient();
 
 builder.Services.AddSingleton(new InteractiveSignIn.Options(

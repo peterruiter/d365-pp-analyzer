@@ -74,6 +74,31 @@ resource uploads 'Microsoft.Storage/storageAccounts/blobServices/containers@2023
   }
 }
 
+// Where the API keeps its data protection keys.
+//
+// Those keys are what sign an interactive sign-in's state parameter. ASP.NET creates them
+// on first use and, with nothing configured, writes them to a directory inside the
+// container: they die with the replica and they are not shared between replicas. The API
+// scales to three. So a sign-in begun on one replica and returned to another could not be
+// unprotected, and every restart invalidated every sign-in in flight, intermittently and
+// with an error that reads like a tampered request rather than like a missing key.
+//
+// A second container rather than a folder in uploads, because the two have opposite
+// audiences. An uploaded solution is a client's file that a consultant may need to fetch;
+// these keys are the product's own and nobody should ever read them by hand. Separating
+// them means the difference can be enforced later without moving anything.
+//
+// The contents are encrypted with a key from the vault before they are written, which is
+// what makes this safe to do at all: the blob role below is scoped to the account, so
+// anybody granted access to the uploads container can read this container too.
+resource dataProtection 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobService
+  name: 'dataprotection'
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
 // Storage Blob Data Contributor, scoped to this account rather than the resource group.
 // The API writes an uploaded file and the worker reads it back; neither needs to manage
 // the account itself, which is why this is the data plane role and not Contributor.
@@ -93,6 +118,9 @@ resource grant 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 
 @description('The uploads container, as the product addresses it.')
 output uploadContainerUri string = '${account.properties.primaryEndpoints.blob}${uploads.name}'
+
+@description('The blob the API keeps its data protection keys in.')
+output dataProtectionBlobUri string = '${account.properties.primaryEndpoints.blob}${dataProtection.name}/keys.xml'
 
 @description('The account, for anybody looking for the files.')
 output accountName string = account.name

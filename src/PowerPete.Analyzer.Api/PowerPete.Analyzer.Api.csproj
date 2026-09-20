@@ -13,6 +13,15 @@
 
   <ItemGroup>
     <PackageReference Include="Azure.Storage.Blobs" />
+
+    <!--
+      The keys that sign an interactive sign-in's state, kept in blob storage and wrapped
+      with a vault key rather than written inside the container. Blobs was already pinned in
+      Directory.Packages.props and referenced by nothing, which is how long the intent had
+      been sitting there.
+    -->
+    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" />
+    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Keys" />
     <PackageReference Include="Microsoft.Identity.Web" />
   </ItemGroup>
 

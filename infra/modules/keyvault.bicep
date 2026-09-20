@@ -35,6 +35,14 @@ param secretsOfficers array = []
 param secretsUsers array = []
 
 @description('''
+Who may wrap and unwrap with the data protection key. Same shape as the two above.
+
+In practice this is the containers' managed identity and nobody else. A person never needs
+it: the key protects the product's own sign-in state, not anything a consultant reads.
+''')
+param cryptoKeyUsers array = []
+
+@description('''
 Whether the vault refuses to be purged before its retention expires.
 
 Off for a development environment, because it cannot be undone and it makes a resource
@@ -59,6 +67,13 @@ var secretsOfficer = subscriptionResourceId(
   'Microsoft.Authorization/roleDefinitions', 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7')
 var secretsUser = subscriptionResourceId(
   'Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
+
+// Crypto User can wrap and unwrap with a key and cannot read it, export it or delete it.
+// That is exactly what encrypting the data protection keys needs, and deliberately less
+// than Crypto Officer: the identity should never be able to remove the key that everything
+// it has written depends on.
+var cryptoUser = subscriptionResourceId(
+  'Microsoft.Authorization/roleDefinitions', '12338af0-0e69-4776-bea7-57ae8d297424')
 
 resource vault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   name: vaultName
@@ -109,8 +124,50 @@ resource users 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
   }
 ]
 
+// The key the API's data protection keys are encrypted with.
+//
+// A key rather than a secret, because the API never sees it: it sends the data protection
+// key material to the vault to be wrapped and gets ciphertext back. The material never
+// leaves Azure's HSM boundary and nothing in the product can print it.
+//
+// This is what makes it safe to write those keys to blob storage at all. The blob role is
+// scoped to the whole storage account, so anybody granted access to the uploads container
+// can also read the container these live in; encrypted, that gets them nothing.
+resource dataProtectionKey 'Microsoft.KeyVault/vaults/keys@2023-07-01' = {
+  parent: vault
+  name: 'dataprotection'
+  properties: {
+    kty: 'RSA'
+    keySize: 2048
+
+    // Wrap and unwrap only. The key exists to protect other keys and has no business
+    // signing or encrypting anything else.
+    keyOps: ['wrapKey', 'unwrapKey']
+    attributes: {
+      enabled: true
+    }
+  }
+}
+
+resource cryptoUsers 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
+  for principal in cryptoKeyUsers: {
+    // Scoped to the key rather than to the vault. The identity can wrap with this one key
+    // and has no relationship with any other key anybody puts here later.
+    scope: dataProtectionKey
+    name: guid(dataProtectionKey.id, principal.objectId, cryptoUser)
+    properties: {
+      roleDefinitionId: cryptoUser
+      principalId: principal.objectId
+      principalType: principal.principalType
+    }
+  }
+]
+
 @description('Vault name.')
 output vaultName string = vault.name
+
+@description('The key the data protection keys are wrapped with, for DataProtection:KeyUri.')
+output dataProtectionKeyUri string = dataProtectionKey.properties.keyUriWithVersion
 
 @description('What goes in KeyVault:Uri. There is no secret in this; reaching it still needs a role.')
 output vaultUri string = vault.properties.vaultUri

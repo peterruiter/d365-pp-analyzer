@@ -14,8 +14,9 @@
     <!-- Uploaded solution files. A client's export is their intellectual property and some
          contain secrets in plain text, which is one of the things this product looks for, so
          the container is private and read with a managed identity rather than a key. -->
-    <PackageVersion Include="Azure.Storage.Blobs" Version="12.23.0" />
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.24.1" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.5.1" />
+    <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Keys" Version="1.4.0" />
     <PackageVersion Include="Azure.Security.KeyVault.Secrets" Version="4.7.0" />
 
     <!-- Data -->

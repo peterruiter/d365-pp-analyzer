@@ -1180,6 +1180,57 @@ poll, with the command to fix it, and nothing is claimed until it is current; th
 itself up without a restart the moment somebody applies them. Refusing to work is right, and
 crash looping with a stack trace nobody reads is not.
 
+## The keys that sign a sign-in were thrown away on every restart
+
+Found in the API's own log while looking for something else, which is the only way it would
+ever have been found: it fails intermittently and the error reads like a tampered request.
+
+ASP.NET protects the interactive sign-in's state parameter with data protection keys. With
+nothing configured it creates them on first use and writes them to
+`/root/.aspnet/DataProtection-Keys` inside the container. It says so, in a warning, on every
+start. That means the keys die with the replica and are shared with none of the others, and
+the API scales to three.
+
+So a sign-in begun on one replica and returned to another could not be unprotected, and
+every deployment invalidated every sign-in in flight. It worked only because the deployment
+has been sitting on one replica.
+
+`Azure.Extensions.AspNetCore.DataProtection.Blobs` had been pinned in
+`Directory.Packages.props` since the beginning and referenced by no project. The intent was
+recorded and never carried out.
+
+### Persisting them without encrypting them would have been worse
+
+The blob role in `storage.bicep` is Storage Blob Data Contributor scoped to the whole
+account, because the API writes uploads and the worker reads them. Writing the key material
+into a container under that account would put the thing that signs every sign-in within
+reach of anything granted access to the uploads container, which is a weaker position than
+keys that die with the container, not a stronger one.
+
+So they are wrapped with a vault key before they are written. A key rather than a secret:
+the API sends the material to the vault and gets ciphertext back, the material never leaves
+Azure's HSM boundary, and nothing in the product can print it. The identity holds Key Vault
+Crypto User scoped to that one key, which can wrap and unwrap and cannot read, export or
+delete it.
+
+`SetApplicationName` is load bearing rather than decoration. Without it each revision would
+start a fresh ring in the same blob and invalidate every sign-in in flight on every deploy,
+which is the bug this fixes wearing a different hat.
+
+### Verified rather than assumed
+
+The blob was read back after deployment. It holds `<encryptedKey>` with a `<kid>` naming the
+vault key and no `masterKey` element, and the revision that wrote it logged neither of the
+two warnings the previous one logged on every start.
+
+### One privilege granted by hand
+
+Creating the key through `az keyvault key create` is a data plane operation, and Owner does
+not grant it under RBAC, so `peter@powerpete.com` was given Key Vault Crypto Officer on the
+vault to do it. A deployment from `main.bicep` creates the key through ARM instead and needs
+no such role, so that assignment is not in the template and is not needed by anything. It
+can be removed.
+
 ## What was ported rather than invented
 
 | From | What |

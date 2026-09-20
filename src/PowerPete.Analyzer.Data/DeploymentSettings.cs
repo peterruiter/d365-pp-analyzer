@@ -65,6 +65,28 @@ public static class DeploymentSettings
         ["ANALYZER_UPLOAD_CONTAINER"],
         "The blob container an uploaded solution is written to and the worker reads back.");
 
+    /// <summary>Where the keys that sign a sign-in are kept.</summary>
+    /// <remarks>
+    /// Without it ASP.NET writes them to a directory inside the container, where they die
+    /// with the replica and are shared with none of the others. The API scales to three, so
+    /// a sign-in begun on one replica and returned to another could not be unprotected, and
+    /// every restart invalidated every sign-in in flight. It fails intermittently and the
+    /// error reads like a tampered request rather than a missing key.
+    /// </remarks>
+    public static readonly DeploymentSetting DataProtectionBlob = new(
+        "DataProtection:BlobUri",
+        [],
+        "The blob holding the keys that sign an interactive sign-in. Shared between replicas "
+        + "and outliving them, which the default is neither.");
+
+    /// <summary>What those keys are encrypted with before they are written.</summary>
+    public static readonly DeploymentSetting DataProtectionKey = new(
+        "DataProtection:KeyUri",
+        [],
+        "The vault key the data protection keys are wrapped with. The blob role is scoped to "
+        + "the whole storage account, so unencrypted they would be readable by anything granted "
+        + "access to the uploads container.");
+
     /// <summary>Who is admitted before anybody can admit anybody.</summary>
     public static readonly DeploymentSetting InitialGlobalAdmin = new(
         "Access:InitialGlobalAdminUpn",
@@ -172,6 +194,8 @@ public static class DeploymentSettings
         SqlConnection,
         KeyVaultUri,
         UploadContainer,
+        DataProtectionBlob,
+        DataProtectionKey,
         InitialGlobalAdmin,
         AdminContact,
         EntraTenantId,
