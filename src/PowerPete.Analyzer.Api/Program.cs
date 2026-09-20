@@ -87,6 +87,15 @@ builder.Services.AddSingleton(SecretStore.For(keyVaultUri));
 // The same factory the worker authenticates with, so testing a connection from the screen
 // and reading an environment on a run cannot disagree about whether a credential works.
 builder.Services.AddSingleton<ConnectionFactory>();
+
+// Every date this API returns is UTC and says so on the wire. Without this the browser reads
+// a stage that started two hours ago as one that started now, which is how every running
+// stage came to show an elapsed time of about two hours.
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new UtcDateTimeConverter());
+    options.SerializerOptions.Converters.Add(new NullableUtcDateTimeConverter());
+});
 builder.Services.AddSingleton<SystemHealth>();
 builder.Services.AddSingleton<ReportComposer>();
 

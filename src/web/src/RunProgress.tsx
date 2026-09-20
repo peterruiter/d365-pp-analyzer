@@ -202,6 +202,10 @@ function StageRow({ stage, culture, retry }: {
 
 /** How long a stage took, or has been taking. */
 function elapsed(t: Translate, stage: RunStage): string {
+  // A skipped stage was never going to run in this mode, so it has no duration. It was
+  // showing the time since the run started, because the worker stamps a start on it.
+  if (stage.status === 'skipped') return t('runs.status.skipped');
+
   if (!stage.startedUtc) return stage.status === 'pending' ? t('runs.not-started') : '';
 
   const finished = stage.completedUtc ? new Date(stage.completedUtc).getTime() : Date.now();

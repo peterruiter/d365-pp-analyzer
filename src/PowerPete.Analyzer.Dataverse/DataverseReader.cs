@@ -288,6 +288,19 @@ public sealed class DataverseReader(HttpClient client)
     private static bool InScope(
         DiscoveredComponent component, HashSet<Guid> scope, IReadOnlyList<string> chosen)
     {
+        // A solution is not a component of itself, so its own identifier is not in
+        // solutioncomponent and the scope check below threw all eleven chosen solutions out
+        // of the inventory they defined. The run read their contents and reported that it
+        // had read no solutions.
+        //
+        // The reader puts the unique name in the schema name for this type, which is what
+        // the choice was made against.
+        if (string.Equals(component.TypeId, "solution", StringComparison.Ordinal))
+        {
+            return component.SchemaName is { Length: > 0 } name
+                && chosen.Contains(name, StringComparer.OrdinalIgnoreCase);
+        }
+
         if (component.SolutionUniqueName is { Length: > 0 } solution
             && chosen.Contains(solution, StringComparer.OrdinalIgnoreCase))
         {
@@ -448,9 +461,17 @@ public sealed class DataverseReader(HttpClient client)
         var count = 0;
 
         await foreach (var process in PageAsync(
+            // owninguser, not ownerid. ownerid is a polymorphic Owner lookup, which can be a
+            // user or a team, and Dataverse refuses a $select inside a $expand on one with a
+            // 400. Every classic workflow read against a real environment failed on it, and
+            // the failure was correctly reported as one entity read of eleven rather than
+            // taking the run down, which is why it survived to be found here.
+            //
+            // owninguser is the non-polymorphic half and carries the UPN this wants. A
+            // workflow owned by a team has none, which is a null owner rather than an error.
             "workflows?$select=workflowid,name,category,mode,type,statecode,primaryentity,description," +
             "triggeroncreate,triggerondelete,triggeronupdateattributelist,createdon,modifiedon" +
-            "&$filter=type eq 1&$expand=ownerid($select=fullname,domainname)",
+            "&$filter=type eq 1&$expand=owninguser($select=domainname,fullname)",
             cancellationToken).ConfigureAwait(false))
         {
             var category = Int(process, "category") ?? -1;
@@ -474,7 +495,7 @@ public sealed class DataverseReader(HttpClient client)
             var table = Str(process, "primaryentity");
 
             var component = Component(typeId, Str(process, "workflowid"), name, name, false,
-                process.TryGetProperty("ownerid", out var owner) ? Str(owner, "domainname") : null,
+                process.TryGetProperty("owninguser", out var owner) ? Str(owner, "domainname") : null,
                 new Dictionary<string, object?>
                 {
                     ["category"] = category,

@@ -127,10 +127,14 @@
 .stage-head { display: grid; grid-template-columns: 14px minmax(0, 1.4fr) minmax(80px, 1fr) auto; align-items: center; gap: 12px; width: 100%; padding: 12px 23px; border: 0; background: none; text-align: left; cursor: pointer; }
 .stage-head:hover { background: var(--brand-cloud); }
 .stage-marker { width: 10px; height: 10px; border-radius: 50%; background: var(--cp-border-strong); }
-.stage-completed .stage-marker { background: var(--cp-success); }
+/* This product's stage vocabulary, not the one this stylesheet was ported with.
+   .stage-completed and .stage-awaitinginput are the sibling product's words; here a stage
+   is succeeded or awaitingSelection, so neither rule ever matched and every finished stage
+   drew the default grey marker. Four stages green, four grey, and nothing wrong with any
+   of them. */
+.stage-succeeded .stage-marker { background: var(--cp-success); }
 .stage-running .stage-marker { background: var(--brand-blue); }
 .stage-failed .stage-marker { background: var(--cp-danger); }
-.stage-awaitinginput .stage-marker { background: var(--cp-warning); }
 .stage-title strong { display: block; color: var(--brand-ink); font-size: 13px; }
 .stage-title small { color: var(--cp-text-muted); font-size: 11px; }
 .stage-bar { display: block; height: 4px; background: var(--cp-surface-soft); }
