@@ -2,7 +2,6 @@
   "contract": "analysis-stages",
   "version": "1.0.0",
   "description": "Every stage an analysis run passes through, in order, plus the run modes and the one gate that matters. Generates the stage enumeration, the resume logic and the status screens.",
-
   "principles": {
     "nothingWritesToThePlatform": "No stage writes to a Power Platform environment in any mode. There is no flag that changes this, because the value of a discovery that is safe to run in a first meeting exceeds anything a write would add.",
     "publishIsTheOnlyWrite": "The publish stage writes work items to Azure DevOps and is the only stage in the product that writes anywhere outside its own database. It sits behind an approval recorded against a named person and the exact backlog they saw.",
@@ -10,7 +9,6 @@
     "resumable": "Every stage checkpoints. A run that dies during extraction resumes rather than restarting, because re-extracting a large estate costs an hour and re-running a checker job costs a queue place.",
     "idempotentPublish": "Publishing twice creates no duplicates. Every work item carries a deterministic key derived from the engagement, the rule and the component, and an existing item is updated rather than added."
   },
-
   "modes": [
     {
       "id": "quickScan",
@@ -50,7 +48,6 @@
       "requiresApproval": false
     }
   ],
-
   "stages": [
     {
       "id": "connect",
@@ -126,24 +123,25 @@
       "failureIsFatal": true
     },
     {
+      "id": "estimate",
+      "name": "Estimate",
+      "order": 80,
+      "writes": "own",
+      "description": "One model call per finding, with the band as an anchor and the engagement override table consulted first. Rationale required on every estimate. Falls back to the band when no model is configured and says so in the report.",
+      "retryable": true,
+      "maxAttempts": 2,
+      "failureIsFatal": false,
+      "orderNote": "Before score, not after it. The score stage is what persists the findings, and the estimator is what attaches an estimate to each one, so scoring first saves every finding with no estimate on it. This contract declared the other order for months while the worker ran this one, and nothing noticed because nothing held the two together."
+    },
+    {
       "id": "score",
       "name": "Score",
-      "order": 80,
+      "order": 90,
       "writes": "own",
       "description": "The low code ratio, the debt profile per domain, the lifecycle position and the comparison against a previous run where one exists. Every number carries its own definition into the export.",
       "retryable": true,
       "maxAttempts": 2,
       "failureIsFatal": true
-    },
-    {
-      "id": "estimate",
-      "name": "Estimate",
-      "order": 90,
-      "writes": "own",
-      "description": "One model call per finding, with the band as an anchor and the engagement override table consulted first. Rationale required on every estimate. Falls back to the band when no model is configured and says so in the report.",
-      "retryable": true,
-      "maxAttempts": 2,
-      "failureIsFatal": false
     },
     {
       "id": "backlog",
@@ -187,12 +185,103 @@
       "failureIsFatal": false
     }
   ],
-
   "deliverables": [
-    { "id": "managementReport", "name": "Assessment report", "format": "pdf", "description": "The document a client reads. Findings, the ratio, the debt profile, the modernisation options and the estimate with its assumptions." },
-    { "id": "findingsWorkbook", "name": "Findings", "format": "xlsx", "description": "Every finding, one row each, with component, rule, severity, evidence, estimate range, rationale and confidence. The sheet that gets filtered in a workshop." },
-    { "id": "backlogWorkbook", "name": "Backlog", "format": "xlsx", "description": "The work items as they would be created, with acceptance criteria and points. Exported whether or not anybody publishes to DevOps." },
-    { "id": "inventory", "name": "Component inventory", "format": "xlsx", "description": "Everything found, by type and solution, with craft and lifecycle. The appendix nobody reads and everybody asks for." },
-    { "id": "comparison", "name": "Comparison", "format": "pdf", "description": "This run against a previous one." }
-  ]
+    {
+      "id": "managementReport",
+      "name": "Assessment report",
+      "format": "pdf",
+      "description": "The document a client reads. Findings, the ratio, the debt profile, the modernisation options and the estimate with its assumptions."
+    },
+    {
+      "id": "findingsWorkbook",
+      "name": "Findings",
+      "format": "xlsx",
+      "description": "Every finding, one row each, with component, rule, severity, evidence, estimate range, rationale and confidence. The sheet that gets filtered in a workshop."
+    },
+    {
+      "id": "backlogWorkbook",
+      "name": "Backlog",
+      "format": "xlsx",
+      "description": "The work items as they would be created, with acceptance criteria and points. Exported whether or not anybody publishes to DevOps."
+    },
+    {
+      "id": "inventory",
+      "name": "Component inventory",
+      "format": "xlsx",
+      "description": "Everything found, by type and solution, with craft and lifecycle. The appendix nobody reads and everybody asks for."
+    },
+    {
+      "id": "comparison",
+      "name": "Comparison",
+      "format": "pdf",
+      "description": "This run against a previous one."
+    }
+  ],
+  "checks": [
+    {
+      "id": "environmentHealth",
+      "name": "Environment health",
+      "description": "What the identity can actually read, which evidence sources are therefore reachable, and the privileges it holds. Part of connect, reported separately.",
+      "defaultOn": true,
+      "cost": "Seconds.",
+      "whenOff": "The run proceeds on whatever the credential happens to reach, and a source that is unreachable is indistinguishable from one that is empty."
+    },
+    {
+      "id": "solutionChecker",
+      "name": "Solution checker",
+      "description": "Microsoft's own static analysis, submitted as a job on their side and waited for.",
+      "defaultOn": true,
+      "defaultFromMode": "runsChecker",
+      "cost": "The slowest part of a run by a wide margin, and the usual reason an assessment takes hours rather than minutes.",
+      "whenOff": "Every rule whose evidence is a checker result is reported as not assessed, never as passing."
+    },
+    {
+      "id": "modelEstimates",
+      "name": "Model estimates",
+      "description": "Per component estimates with a rationale, rather than the band default for the component type.",
+      "defaultOn": true,
+      "defaultFromMode": "estimates",
+      "cost": "Minutes, and a model endpoint.",
+      "whenOff": "Estimates fall back to band defaults, which is what a quick scan does. The report says which of the two it used."
+    }
+  ],
+  "solutionSelection": {
+    "description": "A run lists what the environment holds, stops, and waits for somebody to say what it should read. The pause is a run status rather than a second run, so one discovery is one row and one timeline.",
+    "whyNotEverything": "Most of what a Dataverse environment contains is Microsoft's own first party solutions. Reading them costs the longest part of a run and produces a report about Dynamics rather than about the client's work.",
+    "whyNotSilently": "A report covering four of nineteen solutions and a report covering all nineteen look identical on the cover page. Every solution found is recorded whether or not it was chosen, so the run can always say what it did not look at.",
+    "firstPartyDefaultsToUnselected": true,
+    "firstParty": {
+      "description": "How a solution is judged to be Microsoft's rather than the client's. Deliberately generous in what it treats as first party and conservative about the consequence, which is only that a box starts unticked and somebody can tick it.",
+      "publisherPrefixes": [
+        "msdyn",
+        "msdynce",
+        "msdyn365",
+        "msft",
+        "mscrm",
+        "microsoft",
+        "msevtmgt",
+        "msgxp",
+        "msfp",
+        "msdynmkt"
+      ],
+      "publisherNameContains": [
+        "microsoft",
+        "dynamics 365",
+        "microsoftdynamics"
+      ],
+      "uniqueNames": [
+        "Active",
+        "Basic",
+        "System",
+        "Default",
+        "ActivityFeeds",
+        "FieldService",
+        "msdynce_SalesPatch",
+        "MicrosoftFlowExtensionsCore",
+        "CustomerService",
+        "SalesPatch"
+      ],
+      "note": "A judgement, not a fact the platform states. The prefix is the strongest signal because a publisher name can be renamed and a solution cannot change the prefix its components carry."
+    }
+  }
 }

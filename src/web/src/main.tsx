@@ -60,9 +60,22 @@ const pageDescriptionKeys: Record<string, string> = {
 
 /** The workspace the address bar names, or the overview when it names none. */
 function viewFromHash(): string {
-  const name = decodeURIComponent(window.location.hash.replace('#', '')).trim();
+  const name = decodeURIComponent(window.location.hash.replace('#', '')).split('/')[0].trim();
   // A stale bookmark or a typo lands on the overview rather than on a blank screen.
   return addressable.includes(name) ? name : 'Overview';
+}
+
+/**
+ * The engagement the URL is asking for, if any.
+ *
+ * The second half of `#Findings/3f2a…`. Absent on a first visit and on every link written
+ * before this existed, which is why it is only ever one candidate among three: the shell
+ * falls back to what the person was last looking at, and then to the first engagement they
+ * hold.
+ */
+function engagementFromHash(): string | null {
+  const parts = decodeURIComponent(window.location.hash.replace('#', '')).split('/');
+  return parts.length > 1 && parts[1].trim().length > 0 ? parts[1].trim() : null;
 }
 
 function NavItem({ workspace, label, active, disabled, disabledReason, onOpen }: {
@@ -135,12 +148,29 @@ function App() {
 
   // replaceState rather than pushState: moving between workspaces is not navigation a reader
   // expects the back button to unwind one step at a time.
+  //
+  // The engagement rides in the hash as well as the view, so a refresh returns to the same
+  // client rather than to whichever engagement sorts first, and so a link pasted into a chat
+  // opens what the sender was looking at.
   useEffect(() => {
-    const target = `#${activeView}`;
+    const target = engagement ? `#${activeView}/${engagement.engagementId}` : `#${activeView}`;
     if (window.location.hash !== target) {
       window.history.replaceState(null, '', target);
     }
-  }, [activeView]);
+  }, [activeView, engagement]);
+
+  // Recorded against the person, not the browser, because the browser is what a sign-in
+  // redirect throws away. Failures are ignored on purpose: not remembering where somebody
+  // was is a small annoyance, and an error toast about it would be a larger one.
+  useEffect(() => {
+    if (!engagement || !registered) return;
+
+    void fetch('/api/me/engagement', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ engagementId: engagement.engagementId })
+    }).catch(() => { /* Nothing to tell anybody. They are still where they wanted to be. */ });
+  }, [engagement, registered]);
 
   useEffect(() => {
     const onHashChange = () => setActiveView(viewFromHash());
@@ -182,7 +212,21 @@ function App() {
             const list: Engagement[] = await engagementResponse.json();
             if (cancelled) return;
             setEngagements(list);
-            setEngagement((current) => current ?? list[0] ?? null);
+
+            // Where they were last time, then whatever the URL says, then the first in the
+            // list. The order matters and the last entry is the bug this replaces: it was
+            // the only rule, so every reader landed in whichever engagement sorted first,
+            // which is the demonstration estate. Signing in redirects through Entra and
+            // returns to a freshly loaded page, so it happened on exactly the occasion
+            // somebody had just come to look at a client.
+            const remembered = auth.lastEngagementId as string | undefined;
+            const asked = engagementFromHash();
+
+            setEngagement((current) => current
+              ?? list.find((one) => one.engagementId === asked)
+              ?? list.find((one) => one.engagementId === remembered)
+              ?? list[0]
+              ?? null);
           }
         }
       } catch {

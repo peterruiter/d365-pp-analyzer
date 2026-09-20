@@ -11,7 +11,18 @@ export const statusTag: Record<string, string> = {
   pending: 'muted',
   running: 'review',
   awaitingApproval: 'warning',
+
+  // Waiting for a person, like awaitingApproval, and wearing the same colour for the same
+  // reason: the product is not stuck, somebody is holding it, and amber is what says that
+  // without reading as a fault.
+  awaitingSelection: 'warning',
   succeeded: 'complete',
+
+  // Not green. A run that reached three quarters of an estate and one that reached all of
+  // it must not look the same on a screen, because the report from the first is missing
+  // things nobody will notice.
+  partial: 'warning',
+  skipped: 'muted',
   failed: 'danger',
   cancelled: 'muted'
 };

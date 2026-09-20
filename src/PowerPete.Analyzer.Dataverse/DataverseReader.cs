@@ -162,6 +162,17 @@ public sealed class DataverseReader(HttpClient client)
         var links = new List<ComponentLink>();
         var reads = new List<EntityRead>();
 
+        // What the chosen solutions actually contain, read before anything else so a failure
+        // to work it out stops the run rather than silently widening the scope back to the
+        // whole environment.
+        //
+        // This parameter existed, was documented as "which solutions are in scope", was
+        // passed an empty list by its only caller and was never read by this method. A read
+        // of a client environment therefore always covered everything, including forty-odd
+        // solutions of Microsoft's, which is the slowest possible way to produce a report
+        // about somebody else's product.
+        var scope = await ScopeAsync(solutionUniqueNames, cancellationToken).ConfigureAwait(false);
+
         var identity = (await TestAsync(cancellationToken).ConfigureAwait(false)).Identity;
 
         await Attempt(reads, "solution", () => ReadSolutionsAsync(components, cancellationToken)).ConfigureAwait(false);
@@ -186,8 +197,112 @@ public sealed class DataverseReader(HttpClient client)
                 "Every rule that needs it is reported as not assessed rather than as passing."));
         }
 
+        if (scope is not null)
+        {
+            components.RemoveAll(component => !InScope(component, scope, solutionUniqueNames));
+
+            // The counts are recounted rather than left as read, so every number downstream
+            // describes the same set of components. A read that says it found four hundred
+            // tables beside a report that discusses twelve is a report nobody trusts.
+            for (var index = 0; index < reads.Count; index++)
+            {
+                var read = reads[index];
+                if (!read.Succeeded) continue;
+
+                reads[index] = read with
+                {
+                    RecordCount = components.Count(component =>
+                        string.Equals(component.TypeId, read.ComponentTypeId, StringComparison.Ordinal))
+                };
+            }
+        }
+
         return new Result(components, links, reads, identity);
     }
+
+    /// <summary>
+    /// The platform identifiers the chosen solutions contain.
+    /// </summary>
+    /// <remarks>
+    /// Null when nothing was chosen, which means everything is in scope. An empty set is a
+    /// different answer: it means the chosen solutions are genuinely empty, and returning
+    /// null for that would read the whole environment instead.
+    ///
+    /// Read from solutioncomponent rather than inferred from a prefix. A prefix says who
+    /// published a component, not which solution carries it, and the two diverge the moment
+    /// anybody adds an existing table to a new solution.
+    /// </remarks>
+    /// <param name="solutionUniqueNames">The chosen solutions.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    private async Task<HashSet<Guid>?> ScopeAsync(
+        IReadOnlyList<string> solutionUniqueNames, CancellationToken cancellationToken)
+    {
+        if (solutionUniqueNames.Count == 0) return null;
+
+        var solutionIds = new List<Guid>();
+        var filter = string.Join(" or ", solutionUniqueNames.Select(name => $"uniquename eq '{Escape(name)}'"));
+
+        await foreach (var solution in PageAsync(
+            $"solutions?$select=solutionid&$filter={Uri.EscapeDataString(filter)}",
+            cancellationToken).ConfigureAwait(false))
+        {
+            if (solution.TryGetProperty("solutionid", out var id)
+                && Guid.TryParse(id.GetString(), out var parsed))
+            {
+                solutionIds.Add(parsed);
+            }
+        }
+
+        var objectIds = new HashSet<Guid>();
+
+        // One request per solution rather than one filter listing them all. A filter naming
+        // nineteen solutions is a URL long enough to be refused, and the refusal reads as a
+        // bad request rather than as a URL length.
+        foreach (var solutionId in solutionIds)
+        {
+            await foreach (var component in PageAsync(
+                $"solutioncomponents?$select=objectid&$filter=_solutionid_value eq {solutionId}",
+                cancellationToken).ConfigureAwait(false))
+            {
+                if (component.TryGetProperty("objectid", out var objectId)
+                    && Guid.TryParse(objectId.GetString(), out var parsed))
+                {
+                    objectIds.Add(parsed);
+                }
+            }
+        }
+
+        return objectIds;
+    }
+
+    /// <summary>Whether one component belongs to the chosen solutions.</summary>
+    /// <remarks>
+    /// Two ways in, because the readers fill two different things. Most carry the platform
+    /// identifier, which is what solutioncomponent lists. The solution read itself carries
+    /// the unique name, and a solution somebody chose has to survive the filter that the
+    /// choice created.
+    /// </remarks>
+    /// <param name="component">The component.</param>
+    /// <param name="scope">Identifiers the chosen solutions contain.</param>
+    /// <param name="chosen">The chosen unique names.</param>
+    private static bool InScope(
+        DiscoveredComponent component, HashSet<Guid> scope, IReadOnlyList<string> chosen)
+    {
+        if (component.SolutionUniqueName is { Length: > 0 } solution
+            && chosen.Contains(solution, StringComparer.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return component.PlatformId is { Length: > 0 } platformId
+            && Guid.TryParse(platformId, out var id)
+            && scope.Contains(id);
+    }
+
+    /// <summary>A literal safe to put in an OData filter.</summary>
+    /// <param name="value">The literal.</param>
+    private static string Escape(string value) =>
+        value.Replace("'", "''", StringComparison.Ordinal);
 
     /// <summary>
     /// Runs one read and records what happened, whichever it was.

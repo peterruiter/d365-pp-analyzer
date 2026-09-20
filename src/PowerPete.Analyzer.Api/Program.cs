@@ -314,6 +314,46 @@ async Task<IResult?> Denied(HttpContext context, Guid engagementId, string minim
     return null;
 }
 
+// The pipeline's stages, from the contract, read once.
+//
+// From the contract rather than from a list here, so a stage added to analysis-stages.json
+// appears on the screen that watches a run without anybody editing this file. That is the
+// same reason the stage list exists in the contract at all, and a second copy here would be
+// a second copy to fall out of step with the worker.
+List<PipelineStage>? pipelineStages = null;
+
+List<PipelineStage> PipelineStages()
+{
+    if (pipelineStages is not null) return pipelineStages;
+
+    var path = ContractFiles.Path("analysis-stages.json");
+
+    if (!File.Exists(path))
+    {
+        pipelineStages = [];
+        return pipelineStages;
+    }
+
+    using var document = JsonDocument.Parse(File.ReadAllText(path));
+
+    // Materialised inside the using. A lazy sequence handed to the serialiser is read after
+    // this method returns and after the document is disposed, which is a mistake this file
+    // has already made once and which presents as an empty screen rather than as an error.
+    pipelineStages =
+    [
+        .. document.RootElement.GetProperty("stages").EnumerateArray()
+            .Where(stage => PipelineOrder.Stages.Contains(stage.GetProperty("id").GetString() ?? string.Empty))
+            .OrderBy(stage => stage.GetProperty("order").GetInt32())
+            .Select(stage => new PipelineStage(
+                stage.GetProperty("id").GetString() ?? string.Empty,
+                stage.GetProperty("name").GetString() ?? string.Empty,
+                stage.TryGetProperty("description", out var description) ? description.GetString() ?? string.Empty : string.Empty,
+                stage.TryGetProperty("retryable", out var retryable) && retryable.GetBoolean()))
+    ];
+
+    return pipelineStages;
+}
+
 // --------------------------------------------------------------------- shell --
 app.MapGet("/api/version", () => Results.Ok(new
 {
@@ -505,9 +545,179 @@ app.MapGet("/api/runs/{runId:guid}", async (HttpContext context, WorkspaceStore 
     if (run is null) return Results.NotFound();
     if (await Denied(context, run.EngagementId, EngagementRoles.Viewer) is { } denied) return denied;
 
-    var stages = await store.GetCompletedStagesAsync(runId, context.RequestAborted);
-    return Results.Ok(new { run, completedStages = stages.Keys });
+    // Every stage in pipeline order with where it got to, rather than the identifiers of the
+    // ones that finished. Watching a run is what a consultant does while a client waits, and
+    // a list of what has completed cannot say which stage is running now, how long it has
+    // been running, or which one stopped.
+    var recorded = (await store.ListStagesAsync(runId, context.RequestAborted))
+        .ToDictionary(stage => stage.StageId, StringComparer.Ordinal);
+
+    var stages = PipelineStages()
+        .Select((stage, order) =>
+        {
+            recorded.TryGetValue(stage.Id, out var state);
+
+            return new
+            {
+                stageId = stage.Id,
+                name = stage.Name,
+                stage.Description,
+                order,
+
+                // Pending rather than absent. A stage with no row has not been reached, and
+                // leaving it out of the list would make a run that stopped at stage three
+                // look like a pipeline with three stages in it.
+                status = state?.Status ?? "pending",
+                attempt = state?.Attempt ?? 0,
+                startedUtc = state?.StartedUtc,
+                completedUtc = state?.CompletedUtc,
+                error = state?.Error,
+                stage.Retryable
+            };
+        })
+        .ToList();
+
+    var completed = stages.Count(stage => stage.status is "succeeded" or "partial" or "skipped");
+
+    var current = stages.FirstOrDefault(stage => stage.status is "running" or "awaitingSelection")
+        ?? stages.FirstOrDefault(stage => stage.status == "failed");
+
+    return Results.Ok(new
+    {
+        run,
+        stages,
+        stagesComplete = completed,
+        stagesTotal = stages.Count,
+        currentStageName = current?.name
+    });
 }).RequireAuthorization();
+
+// ------------------------------------------------------------ what to read --
+
+// The picker. A run stops after listing the environment and waits here, because most of what
+// a Dataverse environment holds is Microsoft's own solutions: reading them is the longest
+// part of a run and produces a report about Dynamics rather than about the client's work.
+app.MapGet("/api/runs/{runId:guid}/solutions", async (HttpContext context, WorkspaceStore store, Guid runId) =>
+{
+    var run = await store.GetRunAsync(runId, context.RequestAborted);
+    if (run is null) return Results.NotFound();
+    if (await Denied(context, run.EngagementId, EngagementRoles.Viewer) is { } denied) return denied;
+
+    var solutions = await store.ListRunSolutionsAsync(runId, context.RequestAborted);
+    var selection = await store.GetSelectionAsync(runId, context.RequestAborted);
+    var defaults = RunChecks.ForMode(run.Mode);
+
+    return Results.Ok(new
+    {
+        runId,
+        run.Mode,
+
+        // Whether the run is actually waiting, as opposed to the list being available to
+        // read afterwards. The screen shows a picker for one and a record for the other.
+        awaiting = run.Status == "awaitingSelection",
+
+        solutions = solutions.Select(solution => new
+        {
+            solution.UniqueName,
+            solution.FriendlyName,
+            solution.Version,
+            solution.IsManaged,
+            solution.PublisherPrefix,
+            solution.PublisherName,
+            solution.ComponentCount,
+            solution.IsFirstParty,
+
+            // The tick the box starts with. Null means nobody has been asked, and the
+            // default is everything that is not Microsoft's.
+            selected = solution.IsSelected ?? !solution.IsFirstParty
+        }),
+
+        checks = new
+        {
+            solutionChecker = selection?.Checks.SolutionChecker ?? defaults.SolutionChecker,
+            modelEstimates = selection?.Checks.ModelEstimates ?? defaults.ModelEstimates,
+            environmentHealth = selection?.Checks.EnvironmentHealth ?? defaults.EnvironmentHealth
+        }
+    });
+}).RequireAuthorization();
+
+app.MapPost("/api/runs/{runId:guid}/selection",
+    async (HttpContext context, WorkspaceStore store, Guid runId, ChooseSolutions request) =>
+{
+    var run = await store.GetRunAsync(runId, context.RequestAborted);
+    if (run is null) return Results.NotFound();
+    if (await Denied(context, run.EngagementId, EngagementRoles.Contributor) is { } denied) return denied;
+
+    if (run.Status != "awaitingSelection")
+    {
+        // Refused rather than recorded. A selection against a run that has already read the
+        // environment would sit in the database looking like the scope of a report it had
+        // nothing to do with.
+        return Results.BadRequest(new
+        {
+            error = $"This run is {run.Status}, not waiting for a selection. Start a new run to analyse a "
+                  + "different set of solutions."
+        });
+    }
+
+    var chosen = request.Solutions ?? [];
+
+    await store.RecordSelectionAsync(
+        runId,
+        chosen,
+        new RunCheckChoices(request.SolutionChecker, request.ModelEstimates, request.EnvironmentHealth),
+        UserId(context.User),
+        context.RequestAborted);
+
+    return Results.Accepted($"/api/runs/{runId}", new
+    {
+        resumed = true,
+        chosen = chosen.Count,
+        note = chosen.Count == 0
+            ? "Nothing was chosen, so the run will report an unread estate rather than a clean one."
+            : null
+    });
+}).RequireAuthorization();
+
+// --------------------------------------------------------------- run again --
+
+// From a stage rather than from the beginning, because a run that failed at the checker after
+// forty minutes of extraction should not pay for the extraction twice.
+app.MapPost("/api/runs/{runId:guid}/stages/{stageId}/retry",
+    async (HttpContext context, WorkspaceStore store, Guid runId, string stageId) =>
+{
+    var run = await store.GetRunAsync(runId, context.RequestAborted);
+    if (run is null) return Results.NotFound();
+    if (await Denied(context, run.EngagementId, EngagementRoles.Contributor) is { } denied) return denied;
+
+    if (run.Status is "running" or "pending")
+    {
+        return Results.BadRequest(new
+        {
+            error = "This run is still going. Wait for it to stop before running a stage again, or two "
+                  + "workers will be writing the same findings."
+        });
+    }
+
+    if (!PipelineStages().Any(stage => string.Equals(stage.Id, stageId, StringComparison.Ordinal)))
+    {
+        return Results.BadRequest(new { error = $"'{stageId}' is not a stage of this pipeline." });
+    }
+
+    await store.QueueCommandAsync(runId, "retryStage", stageId, UserId(context.User), context.RequestAborted);
+
+    return Results.Accepted($"/api/runs/{runId}", new
+    {
+        queued = true,
+
+        // Said plainly, because it is the surprising part. Everything after the stage is
+        // discarded as well, and a person who expected one stage to re-run would otherwise
+        // watch the run redo an hour of work with no explanation.
+        note = "This stage and everything after it will run again."
+    });
+}).RequireAuthorization();
+
+// -------------------------------------------------------------- approval --
 
 // -------------------------------------------------------------------- approval --
 app.MapPost("/api/runs/{runId:guid}/approve",
@@ -1757,7 +1967,18 @@ app.MapGet("/api/auth/status", async (HttpContext context) =>
         access.IsGlobalAdmin,
         adminContact = adminContact,
         language = preferences.Language,
-        theme = preferences.Theme
+        theme = preferences.Theme,
+
+        // Where they were last time, but only if it still exists and is still theirs.
+        //
+        // Checked here rather than trusted, because an engagement can be deleted and a
+        // grant can be revoked between one sign-in and the next, and a shell that tried to
+        // open an engagement somebody no longer holds would show them a screen full of
+        // failed requests instead of the product.
+        lastEngagementId = preferences.LastEngagementId is { } last
+            && access.Holds(last, EngagementRoles.Viewer)
+                ? last
+                : (Guid?)null
     });
 });
 
@@ -1791,6 +2012,28 @@ app.MapPut("/api/me/theme", async (HttpContext context, SetTheme request) =>
 
     var store = context.RequestServices.GetRequiredService<AccessStore>();
     await store.SetThemeAsync(UserId(context.User), request.Theme, context.RequestAborted);
+
+    return Results.NoContent();
+}).RequireAuthorization();
+
+// Where somebody was working, so signing in puts them back there.
+//
+// Against the person rather than the browser. Signing in redirects through Entra and comes
+// back to a freshly loaded page, so a selection held in the browser is destroyed by the one
+// action most likely to come just before wanting it, and every reader landed in whichever
+// engagement sorted first. That is the demonstration estate.
+app.MapPut("/api/me/engagement", async (HttpContext context, SetEngagement request) =>
+{
+    ArgumentNullException.ThrowIfNull(request);
+
+    if (request.EngagementId is { } engagementId
+        && await Denied(context, engagementId, EngagementRoles.Viewer) is { } denied)
+    {
+        return denied;
+    }
+
+    var store = context.RequestServices.GetRequiredService<AccessStore>();
+    await store.SetLastEngagementAsync(UserId(context.User), request.EngagementId, context.RequestAborted);
 
     return Results.NoContent();
 }).RequireAuthorization();
@@ -2101,6 +2344,30 @@ internal sealed record CreateConnection(
 /// <summary>A replacement Syncfusion licence key.</summary>
 /// <param name="Key">The key, from the Syncfusion account.</param>
 internal sealed record SetSyncfusionKey(string Key);
+
+/// <summary>One stage of the pipeline, as the contract declares it.</summary>
+/// <param name="Id">Its identifier, which the worker records against.</param>
+/// <param name="Name">What it is called on screen.</param>
+/// <param name="Description">What it does, for somebody watching it happen.</param>
+/// <param name="Retryable">Whether running it again is a sensible thing to offer.</param>
+internal sealed record PipelineStage(string Id, string Name, string Description, bool Retryable);
+
+/// <summary>
+/// What a person chose when a run stopped to ask.
+/// </summary>
+/// <param name="Solutions">The unique names that were ticked. Empty is an answer, not an absence.</param>
+/// <param name="SolutionChecker">Whether to run Microsoft's checker, null to keep the mode's default.</param>
+/// <param name="ModelEstimates">Whether to estimate with a model, null to keep the mode's default.</param>
+/// <param name="EnvironmentHealth">Whether to report what the identity reaches, null to keep the mode's default.</param>
+internal sealed record ChooseSolutions(
+    IReadOnlyList<string>? Solutions,
+    bool? SolutionChecker,
+    bool? ModelEstimates,
+    bool? EnvironmentHealth);
+
+/// <summary>Where somebody was working.</summary>
+/// <param name="EngagementId">The engagement, or null to forget it.</param>
+internal sealed record SetEngagement(Guid? EngagementId);
 
 /// <summary>The language somebody reads the product in.</summary>
 /// <param name="Language">A locale code, or null to follow the default.</param>

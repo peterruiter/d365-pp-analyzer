@@ -81,10 +81,66 @@ public sealed record AnalysisRun(
 /// <summary>What the API asked the worker to do.</summary>
 /// <param name="CommandId">Its identifier.</param>
 /// <param name="RunId">Which run.</param>
-/// <param name="Command">start, retryStage, cancel, approve or publish.</param>
+/// <param name="Command">start, resume, retryStage, cancel, approve or publish.</param>
 /// <param name="StageId">Which stage, on a retry.</param>
 /// <param name="RequestedBy">Who asked.</param>
 public sealed record RunCommand(Guid CommandId, Guid RunId, string Command, string? StageId, string RequestedBy);
+
+/// <summary>One solution a run found in the environment, and whether it was chosen.</summary>
+/// <param name="RunId">Which run found it.</param>
+/// <param name="UniqueName">Its unique name, which is what the extract stage asks for.</param>
+/// <param name="FriendlyName">What it is called on screen.</param>
+/// <param name="Version">Its version.</param>
+/// <param name="IsManaged">Whether it is managed.</param>
+/// <param name="PublisherPrefix">The prefix stamped into every component inside it.</param>
+/// <param name="PublisherName">Who published it.</param>
+/// <param name="ComponentCount">How much is in it, where the environment says.</param>
+/// <param name="IsFirstParty">Whether it looked like Microsoft's rather than the client's.</param>
+/// <param name="IsSelected">Ticked, unticked, or null when nobody has been asked yet.</param>
+public sealed record RunSolution(
+    Guid RunId,
+    string UniqueName,
+    string? FriendlyName,
+    string? Version,
+    bool IsManaged,
+    string? PublisherPrefix,
+    string? PublisherName,
+    int? ComponentCount,
+    bool IsFirstParty,
+    bool? IsSelected);
+
+/// <summary>
+/// Which optional checks a run was told to do.
+/// </summary>
+/// <remarks>
+/// Every one is nullable and null means "whatever the mode says". The contract owns the
+/// default per mode, and storing a resolved value here would mean a mode whose default
+/// changes still applying the old one to every run that never expressed an opinion.
+/// </remarks>
+/// <param name="SolutionChecker">Microsoft's static analysis, the slowest part of a run.</param>
+/// <param name="ModelEstimates">Estimates with rationale rather than band defaults.</param>
+/// <param name="EnvironmentHealth">What the identity can actually read.</param>
+public sealed record RunCheckChoices(bool? SolutionChecker, bool? ModelEstimates, bool? EnvironmentHealth);
+
+/// <summary>What somebody told a paused run to do.</summary>
+/// <param name="Checks">Which optional checks to run.</param>
+/// <param name="Solutions">The unique names that were ticked.</param>
+public sealed record RunSelection(RunCheckChoices Checks, IReadOnlyList<string> Solutions);
+
+/// <summary>Where one stage of a run got to.</summary>
+/// <param name="StageId">Which stage.</param>
+/// <param name="Status">Where it is.</param>
+/// <param name="Attempt">How many times it has been tried.</param>
+/// <param name="StartedUtc">When it started.</param>
+/// <param name="CompletedUtc">When it finished.</param>
+/// <param name="Error">Why it did not.</param>
+public sealed record RunStageState(
+    string StageId,
+    string Status,
+    int Attempt,
+    DateTime? StartedUtc,
+    DateTime? CompletedUtc,
+    string? Error);
 
 /// <summary>
 /// Engagements, connections and runs.
@@ -110,6 +166,9 @@ public sealed class WorkspaceStore(string connectionString)
 
     /// <summary>The columns <see cref="AnalysisRun"/> declares.</summary>
     private const string RunColumns = "RunId, EngagementId, Mode, Status, SourceConnectionId, TargetConnectionId, BasedOnRunId, CreatedBy, CreatedUtc, StartedUtc, CompletedUtc, Error";
+
+    /// <summary>The solution columns, in the record's order, written once for the same reason.</summary>
+    private const string RunSolutionColumns = "RunId, UniqueName, FriendlyName, Version, IsManaged, PublisherPrefix, PublisherName, ComponentCount, IsFirstParty, IsSelected";
 
     private SqlConnection Connect() => new(connectionString);
 
@@ -772,6 +831,282 @@ public sealed class WorkspaceStore(string connectionString)
     /// person already had the right to queue. Every entry point a person reaches goes through
     /// ListEngagementsAsync, which filters by what they hold.
     /// </remarks>
+    /// <summary>
+    /// Records every solution a run found, and which of them start ticked.
+    /// </summary>
+    /// <remarks>
+    /// Every solution, not only the chosen ones. A report covering four of nineteen solutions
+    /// and a report covering all nineteen look identical on the cover page, so the list of
+    /// what was there and deliberately not read is the only thing that tells them apart
+    /// afterwards.
+    ///
+    /// Replaces rather than merges. A run listed twice, because somebody resumed it an hour
+    /// later, should describe the environment as it is now rather than the union of two
+    /// moments.
+    /// </remarks>
+    /// <param name="runId">Which run.</param>
+    /// <param name="solutions">What the environment reported, with the default tick.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task RecordRunSolutionsAsync(
+        Guid runId, IReadOnlyList<RunSolution> solutions, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(solutions);
+
+        await using var connection = Connect();
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            "DELETE FROM ops.RunSolution WHERE RunId = @runId;",
+            new { runId }, transaction, cancellationToken: cancellationToken));
+
+        foreach (var solution in solutions)
+        {
+            await connection.ExecuteAsync(new CommandDefinition(
+                $"""
+                 INSERT INTO ops.RunSolution ({RunSolutionColumns})
+                 VALUES (@RunId, @UniqueName, @FriendlyName, @Version, @IsManaged, @PublisherPrefix,
+                         @PublisherName, @ComponentCount, @IsFirstParty, @IsSelected);
+                 """,
+                solution with { RunId = runId }, transaction, cancellationToken: cancellationToken));
+        }
+
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>What a run found, in the order somebody would want to tick it.</summary>
+    /// <remarks>
+    /// The client's own solutions first, biggest first within that. The list exists to be
+    /// read and ticked, and the thing somebody came to analyse should not be below forty rows
+    /// of Microsoft's.
+    /// </remarks>
+    /// <param name="runId">Which run.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task<IReadOnlyList<RunSolution>> ListRunSolutionsAsync(
+        Guid runId, CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        var rows = await connection.QueryAsync<RunSolution>(new CommandDefinition(
+            $"""
+             SELECT {RunSolutionColumns} FROM ops.RunSolution
+             WHERE RunId = @runId
+             ORDER BY IsFirstParty, ISNULL(ComponentCount, 0) DESC, UniqueName;
+             """,
+            new { runId },
+            cancellationToken: cancellationToken));
+
+        return rows.ToList();
+    }
+
+    /// <summary>
+    /// Records what somebody chose, and releases the run to carry on.
+    /// </summary>
+    /// <remarks>
+    /// One transaction. A selection recorded without the command that resumes the run leaves
+    /// a run paused for ever against a question that has been answered, and a command without
+    /// the selection resumes it against the question nobody answered.
+    /// </remarks>
+    /// <param name="runId">Which run.</param>
+    /// <param name="selected">The unique names that were ticked.</param>
+    /// <param name="checks">Which optional checks to run, null meaning the mode's default.</param>
+    /// <param name="chosenBy">Who chose.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task RecordSelectionAsync(
+        Guid runId,
+        IReadOnlyCollection<string> selected,
+        RunCheckChoices checks,
+        string chosenBy,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(selected);
+        ArgumentNullException.ThrowIfNull(checks);
+
+        await using var connection = Connect();
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+
+        // Everything to false first, then the ticked ones to true. Setting only the ticked
+        // ones would leave a box unticked on a second pass still reading as selected from
+        // the first.
+        await connection.ExecuteAsync(new CommandDefinition(
+            "UPDATE ops.RunSolution SET IsSelected = 0 WHERE RunId = @runId;",
+            new { runId }, transaction, cancellationToken: cancellationToken));
+
+        if (selected.Count > 0)
+        {
+            await connection.ExecuteAsync(new CommandDefinition(
+                "UPDATE ops.RunSolution SET IsSelected = 1 WHERE RunId = @runId AND UniqueName IN @selected;",
+                new { runId, selected }, transaction, cancellationToken: cancellationToken));
+        }
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            MERGE ops.RunSelection AS target
+            USING (SELECT @runId AS RunId) AS source ON target.RunId = source.RunId
+            WHEN MATCHED THEN UPDATE SET
+                RunsChecker = @runsChecker, ModelEstimates = @modelEstimates,
+                EnvironmentHealth = @environmentHealth, ChosenUtc = SYSUTCDATETIME(), ChosenBy = @chosenBy
+            WHEN NOT MATCHED THEN
+                INSERT (RunId, RunsChecker, ModelEstimates, EnvironmentHealth, ChosenBy)
+                VALUES (@runId, @runsChecker, @modelEstimates, @environmentHealth, @chosenBy);
+            """,
+            new
+            {
+                runId,
+                runsChecker = checks.SolutionChecker,
+                modelEstimates = checks.ModelEstimates,
+                environmentHealth = checks.EnvironmentHealth,
+                chosenBy
+            },
+            transaction, cancellationToken: cancellationToken));
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            "UPDATE ops.AnalysisRun SET Status = 'pending' WHERE RunId = @runId AND Status = 'awaitingSelection';",
+            new { runId }, transaction, cancellationToken: cancellationToken));
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            INSERT INTO ops.RunCommand (CommandId, RunId, Command, RequestedBy)
+            VALUES (@commandId, @runId, 'resume', @chosenBy);
+            """,
+            new { commandId = Guid.NewGuid(), runId, chosenBy },
+            transaction, cancellationToken: cancellationToken));
+
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// What a run was told to do, or null when nobody has said yet.
+    /// </summary>
+    /// <remarks>
+    /// Null is the whole point. It is what tells the pipeline to stop and ask rather than to
+    /// read everything, and it is a different answer from "none of them".
+    /// </remarks>
+    /// <param name="runId">Which run.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task<RunSelection?> GetSelectionAsync(Guid runId, CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        var checks = await connection.QuerySingleOrDefaultAsync<RunCheckChoices>(new CommandDefinition(
+            """
+            SELECT RunsChecker AS SolutionChecker, ModelEstimates, EnvironmentHealth
+            FROM ops.RunSelection WHERE RunId = @runId;
+            """,
+            new { runId },
+            cancellationToken: cancellationToken));
+
+        if (checks is null) return null;
+
+        var chosen = await connection.QueryAsync<string>(new CommandDefinition(
+            "SELECT UniqueName FROM ops.RunSolution WHERE RunId = @runId AND IsSelected = 1;",
+            new { runId },
+            cancellationToken: cancellationToken));
+
+        return new RunSelection(checks, chosen.ToList());
+    }
+
+    /// <summary>
+    /// Forgets a stage and everything recorded after it, so a run can be resumed from there.
+    /// </summary>
+    /// <remarks>
+    /// Everything after it, not only the stage named, and that is the whole point. A stage
+    /// re-run on its own would write over what the stages behind it had already consumed: the
+    /// findings would come from one extraction and the score from another, the run would look
+    /// perfectly healthy, and nothing on the screen would say the two halves disagreed.
+    ///
+    /// Ordered by the stage list the caller passes rather than by a column, because the order
+    /// of the pipeline is the pipeline's to know. A second copy of it here is a second copy
+    /// to fall out of step.
+    /// </remarks>
+    /// <param name="runId">Which run.</param>
+    /// <param name="order">Every stage id, in pipeline order.</param>
+    /// <param name="fromStageId">The stage to run again.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task ClearStagesFromAsync(
+        Guid runId, IReadOnlyList<string> order, string fromStageId, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(order);
+
+        var at = order.ToList().IndexOf(fromStageId);
+
+        if (at < 0)
+        {
+            throw new InvalidOperationException(
+                $"'{fromStageId}' is not a stage of this pipeline, so there is nothing to run again from.");
+        }
+
+        var discarded = order.Skip(at).ToList();
+
+        await using var connection = Connect();
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            "DELETE FROM ops.RunStage WHERE RunId = @runId AND StageId IN @discarded;",
+            new { runId, discarded }, transaction, cancellationToken: cancellationToken));
+
+        // Back to pending, so the screen stops showing a finished run while the worker is
+        // about to start doing it again.
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            UPDATE ops.AnalysisRun
+            SET Status = 'pending', CompletedUtc = NULL, Error = NULL
+            WHERE RunId = @runId;
+            """,
+            new { runId }, transaction, cancellationToken: cancellationToken));
+
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Asks the worker to do something to a run that already exists.
+    /// </summary>
+    /// <param name="runId">Which run.</param>
+    /// <param name="command">start, resume, retryStage or cancel.</param>
+    /// <param name="stageId">Which stage, on a retry.</param>
+    /// <param name="requestedBy">Who asked.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task QueueCommandAsync(
+        Guid runId, string command, string? stageId, string requestedBy, CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            INSERT INTO ops.RunCommand (CommandId, RunId, Command, StageId, RequestedBy)
+            VALUES (@commandId, @runId, @command, @stageId, @requestedBy);
+            """,
+            new { commandId = Guid.NewGuid(), runId, command, stageId, requestedBy },
+            cancellationToken: cancellationToken));
+    }
+
+    /// <summary>
+    /// Every stage of a run with where it got to, for the screen that watches one.
+    /// </summary>
+    /// <remarks>
+    /// The whole row rather than the identifiers. Watching a run is what a consultant does
+    /// while a client waits, and "extract, running, four minutes" is the difference between a
+    /// product that is working and one that has hung.
+    /// </remarks>
+    /// <param name="runId">Which run.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task<IReadOnlyList<RunStageState>> ListStagesAsync(Guid runId, CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        var rows = await connection.QueryAsync<RunStageState>(new CommandDefinition(
+            """
+            SELECT StageId, Status, Attempt, StartedUtc, CompletedUtc, Error
+            FROM ops.RunStage WHERE RunId = @runId;
+            """,
+            new { runId },
+            cancellationToken: cancellationToken));
+
+        return rows.ToList();
+    }
+
     /// <param name="engagementId">Which engagement.</param>
     /// <param name="cancellationToken">Cancellation.</param>
     public async Task<Engagement?> GetEngagementAsync(Guid engagementId, CancellationToken cancellationToken)

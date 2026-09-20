@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using FluentAssertions;
 using PowerPete.Analyzer.Data;
 using PowerPete.Analyzer.Domain;
+using PowerPete.Analyzer.Pipeline;
 using Xunit;
 
 /// <summary>
@@ -737,6 +738,228 @@ public class DataLayerTests
         unreachable.Should().BeEmpty(
             "the template overwrites these with an empty value when they are not passed, so a "
             + "parameter the deployment script cannot pass is one that cannot survive a deployment");
+    }
+
+    [Fact]
+    public void Runs_the_stages_the_contract_declares_in_the_order_it_declares_them()
+    {
+        // PipelineOrder exists because two callers need the order without being able to
+        // build a stage: the worker, to know what "everything after this one" means when
+        // somebody re-runs a stage, and the API, to draw a timeline before a run has
+        // reached anything.
+        //
+        // A list like that is exactly the kind that falls quietly out of step. The way it
+        // would go wrong is a retry that discards the wrong stages, which looks like the
+        // product losing work for no reason.
+        var contract = Contracts.Read("analysis-stages");
+
+        var declared = contract.GetProperty("stages").EnumerateArray()
+            .Select(stage => (
+                Id: stage.GetProperty("id").GetString()!,
+                Order: stage.GetProperty("order").GetInt32()))
+            .OrderBy(stage => stage.Order)
+            .Select(stage => stage.Id)
+            .ToList();
+
+        // Not every declared stage is one the worker runs: normalise, approve and export
+        // are declared and handled elsewhere. What matters is that the ones it does run
+        // appear in the order the contract puts them in.
+        var run = PipelineOrder.Stages;
+
+        run.Should().OnlyHaveUniqueItems();
+
+        foreach (var stage in run)
+        {
+            declared.Should().Contain(
+                stage,
+                "the worker runs this stage and analysis-stages.json is where the pipeline is declared");
+        }
+
+        var expected = declared.Where(run.Contains).ToList();
+
+        run.Should().Equal(
+            expected,
+            "the worker's order and the contract's order have to be the same one, or running a stage "
+            + "again discards the wrong work");
+    }
+
+    [Fact]
+    public void Runs_the_checks_each_mode_says_it_runs()
+    {
+        // The defaults are resolved in code, once, at the top of a run, and declared in the
+        // contract beside the mode they belong to. A drift between the two is a report that
+        // says it ran the checker and did not.
+        var contract = Contracts.Read("analysis-stages");
+
+        foreach (var mode in contract.GetProperty("modes").EnumerateArray())
+        {
+            var id = mode.GetProperty("id").GetString()!;
+            var checks = RunChecks.ForMode(id);
+
+            checks.SolutionChecker.Should().Be(
+                mode.GetProperty("runsChecker").GetBoolean(),
+                $"analysis-stages.json says whether {id} runs the checker");
+
+            // "model" is the only value that means a model was asked. bandDefault and
+            // asApproved both mean it was not.
+            checks.ModelEstimates.Should().Be(
+                mode.GetProperty("estimates").GetString() == "model",
+                $"analysis-stages.json says how {id} estimates");
+        }
+    }
+
+    [Fact]
+    public void Knows_a_first_party_solution_by_what_the_contract_says()
+    {
+        // Which solutions start unticked is a judgement about a client's estate, so it is
+        // declared rather than buried. Being wrong is cheap by design: the only consequence
+        // is a box in the wrong position that somebody can move.
+        var selection = Contracts.Read("analysis-stages").GetProperty("solutionSelection");
+        var firstParty = selection.GetProperty("firstParty");
+
+        static List<string> Values(JsonElement element, string name) =>
+            [.. element.GetProperty(name).EnumerateArray().Select(value => value.GetString()!)];
+
+        FirstPartySolutions.PublisherPrefixes.Should().BeEquivalentTo(Values(firstParty, "publisherPrefixes"));
+        FirstPartySolutions.PublisherNameFragments.Should().BeEquivalentTo(Values(firstParty, "publisherNameContains"));
+        FirstPartySolutions.UniqueNames.Should().BeEquivalentTo(Values(firstParty, "uniqueNames"));
+
+        selection.GetProperty("firstPartyDefaultsToUnselected").GetBoolean().Should().BeTrue(
+            "the picker unticks them by default and the contract is where that is written down");
+    }
+
+    [Fact]
+    public void Tells_a_client_solution_from_one_of_Microsofts()
+    {
+        // The positive control matters more than the negatives here. A rule that called
+        // everything first party would tick nothing by default, and the run would read an
+        // empty estate while looking like it had asked.
+        var theirs = new SolutionSummary("nwu_core", "Northwind Core", "1.0", false, "nwu", "Northwind BV", 140);
+
+        FirstPartySolutions.IsFirstParty(theirs).Should().BeFalse();
+
+        FirstPartySolutions.IsFirstParty(
+            new SolutionSummary("msdyn_Sales", "Sales", "9.0", true, "msdyn", "Dynamics 365", 4000))
+            .Should().BeTrue("the prefix is Microsoft's");
+
+        FirstPartySolutions.IsFirstParty(
+            new SolutionSummary("SomeThing", "Something", "1.0", true, "abc", "Microsoft Corporation", 10))
+            .Should().BeTrue("the publisher names them even where the prefix does not");
+
+        FirstPartySolutions.IsFirstParty(
+            new SolutionSummary("Active", "Active", null, false, "nwu", "Northwind BV", null))
+            .Should().BeTrue("the default solution holds everything customised outside a solution");
+    }
+
+    [Theory]
+    [InlineData("CK_AnalysisRun_Mode", @"'(?<value>[a-zA-Z]+)'", "Mode")]
+    [InlineData("CK_AnalysisRun_Status", @"'(?<value>[a-zA-Z]+)'", "Status")]
+    [InlineData("CK_RunStage_Status", @"'(?<value>[a-zA-Z]+)'", "StageStatus")]
+    [InlineData("CK_RunCommand_Command", @"'(?<value>[a-zA-Z]+)'", "Command")]
+    public void Never_writes_a_value_a_check_constraint_would_refuse(string constraint, string pattern, string kind)
+    {
+        // The most expensive defect this product has shipped, twice, in one family.
+        //
+        // The web page asked for a run mode of "discover", which is a real mode in the
+        // sibling product this page was ported from and not one here. The database refused
+        // the insert on CK_AnalysisRun_Mode, the API threw, the response was not the shape
+        // the page reads errors from, and the button did nothing at all, visibly, from the
+        // day it was written. Nobody could have found it by reading either side: both were
+        // internally consistent.
+        //
+        // The same shape was one line away a second time, when a "resume" command was added
+        // and CK_RunCommand_Command allowed five values that did not include it.
+        //
+        // So: every literal the code writes into one of these columns has to be one the
+        // constraint accepts. Scanned rather than listed, because a list here would be a
+        // third copy of the same set.
+        var allowed = ConstraintValues(constraint, pattern);
+
+        allowed.Should().NotBeEmpty($"{constraint} has to be readable from the migrations for this to mean anything");
+
+        var written = kind switch
+        {
+            // Anchored on the request that starts a run, not on the word "mode". A bare
+            // mode: 'x' matches an administration screen's own state and reports a failure
+            // about nothing, and a test that invents failures gets switched off.
+            "Mode" => Literals(@"/runs`,\s*'POST',\s*\{\s*mode:\s*'(?<value>[a-zA-Z]+)'")
+                // Named receivers, because a connection has a Mode too and its values are a
+                // different set entirely. Matching the property name alone reported
+                // "offlineZip" as an illegal run mode, which is a failure about nothing.
+                .Concat(Literals(@"(?:run|state|request)\.Mode\s*(?:==|!=|is)\s*""(?<value>[a-zA-Z]+)""")),
+            // Two ways in, because the store writes one of these through a helper and one
+            // as a literal inside a VALUES list. The first version of this checked only the
+            // helper, passed cleanly against the missing "resume" it was written to catch,
+            // and had to be fixed before it meant anything.
+            "Command" => Literals(@"QueueCommandAsync\([^,]+,\s*""(?<value>[a-zA-Z]+)""")
+                .Concat(Literals(@"INTO ops\.RunCommand[^;]*?VALUES\s*\([^)]*?'(?<value>[a-zA-Z]+)'")),
+            "Status" => Literals(@"SetRunStatusAsync\([^,]+,\s*""(?<value>[a-zA-Z]+)""")
+                .Concat(Literals(@"Status = '(?<value>[a-zA-Z]+)'")),
+            _ => Literals(@"StageOutcome\(""(?<value>[a-zA-Z]+)"""),
+        };
+
+        var refused = written.Distinct(StringComparer.Ordinal)
+            .Where(value => !allowed.Contains(value, StringComparer.Ordinal))
+            .ToList();
+
+        refused.Should().BeEmpty(
+            $"{constraint} would refuse these, and a refused insert surfaces as a button that does nothing "
+            + "rather than as an error anybody can read");
+    }
+
+    /// <summary>The literals one check constraint permits, read out of the migrations.</summary>
+    private static List<string> ConstraintValues(string constraint, string pattern)
+    {
+        var root = Directory.GetParent(Solution())!.FullName;
+        var values = new List<string>();
+
+        // Later migrations rebuild constraints that earlier ones created, so the last
+        // definition wins, exactly as it does in the database.
+        foreach (var file in Directory
+            .EnumerateFiles(Path.Combine(root, "db", "migrations"), "*.sql")
+            .OrderBy(file => file, StringComparer.Ordinal))
+        {
+            var text = File.ReadAllText(file);
+
+            foreach (Match definition in Regex.Matches(
+                text,
+                $@"CONSTRAINT {constraint} CHECK \([^)]*IN\s*\((?<values>[^)]*)\)",
+                RegexOptions.Singleline,
+                TimeSpan.FromSeconds(5)))
+            {
+                values.Clear();
+
+                values.AddRange(Regex
+                    .Matches(definition.Groups["values"].Value, pattern, RegexOptions.None, TimeSpan.FromSeconds(5))
+                    .Select(match => match.Groups["value"].Value));
+            }
+        }
+
+        return values;
+    }
+
+    /// <summary>Every literal in the product's own source that one pattern picks out.</summary>
+    private static List<string> Literals(string pattern)
+    {
+        var found = new List<string>();
+
+        var roots = new[] { Solution(), Path.Combine(Directory.GetParent(Solution())!.FullName, "src", "web", "src") };
+
+        foreach (var root in roots.Where(Directory.Exists))
+        {
+            foreach (var file in Directory
+                .EnumerateFiles(root, "*.*", SearchOption.AllDirectories)
+                .Where(file => file.EndsWith(".cs", StringComparison.Ordinal) || file.EndsWith(".tsx", StringComparison.Ordinal))
+                .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+                .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal)))
+            {
+                found.AddRange(Regex
+                    .Matches(File.ReadAllText(file), pattern, RegexOptions.None, TimeSpan.FromSeconds(5))
+                    .Select(match => match.Groups["value"].Value));
+            }
+        }
+
+        return found;
     }
 
     /// <summary>Every environment variable name the container definition sets.</summary>

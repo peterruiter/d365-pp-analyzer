@@ -3,6 +3,7 @@ import { useCan } from './access';
 import { useT, useLanguage } from './i18n';
 import { statusTag } from './tags';
 import { getJson, sendJson, when, type EntityRead, type Run } from './workspace';
+import { RunProgress } from './RunProgress';
 
 /** What the discovery detail returns for one run. */
 type Discovery = {
@@ -19,6 +20,10 @@ export function RunsPage({ engagementId }: { engagementId: string }) {
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Which run the page is watching. Set when one is started, and set by the list when
+  // somebody opens a run that has not finished.
+  const [watching, setWatching] = useState<string | null>(null);
+
   async function load() {
     const result = await getJson<Run[]>(`/api/engagements/${engagementId}/runs`);
     setRuns(result.data ?? []);
@@ -27,10 +32,34 @@ export function RunsPage({ engagementId }: { engagementId: string }) {
 
   useEffect(() => { void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [engagementId]);
 
+  // A run the page has not been told about can still be going: somebody started it on
+  // another machine, or the browser was closed and reopened. Picking the newest unfinished
+  // one up means the timeline is there when they come back to it.
+  useEffect(() => {
+    if (watching || !runs) return;
+
+    const moving = runs.find((run) => run.status === 'pending' || run.status === 'running'
+      || run.status === 'awaitingSelection');
+
+    if (moving) setWatching(moving.runId);
+  }, [runs, watching]);
+
   async function startDiscovery() {
     setStarting(true);
-    const result = await sendJson<Run>(`/api/engagements/${engagementId}/runs`, 'POST', { mode: 'discover' });
+
+    // 'assessment', not 'discover'. This page was ported from the migrator, where discover
+    // is one of five real modes; here the four are quickScan, assessment, publish and
+    // compare. The database refused every insert on a check constraint, the API threw, and
+    // the button did nothing at all, visibly, from the day it was written.
+    const result = await sendJson<{ runId: string }>(
+      `/api/engagements/${engagementId}/runs`, 'POST', { mode: 'assessment' });
+
     if (result.error) setError(result.error);
+
+    // Opened straight away. The run stops within seconds to ask which solutions to read, and
+    // a button that queues something invisible is the thing this page is being fixed for.
+    if (result.data?.runId) setWatching(result.data.runId);
+
     await load();
     setStarting(false);
   }
@@ -64,6 +93,22 @@ export function RunsPage({ engagementId }: { engagementId: string }) {
         {error && <p className="curation-message danger">{error}</p>}
       </section>
 
+      {watching && (
+        <section className="panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">{t('runs.pipeline')}</p>
+              <h2>{t('runs.stages')}</h2>
+            </div>
+            <button type="button" className="text-button" onClick={() => setWatching(null)}>
+              {t('runs.stop-watching')}
+            </button>
+          </div>
+
+          <RunProgress runId={watching} onChanged={() => void load()} />
+        </section>
+      )}
+
       <section className="panel">
         <div className="panel-heading">
           <div>
@@ -77,7 +122,11 @@ export function RunsPage({ engagementId }: { engagementId: string }) {
         ) : (
           <div className="run-list">
             {runs.map((run) => (
-              <RunRow engagementId={engagementId} run={run} key={run.runId} />
+              <RunRow
+                engagementId={engagementId}
+                run={run}
+                key={run.runId}
+                onWatch={() => setWatching(run.runId)} />
             ))}
           </div>
         )}
@@ -96,7 +145,11 @@ export function RunsPage({ engagementId }: { engagementId: string }) {
  * Fetched when the row is opened rather than with the list. An engagement with forty runs
  * would otherwise make forty requests to draw a page nobody has expanded yet.
  */
-function RunRow({ engagementId, run }: { engagementId: string; run: Run }) {
+function RunRow({ engagementId, run, onWatch }: {
+  engagementId: string;
+  run: Run;
+  onWatch: () => void;
+}) {
   const t = useT();
   const { culture } = useLanguage();
   const [found, setFound] = useState<EntityRead[] | null>(null);
@@ -137,6 +190,10 @@ function RunRow({ engagementId, run }: { engagementId: string; run: Run }) {
 
       <div className="run-body">
         {run.error && <p className="curation-message danger">{run.error}</p>}
+
+        <p className="panel-note">
+          <button type="button" className="text-button" onClick={onWatch}>{t('runs.watch-this-run')}</button>
+        </p>
 
         {found === null ? (
           <p className="dashboard-empty">{t('common.loading')}</p>

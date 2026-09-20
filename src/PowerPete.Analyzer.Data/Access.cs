@@ -492,18 +492,50 @@ public sealed class AccessStore(string connectionString)
     /// </remarks>
     /// <param name="userId">Their normalised sign-in name.</param>
     /// <param name="cancellationToken">Cancellation.</param>
-    public async Task<(string? Language, string? Theme)> GetPreferencesAsync(
+    public async Task<(string? Language, string? Theme, Guid? LastEngagementId)> GetPreferencesAsync(
         string userId, CancellationToken cancellationToken)
     {
         await using var connection = Connect();
 
-        var row = await connection.QuerySingleOrDefaultAsync<(string? Language, string? Theme)>(
+        var row = await connection.QuerySingleOrDefaultAsync<(string? Language, string? Theme, Guid? LastEngagementId)>(
             new CommandDefinition(
-                "SELECT Language, Theme FROM ops.SystemUser WHERE UserId = @userId;",
+                "SELECT Language, Theme, LastEngagementId FROM ops.SystemUser WHERE UserId = @userId;",
                 new { userId = Normalise(userId) },
                 cancellationToken: cancellationToken));
 
         return row;
+    }
+
+    /// <summary>
+    /// Records the engagement somebody was last looking at.
+    /// </summary>
+    /// <remarks>
+    /// Against the person rather than the browser, like the language and the theme, and for a
+    /// stronger reason than either. Signing in redirects through Entra and comes back to a
+    /// freshly loaded page, so a selection held in the browser is destroyed by the one action
+    /// most likely to come just before wanting it. Every reader landed in whichever
+    /// engagement sorted first, which is the demonstration estate, including immediately
+    /// after signing in to look at a client's.
+    ///
+    /// Never validated here. The engagement may have been deleted or the grant revoked by the
+    /// time it is read back, and failing a sign-in over a stale preference would be a worse
+    /// bug than the one this fixes. The reader checks, and falls back quietly.
+    /// </remarks>
+    /// <param name="userId">Their normalised sign-in name.</param>
+    /// <param name="engagementId">Where they were, or null to forget.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task SetLastEngagementAsync(
+        string userId, Guid? engagementId, CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            UPDATE ops.SystemUser SET LastEngagementId = @engagementId, UpdatedUtc = SYSUTCDATETIME()
+            WHERE UserId = @userId;
+            """,
+            new { userId = Normalise(userId), engagementId },
+            cancellationToken: cancellationToken));
     }
 
     /// <summary>Records the language somebody reads the product in.</summary>

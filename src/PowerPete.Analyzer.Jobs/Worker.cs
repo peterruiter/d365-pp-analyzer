@@ -201,6 +201,17 @@ public sealed class Worker(WorkerSettings settings)
             return;
         }
 
+        if (command.Command == "retryStage" && command.StageId is { Length: > 0 } stageId)
+        {
+            // Everything from that stage onwards is cleared, not just the stage named. A
+            // stage that ran again against the state a later stage had already consumed
+            // would leave a run whose findings came from one extraction and whose score came
+            // from another, and nothing on the screen would say so.
+            await workspace
+                .ClearStagesFromAsync(command.RunId, PipelineOrder.Stages, stageId, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
         var run = await workspace.GetRunAsync(command.RunId, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Run {command.RunId} does not exist.");
 
@@ -226,12 +237,23 @@ public sealed class Worker(WorkerSettings settings)
             engagement?.BacklogLanguage,
             cancellationToken).ConfigureAwait(false);
 
+        // Resolved once, here, rather than worked out by each stage from the mode and a
+        // nullable override. Two stages deriving the same answer is two places for them to
+        // disagree, and the way they would disagree is a report that says it ran the checker
+        // and did not.
+        var chosen = await workspace.GetSelectionAsync(run.RunId, cancellationToken).ConfigureAwait(false);
+
         var state = new RunState
         {
             RunId = run.RunId,
             EngagementId = run.EngagementId,
             Mode = run.Mode,
-            EnvironmentRole = source?.EnvironmentRole ?? "unknown"
+            EnvironmentRole = source?.EnvironmentRole ?? "unknown",
+            Checks = RunChecks.ForMode(
+                run.Mode,
+                chosen?.Checks.SolutionChecker,
+                chosen?.Checks.ModelEstimates,
+                chosen?.Checks.EnvironmentHealth)
         };
 
         var stages = new IStage[]
@@ -268,7 +290,9 @@ public sealed class Worker(WorkerSettings settings)
         var outcome = await new PipelineRunner(stages, new StoreJournal(workspace), fatal)
             .RunAsync(state, cancellationToken).ConfigureAwait(false);
 
-        Console.WriteLine($"Run {run.RunId} ended {outcome.Status} after {outcome.StagesRun} stage(s).");
+        Console.WriteLine(outcome.Status == "awaitingSelection"
+            ? $"Run {run.RunId} is waiting for somebody to choose solutions, after {outcome.StagesRun} stage(s)."
+            : $"Run {run.RunId} ended {outcome.Status} after {outcome.StagesRun} stage(s).");
     }
 
     /// <summary>

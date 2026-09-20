@@ -403,7 +403,46 @@ public sealed class StageServicesFactory(
                 }
             },
 
-            ReadEnvironment: async (includeRuntime, token) =>
+            // Recorded through the store rather than handed back to the stage, so the list
+            // outlives the pause. A run that nobody ever resumes still says what the
+            // environment held on the day it looked.
+            RecordSolutions: async (runId, solutions, token) =>
+                await workspace.RecordRunSolutionsAsync(
+                    runId,
+                    [.. solutions.Select(solution => new RunSolution(
+                        runId,
+                        solution.UniqueName,
+                        solution.FriendlyName,
+                        solution.Version,
+                        solution.IsManaged,
+                        solution.PublisherPrefix,
+                        solution.PublisherName,
+                        solution.ComponentCount,
+
+                        // Worked out here, once, and stored beside the answer. Deciding it in
+                        // the query that reads the list would mean a change to the rule
+                        // silently rewriting what every old run appeared to have been asked.
+                        FirstPartySolutions.IsFirstParty(solution),
+
+                        // Not selected and not rejected. Null is what makes the stage stop
+                        // and ask rather than read everything.
+                        IsSelected: null))],
+                    token).ConfigureAwait(false),
+
+            ReadSelection: async (runId, token) =>
+            {
+                var selection = await workspace.GetSelectionAsync(runId, token).ConfigureAwait(false);
+
+                if (selection is null) return null;
+
+                return new ChosenScope(
+                    selection.Solutions,
+                    selection.Checks.SolutionChecker,
+                    selection.Checks.ModelEstimates,
+                    selection.Checks.EnvironmentHealth);
+            },
+
+            ReadEnvironment: async (chosen, includeRuntime, token) =>
             {
                 if (source is null || source.Mode == "offlineZip") return null;
 
@@ -424,7 +463,7 @@ public sealed class StageServicesFactory(
                         $"The connection '{source.Name}' did not authenticate: {test.Message}");
                 }
 
-                var result = await reader.ReadAsync([], includeRuntime, token).ConfigureAwait(false);
+                var result = await reader.ReadAsync(chosen, includeRuntime, token).ConfigureAwait(false);
 
                 return new EnvironmentRead(
                     result.Components,

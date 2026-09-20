@@ -62,6 +62,19 @@ public sealed class RunState
     /// <summary>Every solution the environment has, whether or not it was analysed.</summary>
     public Dictionary<string, SolutionSummary> Available { get; } = new(StringComparer.Ordinal);
 
+    /// <summary>
+    /// The solutions somebody chose to read, once they have.
+    /// </summary>
+    /// <remarks>
+    /// Empty until the selectSolutions stage has an answer, and an answer of "none" is
+    /// possible and legitimate: an offline run has no environment to choose from and reads
+    /// the file it was given.
+    /// </remarks>
+    public List<string> Chosen { get; } = [];
+
+    /// <summary>Which optional checks this run was told to do, resolved against the mode.</summary>
+    public RunChecks Checks { get; set; } = RunChecks.ForMode("assessment");
+
     /// <summary>Findings with their estimates.</summary>
     public List<(Finding Finding, Estimate Estimate)> Findings { get; } = [];
 
@@ -89,8 +102,51 @@ public sealed class RunState
     public string? BacklogHash { get; set; }
 }
 
+/// <summary>
+/// Which optional checks a run does, after the mode's default and anybody's override.
+/// </summary>
+/// <remarks>
+/// Resolved once, at the top of the run, rather than asked per stage. Two stages working out
+/// the same answer from a mode string and a nullable override is two places to get it wrong,
+/// and the way it would go wrong is a report that says it ran the checker and did not.
+/// </remarks>
+/// <param name="SolutionChecker">Microsoft's static analysis.</param>
+/// <param name="ModelEstimates">Estimates with a rationale rather than band defaults.</param>
+/// <param name="EnvironmentHealth">What the identity can actually read.</param>
+public sealed record RunChecks(bool SolutionChecker, bool ModelEstimates, bool EnvironmentHealth)
+{
+    /// <summary>What a mode does when nobody has said otherwise.</summary>
+    /// <remarks>
+    /// Mirrors the modes in analysis-stages.json. A contract test holds the two together,
+    /// because a default that drifts here silently changes what every run does.
+    /// </remarks>
+    /// <param name="mode">quickScan, assessment, publish or compare.</param>
+    public static RunChecks ForMode(string mode) => mode switch
+    {
+        "quickScan" => new RunChecks(SolutionChecker: false, ModelEstimates: false, EnvironmentHealth: true),
+        "publish" => new RunChecks(SolutionChecker: false, ModelEstimates: false, EnvironmentHealth: false),
+        _ => new RunChecks(SolutionChecker: true, ModelEstimates: true, EnvironmentHealth: true),
+    };
+
+    /// <summary>The same, with anything somebody chose applied over the top.</summary>
+    /// <param name="mode">The run mode.</param>
+    /// <param name="solutionChecker">Their answer, or null to keep the mode's.</param>
+    /// <param name="modelEstimates">Their answer, or null to keep the mode's.</param>
+    /// <param name="environmentHealth">Their answer, or null to keep the mode's.</param>
+    public static RunChecks ForMode(
+        string mode, bool? solutionChecker, bool? modelEstimates, bool? environmentHealth)
+    {
+        var defaults = ForMode(mode);
+
+        return new RunChecks(
+            solutionChecker ?? defaults.SolutionChecker,
+            modelEstimates ?? defaults.ModelEstimates,
+            environmentHealth ?? defaults.EnvironmentHealth);
+    }
+}
+
 /// <summary>How a stage ended.</summary>
-/// <param name="Status">succeeded, partial, failed or skipped.</param>
+/// <param name="Status">succeeded, partial, failed, skipped or awaitingSelection.</param>
 /// <param name="Checkpoint">Whatever it needs to resume, as JSON.</param>
 /// <param name="Error">Why it failed.</param>
 public sealed record StageOutcome(string Status, string? Checkpoint = null, string? Error = null)
@@ -115,6 +171,40 @@ public sealed record StageOutcome(string Status, string? Checkpoint = null, stri
 
     /// <summary>It was not needed in this mode.</summary>
     public static StageOutcome Skipped() => new("skipped");
+
+    /// <summary>
+    /// It did its work and the run cannot go on until somebody answers.
+    /// </summary>
+    /// <remarks>
+    /// Not a success and not a failure. A success would count as completed, and a run resumed
+    /// afterwards would skip the stage and carry on with the question still unanswered, which
+    /// is the whole thing this is here to prevent.
+    /// </remarks>
+    /// <param name="reason">What is being asked, in a sentence a person reads on the screen.</param>
+    public static StageOutcome AwaitingSelection(string reason) => new("awaitingSelection", null, reason);
+}
+
+/// <summary>
+/// The stages this pipeline runs, in order, without building any of them.
+/// </summary>
+/// <remarks>
+/// Needed by two callers who cannot build a stage. The worker needs it to run a stage again,
+/// which means forgetting everything recorded after it and therefore knowing what "after"
+/// means. The API needs it to draw the timeline before a run has reached anything.
+///
+/// Here rather than in either of them, because a second copy of the pipeline's order is a
+/// second copy to fall out of step, and the way it would fall out of step is a retry that
+/// discards the wrong stages. A test holds this against the array the worker builds and
+/// against the contract that declares them.
+/// </remarks>
+public static class PipelineOrder
+{
+    /// <summary>Every stage the worker runs, in the order it runs them.</summary>
+    public static IReadOnlyList<string> Stages { get; } =
+    [
+        "connect", "selectSolutions", "extract", "checker", "resolve",
+        "analyse", "estimate", "score", "backlog", "publish",
+    ];
 }
 
 /// <summary>One stage of the pipeline.</summary>
@@ -182,7 +272,7 @@ public interface IRunJournal
 public sealed class PipelineRunner(IReadOnlyList<IStage> stages, IRunJournal journal, IReadOnlyDictionary<string, bool> fatalByStage)
 {
     /// <summary>How a run ended.</summary>
-    /// <param name="Status">succeeded, partial, failed or cancelled.</param>
+    /// <param name="Status">succeeded, partial, failed, cancelled or awaitingSelection.</param>
     /// <param name="StagesRun">How many stages did work.</param>
     /// <param name="Error">Why it failed.</param>
     public sealed record Outcome(string Status, int StagesRun, string? Error);
@@ -236,6 +326,21 @@ public sealed class PipelineRunner(IReadOnlyList<IStage> stages, IRunJournal jou
 
             await journal.SetStageAsync(state.RunId, stage.Id, outcome.Status, outcome.Error, outcome.Checkpoint, cancellationToken)
                 .ConfigureAwait(false);
+
+            if (outcome.Status == "awaitingSelection")
+            {
+                // Returned rather than continued. Everything after this reads an environment,
+                // and reading it before somebody has said which solutions to read would make
+                // the question pointless and cost the hour the question exists to save.
+                //
+                // Not an error, and deliberately not "partial" either: nothing went wrong and
+                // nothing was missed. The run is waiting, and a screen showing it as anything
+                // else would have somebody hunting a fault that is not there.
+                await journal.SetRunStatusAsync(state.RunId, "awaitingSelection", null, cancellationToken)
+                    .ConfigureAwait(false);
+
+                return new Outcome("awaitingSelection", ran, null);
+            }
 
             if (outcome.Status == "failed")
             {

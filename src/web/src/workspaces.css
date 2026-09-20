@@ -1409,3 +1409,58 @@
   .axis-row { grid-template-columns: 1fr; gap: 7px; }
   .maturity-body { padding-left: 14px; padding-right: 14px; }
 }
+
+/* -------------------------------------------------- watching a run happen -- */
+/* The stage timeline above already carries most of this. What is here is the header that
+   sits over it and the picker a run stops at, both of which are new.
+
+   The timeline itself was ported from the sibling product with the rest of the stylesheet
+   and then went unused for months, because nothing rendered a stage. It is the same markup
+   there, deliberately: somebody who watches a run in one product should recognise the other
+   without being told they are related. */
+.run-progress { display: grid; gap: 4px; }
+.run-progress-head { display: grid; grid-template-columns: auto minmax(80px, 1fr) auto; align-items: center; gap: 12px; padding: 14px 23px 16px; }
+.run-progress-head .tag { margin: 0; }
+.run-progress-head small { color: var(--cp-text-muted); font-size: 12px; text-align: right; }
+.run-progress-bar { display: block; height: 4px; background: var(--cp-surface-soft); }
+.run-progress-bar span { display: block; height: 100%; background: var(--brand-cyan); transition: width .3s ease; }
+.stage-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; color: var(--cp-text-muted); font-size: 12px; }
+.stage-pending .stage-marker { background: var(--cp-border); }
+.stage-partial .stage-marker { background: var(--cp-warning); }
+.stage-skipped .stage-marker { background: var(--cp-border); }
+.stage-cancelled .stage-marker { background: var(--cp-border-strong); }
+.stage-awaitingselection .stage-marker { background: var(--cp-warning); }
+
+/* ------------------------------------------------------ choosing what to read -- */
+/* Microsoft's own solutions are dimmed rather than hidden. The decision being made here is
+   which parts of a client's estate the report will describe, and a list that quietly left
+   things out would be the product making that decision on somebody's behalf. */
+.solution-picker { margin: 0 23px 20px; padding: 18px 20px; background: var(--brand-cloud); border-left: 3px solid var(--cp-warning); }
+.solution-picker-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.solution-picker-head strong { color: var(--brand-ink); font-size: 14px; }
+.solution-picker-head p { margin: 4px 0 0; color: var(--cp-text-muted); font-size: 12px; }
+.solution-picker-actions { display: flex; flex-wrap: wrap; gap: 14px; }
+.solution-list { display: grid; max-height: 420px; margin: 16px 0 0; padding: 0; overflow-y: auto; list-style: none; background: var(--cp-surface); border: 1px solid var(--cp-border); }
+.solution-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 14px; border-bottom: 1px solid var(--cp-border); }
+.solution-item:last-child { border-bottom: 0; }
+.solution-item.first-party .solution-name strong { color: var(--cp-text-muted); font-weight: 500; }
+.solution-label { display: flex; flex: 1 1 auto; align-items: center; gap: 11px; min-width: 0; cursor: pointer; }
+.solution-name { display: grid; min-width: 0; gap: 2px; }
+.solution-name strong { overflow: hidden; color: var(--brand-ink); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.solution-name small { overflow: hidden; color: var(--cp-text-soft); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.solution-marks { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: 6px; }
+.solution-marks .tag { margin: 0; }
+.solution-checks { display: grid; gap: 10px; margin-top: 18px; }
+.solution-checks > strong { color: var(--brand-ink); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
+.solution-check { display: grid; grid-template-columns: auto 1fr; align-items: start; gap: 11px; cursor: pointer; }
+.solution-check span { display: grid; gap: 2px; }
+.solution-check strong { color: var(--brand-ink); font-size: 13px; font-weight: 600; }
+.solution-check small { color: var(--cp-text-muted); font-size: 11px; line-height: 1.5; }
+.solution-picker-foot { margin-top: 18px; }
+
+@media (max-width: 680px) {
+  .run-progress-head { grid-template-columns: 1fr; }
+  .run-progress-head small { text-align: left; }
+  .solution-picker { margin-left: 14px; margin-right: 14px; padding: 14px; }
+  .solution-item { flex-wrap: wrap; }
+}

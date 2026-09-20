@@ -16,7 +16,9 @@ using PowerPete.Analyzer.Extraction;
 /// <param name="OpenSolutionFile">Opens the uploaded export, for the offline mode.</param>
 /// <param name="CheckConnections">Authenticates every configured source and says what each reaches.</param>
 /// <param name="ListSolutions">Every solution the environment has, whether or not it is in scope.</param>
-/// <param name="ReadEnvironment">Reads a live environment, for the other two.</param>
+/// <param name="ReadEnvironment">Reads a live environment, scoped to the chosen solutions.</param>
+/// <param name="RecordSolutions">Records what the environment holds, so somebody can choose from it.</param>
+/// <param name="ReadSelection">What somebody chose, or null when nobody has been asked yet.</param>
 /// <param name="RunChecker">Calls the Power Apps checker.</param>
 /// <param name="Estimator">The three layer estimator.</param>
 /// <param name="BacklogBuilder">Turns findings into work items.</param>
@@ -30,7 +32,9 @@ public sealed record StageServices(
     Func<CancellationToken, Task<Stream?>> OpenSolutionFile,
     Func<CancellationToken, Task<IReadOnlyList<ConnectionCheck>>> CheckConnections,
     Func<CancellationToken, Task<IReadOnlyList<SolutionSummary>>> ListSolutions,
-    Func<bool, CancellationToken, Task<EnvironmentRead?>> ReadEnvironment,
+    Func<IReadOnlyList<string>, bool, CancellationToken, Task<EnvironmentRead?>> ReadEnvironment,
+    Func<Guid, IReadOnlyList<SolutionSummary>, CancellationToken, Task> RecordSolutions,
+    Func<Guid, CancellationToken, Task<ChosenScope?>> ReadSelection,
     Func<Stream, CancellationToken, Task<CheckerOutcome>> RunChecker,
     Estimator Estimator,
     BacklogBuilder BacklogBuilder,
@@ -40,6 +44,23 @@ public sealed record StageServices(
     IReadOnlyDictionary<string, EstimateBand> Bands,
     IReadOnlyList<ComplexityRule> ComplexityRules,
     IReadOnlyDictionary<string, RoadmapPosition> RoadmapPositions);
+
+/// <summary>
+/// What somebody told a paused run to do.
+/// </summary>
+/// <remarks>
+/// The pipeline's own shape rather than the data layer's, because `PowerPete.Analyzer.Pipeline`
+/// does not reference the data layer and should not. The worker translates.
+/// </remarks>
+/// <param name="Solutions">The solutions that were ticked. Empty means none of them.</param>
+/// <param name="SolutionChecker">Whether to run Microsoft's checker, null meaning the mode decides.</param>
+/// <param name="ModelEstimates">Whether to estimate with a model, null meaning the mode decides.</param>
+/// <param name="EnvironmentHealth">Whether to report what the identity reaches, null meaning the mode decides.</param>
+public sealed record ChosenScope(
+    IReadOnlyList<string> Solutions,
+    bool? SolutionChecker,
+    bool? ModelEstimates,
+    bool? EnvironmentHealth);
 
 /// <summary>
 /// One configured source, authenticated.
@@ -264,8 +285,9 @@ public sealed class SelectSolutionsStage(StageServices services) : StageBase(ser
 
         if (solutions.Count == 0)
         {
-            // Not a failure. An offline run has no environment to enumerate, and the extract
-            // stage will take the solutions out of the file it was given.
+            // Not a failure, and nothing to ask. An offline run has no environment to
+            // enumerate, and the extract stage will take the solutions out of the file it
+            // was given.
             return StageOutcome.Succeeded();
         }
 
@@ -276,12 +298,44 @@ public sealed class SelectSolutionsStage(StageServices services) : StageBase(ser
             state.Available[solution.UniqueName] = solution;
         }
 
-        var unmanaged = solutions.Count(solution => !solution.IsManaged);
+        // Recorded before anybody is asked, so the list survives the pause and so a run that
+        // is never resumed still says what the environment held.
+        await Services.RecordSolutions(state.RunId, solutions, cancellationToken).ConfigureAwait(false);
+
+        var chosen = await Services.ReadSelection(state.RunId, cancellationToken).ConfigureAwait(false);
+
+        if (chosen is null)
+        {
+            // The pause. Everything after this reads the environment, and reading it before
+            // somebody has said which solutions to read costs the hour the question exists
+            // to save, on a report mostly about Microsoft's own solutions.
+            var theirs = solutions.Count(solution => !FirstPartySolutions.IsFirstParty(solution));
+
+            return StageOutcome.AwaitingSelection(
+                $"{solutions.Count} solutions found, {theirs} of them not Microsoft's. "
+                + "Choose which to analyse before the run reads the environment.");
+        }
+
+        state.Chosen.AddRange(chosen.Solutions);
+
+        state.Checks = RunChecks.ForMode(
+            state.Mode, chosen.SolutionChecker, chosen.ModelEstimates, chosen.EnvironmentHealth);
+
+        if (state.Chosen.Count == 0)
+        {
+            return StageOutcome.Partial(
+                $"None of the {solutions.Count} solutions in this environment were chosen, so nothing was read "
+                + "from it. This is an unread estate rather than a clean one.");
+        }
+
+        var unmanaged = state.Chosen
+            .Where(state.Available.ContainsKey)
+            .Count(name => !state.Available[name].IsManaged);
 
         return unmanaged == 0
             ? StageOutcome.Partial(
-                $"All {solutions.Count} solutions in this environment are managed. There is no unmanaged " +
-                "customisation to analyse, which is either a very disciplined estate or the wrong environment.")
+                $"All {state.Chosen.Count} chosen solutions are managed. There is no unmanaged "
+                + "customisation to analyse, which is either a very disciplined estate or the wrong environment.")
             : StageOutcome.Succeeded();
     }
 }
@@ -333,7 +387,13 @@ public sealed class ExtractStage(StageServices services) : StageBase(services)
             }
         }
 
-        var live = await Services.ReadEnvironment(state.Mode != "quickScan", cancellationToken).ConfigureAwait(false);
+        // Scoped to what somebody chose. This used to read the whole environment whatever the
+        // select stage had found, including every solution Microsoft ships, which is both the
+        // slowest part of a run and the part that produces findings about somebody else's
+        // product.
+        var live = await Services
+            .ReadEnvironment(state.Chosen, state.Mode != "quickScan", cancellationToken)
+            .ConfigureAwait(false);
 
         if (live is not null)
         {
@@ -436,6 +496,17 @@ public sealed class CheckerStage(StageServices services) : StageBase(services)
     public override async Task<StageOutcome> RunAsync(RunState state, string? checkpoint, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(state);
+
+        // Turned off deliberately is not the same as failed, and it is not the same as
+        // passed either. The checker is the slowest part of a run by a wide margin, so it is
+        // the one somebody turns off to get an answer before a meeting, and the rules that
+        // depend on it stay unassessed rather than quietly reading as clean.
+        if (!state.Checks.SolutionChecker)
+        {
+            return StageOutcome.Partial(
+                "The solution checker was turned off for this run. Every rule whose evidence is a checker "
+                + "result is reported as not assessed rather than as passing.");
+        }
 
         await using var file = await Services.OpenSolutionFile(cancellationToken).ConfigureAwait(false);
 
@@ -561,6 +632,14 @@ public sealed class EstimateStage(StageServices services) : StageBase(services)
     public override async Task<StageOutcome> RunAsync(RunState state, string? checkpoint, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(state);
+
+        // Skipped, not failed. Every finding still gets an estimate: the scorer falls back to
+        // the band default for the component type, which is exactly what a quick scan does
+        // and what the report then says it did.
+        if (!state.Checks.ModelEstimates)
+        {
+            return StageOutcome.Skipped();
+        }
 
         // Findings already estimated on a previous attempt are not estimated again. A resumed
         // run must not pay a second time for the same model calls.
