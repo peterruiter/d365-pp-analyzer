@@ -17,7 +17,8 @@
       "stopsAfter": "score",
       "runsChecker": false,
       "estimates": "bandDefault",
-      "requiresApproval": false
+      "requiresApproval": false,
+      "exportsSolutions": false
     },
     {
       "id": "assessment",
@@ -26,7 +27,8 @@
       "stopsAfter": "backlog",
       "runsChecker": true,
       "estimates": "model",
-      "requiresApproval": false
+      "requiresApproval": false,
+      "exportsSolutions": true
     },
     {
       "id": "publish",
@@ -36,7 +38,8 @@
       "runsChecker": false,
       "estimates": "asApproved",
       "requiresApproval": true,
-      "note": "Runs against an existing assessment rather than re-analysing. Re-analysing here would mean the thing published is not the thing approved."
+      "note": "Runs against an existing assessment rather than re-analysing. Re-analysing here would mean the thing published is not the thing approved.",
+      "exportsSolutions": false
     },
     {
       "id": "compare",
@@ -45,7 +48,8 @@
       "stopsAfter": "score",
       "runsChecker": true,
       "estimates": "model",
-      "requiresApproval": false
+      "requiresApproval": false,
+      "exportsSolutions": true
     }
   ],
   "stages": [
@@ -243,6 +247,15 @@
       "defaultFromMode": "estimates",
       "cost": "Minutes, and a model endpoint.",
       "whenOff": "Estimates fall back to band defaults, which is what a quick scan does. The report says which of the two it used."
+    },
+    {
+      "id": "solutionExport",
+      "name": "Export the chosen solutions",
+      "description": "Asks the environment for each chosen solution as a zip, through the same call a person makes when they click Export, and reads it as though it had been uploaded.",
+      "defaultOn": true,
+      "defaultFromMode": "exportsSolutions",
+      "cost": "Around a minute per solution against a real environment, so a dozen is a quarter of an hour. Nothing is written to the environment: an export is a read.",
+      "whenOff": "The fourteen rules that read a solution file and the three that need the checker are reported as not assessed. A live connection is then no richer than a metadata read."
     }
   ],
   "solutionSelection": {

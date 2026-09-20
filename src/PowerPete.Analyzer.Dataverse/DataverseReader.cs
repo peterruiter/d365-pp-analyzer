@@ -2,6 +2,7 @@ namespace PowerPete.Analyzer.Dataverse;
 
 using System.Globalization;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using PowerPete.Analyzer.Domain;
 
@@ -146,6 +147,56 @@ public sealed class DataverseReader(HttpClient client)
         }
 
         return solutions;
+    }
+
+    /// <summary>
+    /// Exports one solution, as the platform would if somebody clicked Export.
+    /// </summary>
+    /// <remarks>
+    /// This is why a live connection is the richest one and not the poorest.
+    ///
+    /// Fourteen of this product's rules read a solution file: what is inside a code
+    /// component's bundle, whether a flow handles its errors, how much script a form loads,
+    /// whether a definition carries a secret. Three more need Microsoft's checker, which
+    /// takes a file. None of that is in the Web API, so a run against a live environment
+    /// reported seventeen rules as not assessed and an uploaded zip reported them fine,
+    /// which made the offline mode look like the better one.
+    ///
+    /// It was never true. A connection that can read an environment can ask it for the same
+    /// zip a person would download, and the extraction-sources contract has always said so:
+    /// every live mode declares solutionZip and checker as fully reached. The declaration
+    /// was right and nothing implemented it.
+    ///
+    /// Slow, and worth saying so. One small solution took seventy seconds against a real
+    /// environment, so a dozen is a quarter of an hour: this belongs behind a switch the
+    /// person starting the run can see, not in the quick scan that promises an answer in
+    /// fifteen minutes.
+    /// </remarks>
+    /// <param name="uniqueName">The solution's unique name.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    /// <returns>The zip, or null when the environment refused to produce one.</returns>
+    public async Task<byte[]?> ExportSolutionAsync(string uniqueName, CancellationToken cancellationToken = default)
+    {
+        // Unmanaged. A managed export strips the customisations the rules read, so it would
+        // come back looking like an estate nobody had built anything in.
+        var request = new { SolutionName = uniqueName, Managed = false };
+
+        using var content = new StringContent(
+            JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
+
+        using var response = await client
+            .PostAsync(new Uri($"{Api}ExportSolution", UriKind.Relative), content, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!response.IsSuccessStatusCode) return null;
+
+        using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        return document.RootElement.TryGetProperty("ExportSolutionFile", out var file)
+            && file.GetString() is { Length: > 0 } encoded
+                ? Convert.FromBase64String(encoded)
+                : null;
     }
 
     /// <param name="solutionUniqueNames">Which solutions are in scope. Empty reads every unmanaged solution.</param>

@@ -60,7 +60,68 @@ public sealed class StageServicesFactory(
                 entry.Low, entry.High, entry.StoryPoints, entry.Rationale, entry.SetBy))]);
 
         return new StageServices(
-            OpenSolutionFile: token => ConnectionFactory.OpenUploadAsync(uploads, blobName, token),
+            // Every solution this run can read as a file.
+            //
+            // For an offline engagement that is the one somebody uploaded. For a live one it
+            // is each chosen solution, exported from the environment through the same call a
+            // person makes when they click Export, which is what makes a live connection the
+            // richest source rather than the poorest.
+            //
+            // Seventeen rules depend on this. Fourteen read the zip and three need
+            // Microsoft's checker, which takes a file, and every one of them reported "not
+            // assessed" against a live environment while reporting fine against an uploaded
+            // copy of the same solutions. The extraction-sources contract has always
+            // declared solutionZip and checker as fully reached by a live mode; nothing had
+            // ever implemented it.
+            OpenSolutionFiles: async (chosen, token) =>
+            {
+                var files = new List<SolutionFile>();
+
+                if (blobName is not null)
+                {
+                    await using var uploaded = await ConnectionFactory
+                        .OpenUploadAsync(uploads, blobName, token).ConfigureAwait(false);
+
+                    if (uploaded is not null)
+                    {
+                        using var buffer = new MemoryStream();
+                        await uploaded.CopyToAsync(buffer, token).ConfigureAwait(false);
+                        files.Add(new SolutionFile(blobName, buffer.ToArray()));
+                    }
+                }
+
+                if (source is null || source.Mode == "offlineZip" || chosen.Count == 0) return files;
+
+                var client = await connections.ForDataverseAsync(source, token).ConfigureAwait(false);
+                var reader = new DataverseReader(client);
+
+                foreach (var name in chosen)
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    try
+                    {
+                        // One at a time and slowly. An export took seventy seconds against a
+                        // real environment, so a dozen is a quarter of an hour, and asking
+                        // for them in parallel is how a client's environment starts
+                        // throttling everything else somebody is doing in it.
+                        var exported = await reader.ExportSolutionAsync(name, token).ConfigureAwait(false);
+
+                        if (exported is not null) files.Add(new SolutionFile(name, exported));
+                        else Console.Error.WriteLine($"The environment would not export '{name}'.");
+                    }
+                    catch (Exception failure) when (failure is HttpRequestException or JsonException
+                        or InvalidOperationException or TaskCanceledException)
+                    {
+                        // One solution that will not export is not a reason to lose the other
+                        // eleven. The rules that needed it report as not assessed, which is
+                        // the whole point of that machinery.
+                        Console.Error.WriteLine($"Could not export '{name}': {failure.Message}");
+                    }
+                }
+
+                return files;
+            },
 
             // Authenticates without reading anything. The contract puts this first and says
             // it writes nothing, which is what makes it safe to run against a client who has
@@ -174,7 +235,8 @@ public sealed class StageServicesFactory(
                     selection.Solutions,
                     selection.Checks.SolutionChecker,
                     selection.Checks.ModelEstimates,
-                    selection.Checks.EnvironmentHealth);
+                    selection.Checks.EnvironmentHealth,
+                    selection.Checks.ExportSolutions);
             },
 
             ReadEnvironment: async (chosen, includeRuntime, token) =>

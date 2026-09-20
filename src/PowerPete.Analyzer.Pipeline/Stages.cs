@@ -13,7 +13,7 @@ using PowerPete.Analyzer.Extraction;
 /// one thing and nothing at all for the rest. A stage that reaches into a container is a
 /// stage that can only be exercised by starting the product.
 /// </remarks>
-/// <param name="OpenSolutionFile">Opens the uploaded export, for the offline mode.</param>
+/// <param name="OpenSolutionFiles">Every solution file this run can read: the uploaded export, or the chosen solutions exported from the environment.</param>
 /// <param name="CheckConnections">Authenticates every configured source and says what each reaches.</param>
 /// <param name="ListSolutions">Every solution the environment has, whether or not it is in scope.</param>
 /// <param name="ReadEnvironment">Reads a live environment, scoped to the chosen solutions.</param>
@@ -29,7 +29,7 @@ using PowerPete.Analyzer.Extraction;
 /// <param name="ComplexityRules">The complexity rules, from the contract.</param>
 /// <param name="RoadmapPositions">Where each rule sits on the grid, from the contract.</param>
 public sealed record StageServices(
-    Func<CancellationToken, Task<Stream?>> OpenSolutionFile,
+    Func<IReadOnlyList<string>, CancellationToken, Task<IReadOnlyList<SolutionFile>>> OpenSolutionFiles,
     Func<CancellationToken, Task<IReadOnlyList<ConnectionCheck>>> CheckConnections,
     Func<CancellationToken, Task<IReadOnlyList<SolutionSummary>>> ListSolutions,
     Func<IReadOnlyList<string>, bool, CancellationToken, Task<EnvironmentRead?>> ReadEnvironment,
@@ -46,6 +46,22 @@ public sealed record StageServices(
     IReadOnlyDictionary<string, RoadmapPosition> RoadmapPositions);
 
 /// <summary>
+/// One solution's zip, in memory.
+/// </summary>
+/// <remarks>
+/// Bytes rather than a stream because two stages read the same file: extract unpacks it and
+/// the checker uploads it. A stream would have to be produced twice, which for a live
+/// connection means exporting twice, and one export took seventy seconds.
+///
+/// In memory rather than on disk, which bounds how large an estate this can handle. An
+/// unmanaged solution is customisations rather than data and these are tens of kilobytes,
+/// but a client with a hundred megabyte solution will find this before anything else does.
+/// </remarks>
+/// <param name="Name">The solution's unique name, or the uploaded file's name.</param>
+/// <param name="Content">The zip.</param>
+public sealed record SolutionFile(string Name, byte[] Content);
+
+/// <summary>
 /// What somebody told a paused run to do.
 /// </summary>
 /// <remarks>
@@ -56,11 +72,13 @@ public sealed record StageServices(
 /// <param name="SolutionChecker">Whether to run Microsoft's checker, null meaning the mode decides.</param>
 /// <param name="ModelEstimates">Whether to estimate with a model, null meaning the mode decides.</param>
 /// <param name="EnvironmentHealth">Whether to report what the identity reaches, null meaning the mode decides.</param>
+/// <param name="ExportSolutions">Whether to export the chosen solutions, null meaning the mode decides.</param>
 public sealed record ChosenScope(
     IReadOnlyList<string> Solutions,
     bool? SolutionChecker,
     bool? ModelEstimates,
-    bool? EnvironmentHealth);
+    bool? EnvironmentHealth,
+    bool? ExportSolutions);
 
 /// <summary>
 /// One configured source, authenticated.
@@ -328,7 +346,8 @@ public sealed class SelectSolutionsStage(StageServices services) : StageBase(ser
         }
 
         state.Checks = RunChecks.ForMode(
-            state.Mode, chosen.SolutionChecker, chosen.ModelEstimates, chosen.EnvironmentHealth);
+            state.Mode, chosen.SolutionChecker, chosen.ModelEstimates, chosen.EnvironmentHealth,
+            chosen.ExportSolutions);
 
         if (state.Chosen.Count == 0)
         {
@@ -362,9 +381,15 @@ public sealed class ExtractStage(StageServices services) : StageBase(services)
         var failures = 0;
         var attempts = 0;
 
-        await using (var file = await Services.OpenSolutionFile(cancellationToken).ConfigureAwait(false))
+        // Every solution this run can read as a file. For an offline engagement that is the
+        // one somebody uploaded; for a live one it is each chosen solution, exported.
+        var files = await Services
+            .OpenSolutionFiles(state.Checks.ExportSolutions ? state.Chosen : [], cancellationToken)
+            .ConfigureAwait(false);
+
+        foreach (var solutionFile in files)
         {
-            if (file is not null)
+            await using (var file = new MemoryStream(solutionFile.Content, writable: false))
             {
                 var result = SolutionZipReader.Read(file);
 
@@ -376,13 +401,16 @@ public sealed class ExtractStage(StageServices services) : StageBase(services)
                     state.Solutions[header.UniqueName] = header;
                 }
 
-                state.SolutionsAnalysed = Math.Max(state.SolutionsAnalysed, result.Solutions.Count);
+                // Counted across the files rather than the largest of them. A live run reads
+                // one file per chosen solution, and taking the maximum would report twelve
+                // solutions analysed as one.
+                state.SolutionsAnalysed += result.Solutions.Count;
 
                 // Never lower than what was analysed, and never overwriting what the select
                 // stage found. An offline run has no environment to enumerate, so the file is
                 // the only answer there is; a live run already knows the real denominator and
                 // taking the file's count would quietly claim full coverage.
-                state.SolutionsTotal = Math.Max(state.SolutionsTotal, result.Solutions.Count);
+                state.SolutionsTotal = Math.Max(state.SolutionsTotal, state.SolutionsAnalysed);
                 state.Reached.Add(EvidenceSource.SolutionZip);
 
                 foreach (var read in result.Reads)
@@ -517,23 +545,51 @@ public sealed class CheckerStage(StageServices services) : StageBase(services)
                 + "result is reported as not assessed rather than as passing.");
         }
 
-        await using var file = await Services.OpenSolutionFile(cancellationToken).ConfigureAwait(false);
+        var files = await Services
+            .OpenSolutionFiles(state.Checks.ExportSolutions ? state.Chosen : [], cancellationToken)
+            .ConfigureAwait(false);
 
-        if (file is null)
+        if (files.Count == 0)
         {
+            // No longer the common case. A live connection exports the solutions it was told
+            // to read, so this is an engagement with no source at all rather than one that
+            // simply had nothing uploaded.
             return StageOutcome.Partial(
-                "The checker needs a solution file and this engagement has only a live connection. " +
-                "Export one and re-run, or the three checker backed rules stay unassessed.");
+                "There is no solution file to check. An offline engagement needs one uploaded, and a live "
+                + "one needs the solution export turned on, or the three checker backed rules stay unassessed.");
         }
 
-        var outcome = await Services.RunChecker(file, cancellationToken).ConfigureAwait(false);
+        // One submission per solution. The checker takes a file, and a run covering twelve
+        // solutions is twelve files: submitting only the first would report the other eleven
+        // as checked when nothing looked at them.
+        var refusals = new List<string>();
 
-        if (!outcome.Succeeded)
+        foreach (var solutionFile in files)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            await using var file = new MemoryStream(solutionFile.Content, writable: false);
+
+            var each = await Services.RunChecker(file, cancellationToken).ConfigureAwait(false);
+
+            if (each.Succeeded) state.CheckerIssues.AddRange(each.Issues);
+            else refusals.Add($"{solutionFile.Name}: {each.FailureReason ?? "the checker did not answer"}");
+        }
+
+        if (refusals.Count == files.Count)
         {
             // Never fatal. A checker outage is not a reason to lose the rest of an analysis,
             // and it is absolutely a reason for the report to say so rather than look complete.
-            return StageOutcome.Partial(outcome.FailureReason ?? "The checker did not answer.");
+            return StageOutcome.Partial(string.Join("; ", refusals));
         }
+
+        if (refusals.Count > 0)
+        {
+            return StageOutcome.Partial(
+                $"{refusals.Count} of {files.Count} solutions were not checked: {string.Join("; ", refusals)}");
+        }
+
+        var outcome = new CheckerOutcome(true, state.CheckerIssues, null);
 
         state.CheckerIssues.AddRange(outcome.Issues);
         state.Reached.Add(EvidenceSource.Checker);

@@ -356,6 +356,8 @@
   "runs.cannot-remove-while-running": "Warten Sie, bis der Lauf gestoppt ist, bevor Sie ihn entfernen.",
   "runs.check.environmentHealth": "Zustand der Umgebung",
   "runs.check.environmentHealth-note": "Was die Identität tatsächlich lesen kann und welche Evidenzquellen damit erreichbar sind. Sekunden.",
+  "runs.check.exportSolutions": "Gewählte Lösungen exportieren",
+  "runs.check.exportSolutions-note": "Lädt jede gewählte Lösung aus der Umgebung, genau wie ein Klick auf Exportieren, und liest ihren Inhalt. Siebzehn Regeln brauchen diese Datei und laufen ohne sie nicht. Langsam: etwa eine Minute je Lösung.",
   "runs.check.modelEstimates": "Modellschätzungen",
   "runs.check.modelEstimates-note": "Schätzungen mit Begründung je Befund. Abgeschaltet greifen die Bandvorgaben, und der Bericht nennt, welche verwendet wurden.",
   "runs.check.solutionChecker": "Solution Checker",

@@ -27,10 +27,11 @@ vostro cliente ha pagato qualcuno. Nulla viene nascosto: ogni soluzione trovata 
 e viene registrata, che la spuntiate o no, perché un rapporto che copre quattro soluzioni su
 diciannove e uno che le copre tutte e diciannove sono identici in copertina.
 
-Nella stessa schermata si possono disattivare tre controlli:
+Nella stessa schermata si possono disattivare quattro controlli:
 
 | Controllo | Costa | Se lo disattivate |
 |---|---|---|
+| **Esportare le soluzioni scelte** | Circa un minuto per soluzione, quindi una dozzina è un quarto d'ora. Non viene scritto nulla: un'esportazione è una lettura. | Le quattordici regole che leggono un file di soluzione, e le tre che hanno bisogno del checker, sono riportate come non valutate. Una connessione dal vivo non è allora più ricca di una lettura di metadati. |
 | **Solution checker** | Di gran lunga la parte più lenta di un'esecuzione. | Ogni regola la cui prova è un risultato del checker viene riportata come non valutata, mai come superata. |
 | **Stime da modello** | Minuti, e un endpoint di modello. | Le stime tornano ai valori predefiniti di fascia, come fa una scansione rapida. Il rapporto dice quali ha usato. |
 | **Salute dell'ambiente** | Secondi. | L'esecuzione procede con ciò che la credenziale raggiunge per caso. |

@@ -27,10 +27,11 @@ hidden: every solution found is on the list and recorded whether or not you tick
 a report covering four of nineteen solutions and one covering all nineteen look identical on
 the cover page.
 
-Three checks can be turned off on the same screen:
+Four checks can be turned off on the same screen:
 
 | Check | Costs | If you turn it off |
 |---|---|---|
+| **Export the chosen solutions** | Around a minute per solution, so a dozen is a quarter of an hour. Nothing is written: an export is a read. | The fourteen rules that read a solution file, and the three that need the checker, are reported as not assessed. A live connection is then no richer than a metadata read. |
 | **Solution checker** | The slowest part of a run by a wide margin. | Every rule whose evidence is a checker result is reported as not assessed, never as passing. |
 | **Model estimates** | Minutes, and a model endpoint. | Estimates fall back to band defaults, which is what a quick scan does. The report says which it used. |
 | **Environment health** | Seconds. | The run proceeds on whatever the credential happens to reach. |

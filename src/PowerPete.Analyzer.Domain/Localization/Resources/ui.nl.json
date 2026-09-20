@@ -356,6 +356,8 @@
   "runs.cannot-remove-while-running": "Wacht tot de run gestopt is voordat u hem verwijdert.",
   "runs.check.environmentHealth": "Gezondheid van de omgeving",
   "runs.check.environmentHealth-note": "Wat de identiteit werkelijk kan lezen, en welke bewijsbronnen dus bereikbaar zijn. Seconden.",
+  "runs.check.exportSolutions": "Gekozen oplossingen exporteren",
+  "runs.check.exportSolutions-note": "Haalt elke gekozen oplossing uit de omgeving, precies zoals klikken op Exporteren zou doen, en leest wat erin zit. Zeventien regels hebben dat bestand nodig en kunnen zonder niet draaien. Traag: ongeveer een minuut per oplossing.",
   "runs.check.modelEstimates": "Modelramingen",
   "runs.check.modelEstimates-note": "Ramingen met een onderbouwing per bevinding. Uitgezet vallen ramingen terug op bandstandaarden en het rapport vermeldt welke gebruikt zijn.",
   "runs.check.solutionChecker": "Solution checker",

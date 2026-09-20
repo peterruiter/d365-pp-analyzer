@@ -28,10 +28,11 @@ lequel votre client a payé quelqu'un. Rien n'est caché : chaque solution trouv
 liste et est enregistrée, que vous la cochiez ou non, car un rapport couvrant quatre solutions
 sur dix-neuf et un rapport couvrant les dix-neuf sont identiques en page de garde.
 
-Trois vérifications peuvent être désactivées sur le même écran :
+Quatre vérifications peuvent être désactivées sur le même écran :
 
 | Vérification | Coûte | Si vous la désactivez |
 |---|---|---|
+| **Exporter les solutions choisies** | Environ une minute par solution, donc une douzaine prend un quart d'heure. Rien n'est écrit : un export est une lecture. | Les quatorze règles qui lisent un fichier de solution, et les trois qui ont besoin du checker, sont signalées non évaluées. Une connexion en direct n'est alors pas plus riche qu'une lecture de métadonnées. |
 | **Solution checker** | De loin la partie la plus lente d'une exécution. | Chaque règle dont la preuve est un résultat du checker est signalée non évaluée, jamais conforme. |
 | **Estimations par modèle** | Des minutes, et un point de terminaison de modèle. | Les estimations reviennent aux valeurs par défaut, comme le fait une analyse rapide. Le rapport indique lesquelles il a utilisées. |
 | **Santé de l'environnement** | Quelques secondes. | L'exécution se poursuit avec ce que l'identification atteint par hasard. |

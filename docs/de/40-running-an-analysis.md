@@ -28,10 +28,11 @@ Lösung steht auf der Liste und wird festgehalten, ob Sie sie anhaken oder nicht
 Bericht über vier von neunzehn Lösungen und einer über alle neunzehn sehen auf dem Deckblatt
 identisch aus.
 
-Auf demselben Bildschirm lassen sich drei Prüfungen abschalten:
+Auf demselben Bildschirm lassen sich vier Prüfungen abschalten:
 
 | Prüfung | Kostet | Wenn Sie sie abschalten |
 |---|---|---|
+| **Gewählte Lösungen exportieren** | Etwa eine Minute je Lösung, ein Dutzend also eine Viertelstunde. Es wird nichts geschrieben: ein Export ist ein Lesevorgang. | Die vierzehn Regeln, die eine Lösungsdatei lesen, und die drei, die den Checker brauchen, werden als nicht bewertet gemeldet. Eine Liveverbindung ist dann nicht reicher als ein Metadatenabruf. |
 | **Solution Checker** | Mit Abstand der langsamste Teil eines Laufs. | Jede Regel, deren Beleg ein Checkerergebnis ist, wird als nicht bewertet gemeldet, nie als bestanden. |
 | **Modellschätzungen** | Minuten, und ein Modellendpunkt. | Schätzungen fallen auf Bandvorgaben zurück, wie es eine Schnellprüfung tut. Der Bericht nennt, welche verwendet wurden. |
 | **Zustand der Umgebung** | Sekunden. | Der Lauf arbeitet mit dem, was die Anmeldeinformation zufällig erreicht. |

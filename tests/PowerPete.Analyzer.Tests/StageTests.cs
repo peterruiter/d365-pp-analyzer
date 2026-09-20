@@ -36,7 +36,7 @@ public class StageTests
         Func<CancellationToken, Task<IReadOnlyList<SolutionSummary>>>? list = null,
         ChosenScope? selection = null) =>
         new(
-            OpenSolutionFile: _ => Task.FromResult<Stream?>(null),
+            OpenSolutionFiles: (_, _) => Task.FromResult<IReadOnlyList<SolutionFile>>([]),
             CheckConnections: check ?? (_ => Task.FromResult<IReadOnlyList<ConnectionCheck>>([])),
             ListSolutions: list ?? (_ => Task.FromResult<IReadOnlyList<SolutionSummary>>([])),
             ReadEnvironment: (_, _, _) => Task.FromResult<EnvironmentRead?>(null),
@@ -231,7 +231,12 @@ public class StageTests
         var services = Services(
             list: _ => Task.FromResult<IReadOnlyList<SolutionSummary>>(
                 [new SolutionSummary("nwu_core", "Core", "1.0", false, "nwu", "Northwind", 140)]),
-            selection: new ChosenScope(["nwu_core"], SolutionChecker: false, ModelEstimates: null, EnvironmentHealth: null));
+            selection: new ChosenScope(
+                ["nwu_core"],
+                SolutionChecker: false,
+                ModelEstimates: null,
+                EnvironmentHealth: null,
+                ExportSolutions: null));
 
         var state = State();
         await new SelectSolutionsStage(services).RunAsync(state, null, CancellationToken.None);
@@ -350,5 +355,5 @@ public class StageTests
     /// <summary>An answer to the picker, with the mode's defaults left alone.</summary>
     /// <param name="solutions">What was ticked.</param>
     private static ChosenScope Chose(params string[] solutions) =>
-        new(solutions, SolutionChecker: null, ModelEstimates: null, EnvironmentHealth: null);
+        new(solutions, SolutionChecker: null, ModelEstimates: null, EnvironmentHealth: null, ExportSolutions: null);
 }

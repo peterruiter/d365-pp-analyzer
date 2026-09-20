@@ -27,10 +27,11 @@ iemand voor heeft betaald. Niets wordt verborgen: elke gevonden solution staat o
 wordt vastgelegd, of u hem nu aanvinkt of niet, want een rapport over vier van de negentien
 solutions en een rapport over alle negentien zien er op het voorblad identiek uit.
 
-Op hetzelfde scherm kunnen drie controles worden uitgezet:
+Op hetzelfde scherm kunnen vier controles worden uitgezet:
 
 | Controle | Kost | Als u hem uitzet |
 |---|---|---|
+| **Gekozen oplossingen exporteren** | Ongeveer een minuut per oplossing, dus een dozijn is een kwartier. Er wordt niets geschreven: een export is een leesactie. | De veertien regels die een solutionbestand lezen, en de drie die de checker nodig hebben, worden gerapporteerd als niet beoordeeld. Een live verbinding is dan niet rijker dan een metadatalezing. |
 | **Solution checker** | Verreweg het traagste onderdeel van een run. | Elke regel waarvan het bewijs een checkerresultaat is wordt gerapporteerd als niet beoordeeld, nooit als geslaagd. |
 | **Modelramingen** | Minuten, en een modelendpoint. | Ramingen vallen terug op bandstandaarden, wat een snelle scan ook doet. Het rapport vermeldt welke gebruikt zijn. |
 | **Gezondheid van de omgeving** | Seconden. | De run gaat verder op wat de credential toevallig bereikt. |

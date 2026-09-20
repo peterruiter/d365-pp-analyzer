@@ -356,6 +356,8 @@
   "runs.cannot-remove-while-running": "Wait for the run to stop before removing it.",
   "runs.check.environmentHealth": "Environment health",
   "runs.check.environmentHealth-note": "What the identity can actually read, and which evidence sources are therefore reachable. Seconds.",
+  "runs.check.exportSolutions": "Export the chosen solutions",
+  "runs.check.exportSolutions-note": "Downloads each chosen solution from the environment, exactly as clicking Export would, and reads what is inside it. Seventeen rules need the file and cannot run without it. Slow: roughly a minute per solution.",
   "runs.check.modelEstimates": "Model estimates",
   "runs.check.modelEstimates-note": "Estimates with a rationale per finding. Turned off, estimates fall back to band defaults and the report says which it used.",
   "runs.check.solutionChecker": "Solution checker",

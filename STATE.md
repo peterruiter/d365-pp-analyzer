@@ -1359,6 +1359,54 @@ The guards added this session are aimed at exactly those two shapes: literals he
 the constraints that accept them, hosts held against the addresses that carry them, and
 inserts held against being run twice.
 
+## A live connection was the poorest source, and the contract said it was the richest
+
+The run against the client's environment reported seventeen rules as not assessed. Uploading
+a zip of the same solutions reported them fine, which made the offline mode look like the
+better one and raised the obvious question: where are the PCF components?
+
+They were there. Nothing had read them.
+
+Fourteen rules take their evidence from a solution file and three more need Microsoft's
+checker, which takes a file. `extraction-sources.json` has always declared `solutionZip: full`
+and `checker: full` for both `servicePrincipal` and `delegated`, and nothing had ever
+implemented either. A live run had one code path to a file — the blob somebody uploaded — and
+a live run has no blob.
+
+**It was never a limitation of the connection.** A connection that can read an environment
+can ask it for the same zip a person downloads by clicking Export. `ExportSolution` is an
+ordinary Web API action, it is a read, and it returns the unmanaged customisations the rules
+want. Verified against `CapTranslator` before anything was built on it: 15,864 bytes in 72.4
+seconds, seven entries, `WebResources/` among them.
+
+### What it cost to be wrong about this
+
+Two whole categories of the product looked like they did not apply to live engagements. A
+consultant reading that report would conclude the client has no code components, no web
+resources worth mentioning, and no checker results — not that the tool did not look.
+
+That is the third time this shape has appeared: a declared capability with no implementation
+behind it, failing silently and reading as a clean estate. The other two are recorded above
+under the nine exports. This one was larger because the declaration was in a contract, and a
+contract is the thing this product treats as true.
+
+### A switch rather than always on
+
+One export took seventy seconds. Twelve solutions is a quarter of an hour, and a quick scan
+promises an answer in fifteen minutes, so it is the fourth box on the picker: on for an
+assessment, off for a quick scan and for publish. Exports run one at a time and one that
+fails does not lose the others — the rules that needed it report as not assessed, which is
+what that machinery is for.
+
+### The guard
+
+`Names_every_optional_check_the_contract_declares` holds the `checks` list in
+analysis-stages.json against the properties of `RunChecks`, and
+`Runs_the_checks_each_mode_says_it_runs` now covers `exportsSolutions` beside the other
+three. Both were verified by reintroducing the defect: a mode claiming an export the code
+does not do, and a check declared in the contract with nothing behind it. Each failed, which
+is the only evidence that a guard guards anything.
+
 ## What was ported rather than invented
 
 | From | What |

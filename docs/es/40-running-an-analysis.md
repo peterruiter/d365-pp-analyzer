@@ -27,10 +27,11 @@ cliente pagó a alguien. No se oculta nada: cada solución encontrada figura en 
 registrada, la marque o no, porque un informe que cubre cuatro de diecinueve soluciones y uno
 que cubre las diecinueve son idénticos en la portada.
 
-En la misma pantalla se pueden desactivar tres comprobaciones:
+En la misma pantalla se pueden desactivar cuatro comprobaciones:
 
 | Comprobación | Cuesta | Si la desactiva |
 |---|---|---|
+| **Exportar las soluciones elegidas** | Alrededor de un minuto por solución, así que una docena es un cuarto de hora. No se escribe nada: una exportación es una lectura. | Las catorce reglas que leen un archivo de solución, y las tres que necesitan el checker, se informan como no evaluadas. Una conexión en vivo no es entonces más rica que una lectura de metadatos. |
 | **Solution checker** | Con diferencia la parte más lenta de una ejecución. | Toda regla cuya evidencia sea un resultado del checker se informa como no evaluada, nunca como correcta. |
 | **Estimaciones por modelo** | Minutos, y un punto de conexión de modelo. | Las estimaciones vuelven a los valores por defecto de banda, que es lo que hace un escaneo rápido. El informe indica cuáles usó. |
 | **Salud del entorno** | Segundos. | La ejecución continúa con lo que la credencial alcance por casualidad. |

@@ -120,7 +120,9 @@ public sealed record RunSolution(
 /// <param name="SolutionChecker">Microsoft's static analysis, the slowest part of a run.</param>
 /// <param name="ModelEstimates">Estimates with rationale rather than band defaults.</param>
 /// <param name="EnvironmentHealth">What the identity can actually read.</param>
-public sealed record RunCheckChoices(bool? SolutionChecker, bool? ModelEstimates, bool? EnvironmentHealth);
+/// <param name="ExportSolutions">Whether to export the chosen solutions, which the file backed rules read.</param>
+public sealed record RunCheckChoices(
+    bool? SolutionChecker, bool? ModelEstimates, bool? EnvironmentHealth, bool? ExportSolutions);
 
 /// <summary>What somebody told a paused run to do.</summary>
 /// <param name="Checks">Which optional checks to run.</param>
@@ -1024,10 +1026,11 @@ public sealed class WorkspaceStore(string connectionString)
             USING (SELECT @runId AS RunId) AS source ON target.RunId = source.RunId
             WHEN MATCHED THEN UPDATE SET
                 RunsChecker = @runsChecker, ModelEstimates = @modelEstimates,
-                EnvironmentHealth = @environmentHealth, ChosenUtc = SYSUTCDATETIME(), ChosenBy = @chosenBy
+                EnvironmentHealth = @environmentHealth, ExportSolutions = @exportSolutions,
+                ChosenUtc = SYSUTCDATETIME(), ChosenBy = @chosenBy
             WHEN NOT MATCHED THEN
-                INSERT (RunId, RunsChecker, ModelEstimates, EnvironmentHealth, ChosenBy)
-                VALUES (@runId, @runsChecker, @modelEstimates, @environmentHealth, @chosenBy);
+                INSERT (RunId, RunsChecker, ModelEstimates, EnvironmentHealth, ExportSolutions, ChosenBy)
+                VALUES (@runId, @runsChecker, @modelEstimates, @environmentHealth, @exportSolutions, @chosenBy);
             """,
             new
             {
@@ -1035,6 +1038,7 @@ public sealed class WorkspaceStore(string connectionString)
                 runsChecker = checks.SolutionChecker,
                 modelEstimates = checks.ModelEstimates,
                 environmentHealth = checks.EnvironmentHealth,
+                exportSolutions = checks.ExportSolutions,
                 chosenBy
             },
             transaction, cancellationToken: cancellationToken));
@@ -1069,7 +1073,7 @@ public sealed class WorkspaceStore(string connectionString)
 
         var checks = await connection.QuerySingleOrDefaultAsync<RunCheckChoices>(new CommandDefinition(
             """
-            SELECT RunsChecker AS SolutionChecker, ModelEstimates, EnvironmentHealth
+            SELECT RunsChecker AS SolutionChecker, ModelEstimates, EnvironmentHealth, ExportSolutions
             FROM ops.RunSelection WHERE RunId = @runId;
             """,
             new { runId },

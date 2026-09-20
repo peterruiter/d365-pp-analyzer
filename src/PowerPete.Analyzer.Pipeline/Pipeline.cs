@@ -113,7 +113,8 @@ public sealed class RunState
 /// <param name="SolutionChecker">Microsoft's static analysis.</param>
 /// <param name="ModelEstimates">Estimates with a rationale rather than band defaults.</param>
 /// <param name="EnvironmentHealth">What the identity can actually read.</param>
-public sealed record RunChecks(bool SolutionChecker, bool ModelEstimates, bool EnvironmentHealth)
+/// <param name="ExportSolutions">Whether to export the chosen solutions, which is what the seventeen file backed rules read.</param>
+public sealed record RunChecks(bool SolutionChecker, bool ModelEstimates, bool EnvironmentHealth, bool ExportSolutions)
 {
     /// <summary>What a mode does when nobody has said otherwise.</summary>
     /// <remarks>
@@ -123,9 +124,16 @@ public sealed record RunChecks(bool SolutionChecker, bool ModelEstimates, bool E
     /// <param name="mode">quickScan, assessment, publish or compare.</param>
     public static RunChecks ForMode(string mode) => mode switch
     {
-        "quickScan" => new RunChecks(SolutionChecker: false, ModelEstimates: false, EnvironmentHealth: true),
-        "publish" => new RunChecks(SolutionChecker: false, ModelEstimates: false, EnvironmentHealth: false),
-        _ => new RunChecks(SolutionChecker: true, ModelEstimates: true, EnvironmentHealth: true),
+        // A quick scan promises an answer in fifteen minutes and one export took seventy
+        // seconds, so a dozen solutions is the whole budget. It reads the environment only.
+        "quickScan" => new RunChecks(
+            SolutionChecker: false, ModelEstimates: false, EnvironmentHealth: true, ExportSolutions: false),
+
+        "publish" => new RunChecks(
+            SolutionChecker: false, ModelEstimates: false, EnvironmentHealth: false, ExportSolutions: false),
+
+        _ => new RunChecks(
+            SolutionChecker: true, ModelEstimates: true, EnvironmentHealth: true, ExportSolutions: true),
     };
 
     /// <summary>The same, with anything somebody chose applied over the top.</summary>
@@ -133,15 +141,17 @@ public sealed record RunChecks(bool SolutionChecker, bool ModelEstimates, bool E
     /// <param name="solutionChecker">Their answer, or null to keep the mode's.</param>
     /// <param name="modelEstimates">Their answer, or null to keep the mode's.</param>
     /// <param name="environmentHealth">Their answer, or null to keep the mode's.</param>
+    /// <param name="exportSolutions">Their answer, or null to keep the mode's.</param>
     public static RunChecks ForMode(
-        string mode, bool? solutionChecker, bool? modelEstimates, bool? environmentHealth)
+        string mode, bool? solutionChecker, bool? modelEstimates, bool? environmentHealth, bool? exportSolutions = null)
     {
         var defaults = ForMode(mode);
 
         return new RunChecks(
             solutionChecker ?? defaults.SolutionChecker,
             modelEstimates ?? defaults.ModelEstimates,
-            environmentHealth ?? defaults.EnvironmentHealth);
+            environmentHealth ?? defaults.EnvironmentHealth,
+            exportSolutions ?? defaults.ExportSolutions);
     }
 }
 

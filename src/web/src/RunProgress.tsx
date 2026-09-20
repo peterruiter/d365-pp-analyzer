@@ -50,6 +50,7 @@ type Choice = {
     solutionChecker: boolean;
     modelEstimates: boolean;
     environmentHealth: boolean;
+    exportSolutions: boolean;
   };
 };
 
@@ -293,7 +294,8 @@ function SolutionPicker({ runId, onChosen }: { runId: string; onChosen: () => vo
   const canRun = useCan('Contributor');
   const [choice, setChoice] = useState<Choice | null>(null);
   const [ticked, setTicked] = useState<Set<string>>(new Set());
-  const [checks, setChecks] = useState({ solutionChecker: true, modelEstimates: true, environmentHealth: true });
+  const [checks, setChecks] = useState(
+    { solutionChecker: true, modelEstimates: true, environmentHealth: true, exportSolutions: true });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -338,7 +340,8 @@ function SolutionPicker({ runId, onChosen }: { runId: string; onChosen: () => vo
       solutions: [...ticked],
       solutionChecker: checks.solutionChecker,
       modelEstimates: checks.modelEstimates,
-      environmentHealth: checks.environmentHealth
+      environmentHealth: checks.environmentHealth,
+      exportSolutions: checks.exportSolutions
     });
     setError(result.error);
     setBusy(false);
@@ -429,6 +432,15 @@ function SolutionPicker({ runId, onChosen }: { runId: string; onChosen: () => vo
 
       <div className="solution-checks">
         <strong>{t('runs.also-run')}</strong>
+        {/* First in the list because it is what the two below it read. Seventeen rules need
+            the solution file and none of them can run without this. */}
+        <label className="solution-check">
+          <input
+            type="checkbox"
+            checked={checks.exportSolutions}
+            onChange={(event) => setChecks({ ...checks, exportSolutions: event.target.checked })} />
+          <span><strong>{t('runs.check.exportSolutions')}</strong><small>{t('runs.check.exportSolutions-note')}</small></span>
+        </label>
         <label className="solution-check">
           <input
             type="checkbox"

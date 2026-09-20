@@ -315,7 +315,8 @@ public sealed class Worker(WorkerSettings settings)
                 run.Mode,
                 chosen?.Checks.SolutionChecker,
                 chosen?.Checks.ModelEstimates,
-                chosen?.Checks.EnvironmentHealth)
+                chosen?.Checks.EnvironmentHealth,
+                chosen?.Checks.ExportSolutions)
         };
 
         // The scope, seeded from the database rather than left to the stage that asked for

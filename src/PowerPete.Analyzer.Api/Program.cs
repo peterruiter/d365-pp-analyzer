@@ -718,7 +718,8 @@ app.MapGet("/api/runs/{runId:guid}/solutions", async (HttpContext context, Works
         {
             solutionChecker = selection?.Checks.SolutionChecker ?? defaults.SolutionChecker,
             modelEstimates = selection?.Checks.ModelEstimates ?? defaults.ModelEstimates,
-            environmentHealth = selection?.Checks.EnvironmentHealth ?? defaults.EnvironmentHealth
+            environmentHealth = selection?.Checks.EnvironmentHealth ?? defaults.EnvironmentHealth,
+            exportSolutions = selection?.Checks.ExportSolutions ?? defaults.ExportSolutions
         }
     });
 }).RequireAuthorization();
@@ -747,7 +748,8 @@ app.MapPost("/api/runs/{runId:guid}/selection",
     await store.RecordSelectionAsync(
         runId,
         chosen,
-        new RunCheckChoices(request.SolutionChecker, request.ModelEstimates, request.EnvironmentHealth),
+        new RunCheckChoices(
+            request.SolutionChecker, request.ModelEstimates, request.EnvironmentHealth, request.ExportSolutions),
         UserId(context.User),
         context.RequestAborted);
 
@@ -2661,11 +2663,13 @@ internal sealed record PipelineStage(string Id, string Name, string Description,
 /// <param name="SolutionChecker">Whether to run Microsoft's checker, null to keep the mode's default.</param>
 /// <param name="ModelEstimates">Whether to estimate with a model, null to keep the mode's default.</param>
 /// <param name="EnvironmentHealth">Whether to report what the identity reaches, null to keep the mode's default.</param>
+/// <param name="ExportSolutions">Whether to export the chosen solutions, null to keep the mode's default.</param>
 internal sealed record ChooseSolutions(
     IReadOnlyList<string>? Solutions,
     bool? SolutionChecker,
     bool? ModelEstimates,
-    bool? EnvironmentHealth);
+    bool? EnvironmentHealth,
+    bool? ExportSolutions);
 
 /// <summary>Where somebody was working.</summary>
 /// <param name="EngagementId">The engagement, or null to forget it.</param>

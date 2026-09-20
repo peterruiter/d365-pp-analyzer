@@ -356,6 +356,8 @@
   "runs.cannot-remove-while-running": "Attendez l'arrêt de l'exécution avant de la supprimer.",
   "runs.check.environmentHealth": "Santé de l’environnement",
   "runs.check.environmentHealth-note": "Ce que l’identité peut réellement lire, et donc quelles sources de preuve sont accessibles. Quelques secondes.",
+  "runs.check.exportSolutions": "Exporter les solutions choisies",
+  "runs.check.exportSolutions-note": "Télécharge chaque solution choisie depuis l’environnement, exactement comme le ferait un clic sur Exporter, et lit son contenu. Dix-sept règles ont besoin de ce fichier et ne peuvent pas s’exécuter sans lui. Lent : environ une minute par solution.",
   "runs.check.modelEstimates": "Estimations par modèle",
   "runs.check.modelEstimates-note": "Estimations avec justification par constat. Désactivées, les estimations reviennent aux valeurs par défaut et le rapport indique lesquelles il a utilisées.",
   "runs.check.solutionChecker": "Solution checker",

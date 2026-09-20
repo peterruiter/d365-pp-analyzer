@@ -805,7 +805,36 @@ public class DataLayerTests
             checks.ModelEstimates.Should().Be(
                 mode.GetProperty("estimates").GetString() == "model",
                 $"analysis-stages.json says how {id} estimates");
+
+            // The one that was declared for a year and implemented by nothing. Every live
+            // extraction mode says it reaches solutionZip and checker in full, and until
+            // the export existed that was a promise the product did not keep: seventeen
+            // rules reported as not assessed against an environment and fine against an
+            // uploaded copy of the same solutions.
+            checks.ExportSolutions.Should().Be(
+                mode.GetProperty("exportsSolutions").GetBoolean(),
+                $"analysis-stages.json says whether {id} exports the chosen solutions");
         }
+    }
+
+    [Fact]
+    public void Names_every_optional_check_the_contract_declares()
+    {
+        // The checks are a list in the contract and four booleans in a record, and the
+        // screen offers a box for each. A check declared with nothing behind it is the
+        // defect this whole change was: it reads as a capability and behaves as a gap.
+        var declared = Contracts.Read("analysis-stages").GetProperty("checks")
+            .EnumerateArray().Select(check => check.GetProperty("id").GetString()!).ToList();
+
+        var implemented = typeof(RunChecks).GetProperties().Select(property => property.Name).ToList();
+
+        // solutionExport is the contract's name for it; ExportSolutions is the property's.
+        var expected = declared
+            .Select(id => id == "solutionExport" ? "ExportSolutions" : char.ToUpperInvariant(id[0]) + id[1..])
+            .ToList();
+
+        implemented.Should().BeEquivalentTo(
+            expected, "every optional check in analysis-stages.json is a switch on RunChecks");
     }
 
     [Fact]
