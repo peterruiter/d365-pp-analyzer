@@ -22,11 +22,18 @@ deployed product on 20 September 2026, after the Key Vault setting defect below 
 Two earlier versions of this line were wrong in both directions: one claimed it worked
 before it ever had, and one kept saying it did not after it did.
 
-**What has still never happened is a discovery run against a live client environment.** The
-path is built end to end and no part of it has been exercised by a person: a run stops to
-ask which solutions to read, and nobody has answered that question on a real estate yet.
-Everything below about the picker is true of the code and the schema, and is unproven in
-front of a client.
+**The whole path has been walked, once, on 20 September 2026.** A live client environment
+read through interactive sign-in, eleven solutions chosen from 959 in the picker, 51
+components and 7 findings, a backlog built and approved, and nine work items written into
+Azure DevOps and recorded against the backlog they came from.
+
+It took eleven defects to get there in one morning, every one found by using the product
+rather than by a test, and four of them were things that had never worked at all rather
+than things that broke. They are recorded below.
+
+**What is still unproven is a second client.** One estate is one shape: this one is on the
+Basic process in Azure DevOps, has no Jira, and gave up one 400 from a polymorphic lookup
+that a different tenant would not have. The next one will find its own.
 
 ---
 
@@ -1308,6 +1315,49 @@ missing `resume` it had been written to catch, which is recorded here because a 
 passes against its own defect is worse than no test.
 
 Every guard added in this session was checked by reintroducing the defect it exists for.
+
+## The morning the whole path was walked
+
+Eleven defects between a run starting and work items landing in Azure DevOps. Worth keeping
+together, because the pattern is more useful than any one of them.
+
+| What was reported | What it was |
+|---|---|
+| Discover does nothing | The page sent a run mode that does not exist here. Ported from the migrator, where it does |
+| Stages screen is unreadable | A class name collision with a 4px bar, which painted every span inside it blue |
+| Elapsed starts at 120 minutes | Dates written with no offset, read by the browser as local |
+| Finished stages are grey | The stylesheet's vocabulary was the sibling product's: succeeded never matched |
+| Findings on Microsoft components | A resumed run skips the stage that sets the scope, and an empty scope means no scope |
+| No solution on anything | Nothing in a table or a plug-in names the solution that carries it |
+| Findings have no explanation | The row expanded and nothing said so |
+| Cannot approve | The endpoint existed and no screen had ever called it |
+| Publish returns 400 | An address pasted into a template that already had the host |
+| Publish returns 500 | The run's identifier passed where a backlog item's was wanted |
+| Removing a run returns 500 | A hundred thousand rows deleted in one transaction on a 30 second timeout |
+
+### Four of them had never worked
+
+Not regressions. The Discover button had never queued a run, the approval had never been
+givable, the worker's publish had never been exercised, and the solution scope parameter had
+been declared, documented and passed an empty list by its only caller since the day it was
+written.
+
+A product can be deployed, serving, green on every health check and have whole paths through
+it that have never once been walked. Every test passed throughout.
+
+### The pattern worth remembering
+
+Three of the eleven are the same mistake: something ported from a sibling product kept the
+sibling's vocabulary. A run mode, a CSS class name, a stage status. Each compiled, each was
+spelled correctly, and each failed silently at run time.
+
+Three more are an address or an identifier of the right type in the wrong role. An
+organisation URL used as an organisation name, a run's Guid used as a backlog item's Guid, a
+RunId used as a BacklogItemId. The type system cannot see any of them.
+
+The guards added this session are aimed at exactly those two shapes: literals held against
+the constraints that accept them, hosts held against the addresses that carry them, and
+inserts held against being run twice.
 
 ## What was ported rather than invented
 
