@@ -589,12 +589,7 @@ public sealed class AnalyseStage(StageServices services, RuleEngine engine) : St
             .Select(entry => Enum.TryParse<EvidenceSource>(entry.MissingEvidence, ignoreCase: true, out var source)
                 && state.Reachable.Contains(source)
                 && !state.Reached.Contains(source)
-                    ? entry with
-                    {
-                        Reason = $"This connection reaches {entry.MissingEvidence} and the read of it did not "
-                            + "return anything on this run, so the rule has not been checked. That is a fault to "
-                            + "look into rather than a limit of the connection."
-                    }
+                    ? entry with { Reason = NotAssessedReasons.ReadReturnedNothing }
                     : entry)
             .ToList();
 

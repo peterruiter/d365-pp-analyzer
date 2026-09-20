@@ -445,11 +445,16 @@ public sealed partial class AssessmentReportPdf
         // The first paragraph only. The rest of it is on the management summary page and a
         // cover that reprints the whole thing gives a reader no reason to turn over.
         var opening = written?.Split(["\n\n"], StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()
-            ?? string.Create(Culture,
-                $"{model.Score.ComponentsTotal} components across {model.SolutionNames.Count} solution(s), "
-                + $"{model.Findings.Count} findings, and {model.Score.NotAssessed.Count} checks that could not run. "
-                + $"Nothing in this document was written by hand: every finding below came from a rule with its "
-                + $"detection, its reasoning and its estimate declared in a catalogue.");
+            ?? string.Format(
+                Culture,
+                model.Text["report.coverStatement",
+                    "{0} components across {1} solution(s), {2} findings, and {3} checks that could not run. "
+                    + "Nothing in this document was written by hand: every finding below came from a rule with "
+                    + "its detection, its reasoning and its estimate declared in a catalogue."],
+                model.Score.ComponentsTotal,
+                model.SolutionNames.Count,
+                model.Findings.Count,
+                model.Score.NotAssessed.Count);
 
         flow.Text(opening, new TextStyle { Size = 10, LineHeight = 1.5f }, paddingTop: 8f);
 
@@ -573,12 +578,13 @@ public sealed partial class AssessmentReportPdf
 
         if (model.Score.Caveats.Count == 0)
         {
-            Body(flow, "Every check ran, every solution in the environment was analysed, and every finding was " +
-                       "estimated individually. That is unusual and it is worth saying so.");
+            Body(flow, model.Text["report.noCaveats",
+                "Every check ran, every solution in the environment was analysed, and every finding was "
+                + "estimated individually. That is unusual and it is worth saying so."]);
         }
         else
         {
-            Body(flow, "This assessment has limits, and they are here rather than in an appendix.");
+            Body(flow, model.Text["report.hasLimits", "This assessment has limits, and they are here rather than in an appendix."]);
 
             foreach (var caveat in model.Score.Caveats)
             {
@@ -611,15 +617,22 @@ public sealed partial class AssessmentReportPdf
             .Take(3)
             .ToList();
 
-        Body(flow, string.Create(Culture,
-            $"{model.Score.ComponentsTotal} components across {model.SolutionNames.Count} solution(s). " +
-            $"{model.Score.FindingsBySeverity.Values.Sum()} findings, estimated at " +
-            $"{model.Score.TotalLowHours:0.#} to {model.Score.TotalHighHours:0.#} hours, plus " +
-            $"{model.Score.FixedCostLowHours:0.#} to {model.Score.FixedCostHighHours:0.#} hours of per engagement cost."));
+        Body(flow, string.Format(
+            Culture,
+            model.Text["report.summaryTotals",
+                "{0} components across {1} solution(s). {2} findings, estimated at {3} to {4} hours, plus "
+                + "{5} to {6} hours of per engagement cost."],
+            model.Score.ComponentsTotal,
+            model.SolutionNames.Count,
+            model.Score.FindingsBySeverity.Values.Sum(),
+            model.Score.TotalLowHours.ToString("0.#", Culture),
+            model.Score.TotalHighHours.ToString("0.#", Culture),
+            model.Score.FixedCostLowHours.ToString("0.#", Culture),
+            model.Score.FixedCostHighHours.ToString("0.#", Culture)));
 
         if (worst.Count > 0)
         {
-            Body(flow, "The three that matter most:");
+            Body(flow, model.Text["report.threeThatMatter", "The three that matter most:"]);
 
             foreach (var entry in worst)
             {
@@ -657,9 +670,13 @@ public sealed partial class AssessmentReportPdf
     {
         Heading(flow, model.Text["report.customisationAndComplexity", "Customisation and complexity"]);
 
-        Body(flow, model.Score.LowCodeShare is null
-            ? "No components counted toward the low code ratio, so there is no ratio to report."
-            : string.Create(Culture, $"Low code is {model.Score.LowCodeShare:P0} of the components that count toward the ratio."));
+        Body(flow, model.Score.LowCodeShare is not { } lowCodeShare
+            ? model.Text["report.noLowCodeRatio",
+                "No components counted toward the low code ratio, so there is no ratio to report."]
+            : string.Format(
+                Culture,
+                model.Text["report.lowCodeShareIs", "Low code is {0} of the components that count toward the ratio."],
+                lowCodeShare.ToString("P0", Culture)));
 
         flow.Text(model.Score.RatioDefinition,
             new TextStyle { Size = 9, Colour = CapgeminiBrand.Muted }, paddingTop: 6f);
@@ -715,7 +732,8 @@ public sealed partial class AssessmentReportPdf
         if (unrated > 0)
         {
             flow.Text(
-                $"{unrated} components could not be measured and are counted as unrated rather than simple. " +
+                string.Format(Culture, model.Text["report.unratedComponents",
+                    "{0} components could not be measured and are counted as unrated rather than simple. "], unrated) +
                 "The two are different statements and folding one into the other flatters the estate.",
                 new TextStyle { Size = 9, Colour = CapgeminiBrand.Muted }, paddingTop: 8f);
         }
@@ -795,7 +813,9 @@ public sealed partial class AssessmentReportPdf
 
                 if (category.Count() > 25)
                 {
-                    inner.Text($"and {category.Count() - 25} more, in the findings workbook.",
+                    inner.Text(
+                        string.Format(Culture, model.Text["report.andMoreInWorkbook",
+                            "and {0} more, in the findings workbook."], category.Count() - 25),
                         new TextStyle { Size = 9, Colour = CapgeminiBrand.Muted }, paddingTop: 4f);
                 }
             }, paddingTop: 14f);
@@ -903,7 +923,8 @@ public sealed partial class AssessmentReportPdf
         if (bandOnly > 0)
         {
             flow.Text(
-                $"{bandOnly} of these were not estimated individually and carry the band for their rule. " +
+                string.Format(Culture, model.Text["report.bandOnlyEstimates",
+                    "{0} of these were not estimated individually and carry the band for their rule. "], bandOnly) +
                 "A band is what you get before anybody has looked at the specific component.",
                 new TextStyle { Size = 9, Colour = CapgeminiBrand.Muted }, paddingTop: 8f);
         }
@@ -919,9 +940,12 @@ public sealed partial class AssessmentReportPdf
             return;
         }
 
-        Body(flow, string.Create(
+        Body(flow, string.Format(
             Culture,
-            $"{model.Score.NotAssessed.Count} of {RuleCatalogue.All.Count} checks could not run. None of them is reported as passing anywhere in this report."));
+            model.Text["report.checksCouldNotRun",
+                "{0} of {1} checks could not run. None of them is reported as passing anywhere in this report."],
+            model.Score.NotAssessed.Count,
+            RuleCatalogue.All.Count));
 
         flow.Table(table =>
         {
@@ -931,7 +955,11 @@ public sealed partial class AssessmentReportPdf
             foreach (var entry in model.Score.NotAssessed.OrderBy(entry => entry.RuleId, StringComparer.Ordinal))
             {
                 table.Cell(entry.RuleId);
-                table.Cell(entry.Reason);
+
+                // Resolved here rather than stored as a sentence. The reason was composed
+                // in English by the rule engine, so a German report carried English in the
+                // one section a client reads most carefully.
+                table.Cell(NotAssessedReasons.Describe(model.Text, entry));
             }
         }, paddingTop: 10f);
     }
@@ -955,7 +983,11 @@ public sealed partial class AssessmentReportPdf
             table.Cell(model.Text["report.solutions", "Solutions"], bold: true);
             table.Cell(string.Join(", ", model.SolutionNames));
             table.Cell(model.Text["report.rules", "Rules"], bold: true);
-            table.Cell($"{RuleCatalogue.All.Count} in the catalogue, {model.Score.NotAssessed.Count} not assessed");
+            table.Cell(string.Format(
+                Culture,
+                model.Text["report.inCatalogueNotAssessed", "{0} in the catalogue, {1} not assessed"],
+                RuleCatalogue.All.Count,
+                model.Score.NotAssessed.Count));
         });
 
         flow.Text(

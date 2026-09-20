@@ -5,6 +5,13 @@ import { statusTag } from './tags';
 import { getJson, sendJson, when, type EntityRead, type Run } from './workspace';
 import { RunProgress } from './RunProgress';
 
+/** A connection this engagement can read from. */
+type Source = {
+  connectionId: string;
+  mode: string;
+  name: string;
+};
+
 /** What the discovery detail returns for one run. */
 type Discovery = {
   runId: string;
@@ -24,6 +31,15 @@ export function RunsPage({ engagementId }: { engagementId: string }) {
   // somebody opens a run that has not finished.
   const [watching, setWatching] = useState<string | null>(null);
 
+  // What the engagement can read, and which of them this run will.
+  //
+  // Asked rather than guessed. This engagement has an uploaded export and a live
+  // environment, and they produce different reports: the first is what a security review
+  // lets you have in week one, the second is the one that can see run history and
+  // privileges. Picking one on the reader's behalf would be picking what the report says.
+  const [sources, setSources] = useState<Source[] | null>(null);
+  const [source, setSource] = useState<string>('');
+
   async function load() {
     const result = await getJson<Run[]>(`/api/engagements/${engagementId}/runs`);
     setRuns(result.data ?? []);
@@ -31,6 +47,29 @@ export function RunsPage({ engagementId }: { engagementId: string }) {
   }
 
   useEffect(() => { void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [engagementId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void getJson<Source[]>(`/api/engagements/${engagementId}/connections`).then((result) => {
+      if (cancelled) return;
+
+      // Azure DevOps is a place to publish to, not a place to read from, and offering it
+      // here would be offering a run that cannot do anything.
+      const readable = (result.data ?? []).filter((one) => one.mode !== 'azureDevOps');
+
+      setSources(readable);
+
+      // A live environment first when there is one. It is the mode that can see run
+      // history and privileges, so it is the one somebody means by "discover" unless they
+      // say otherwise.
+      setSource(readable.find((one) => one.mode !== 'offlineZip')?.connectionId
+        ?? readable[0]?.connectionId
+        ?? '');
+    });
+
+    return () => { cancelled = true; };
+  }, [engagementId]);
 
   // A run the page has not been told about can still be going: somebody started it on
   // another machine, or the browser was closed and reopened. Picking the newest unfinished
@@ -52,7 +91,8 @@ export function RunsPage({ engagementId }: { engagementId: string }) {
     // compare. The database refused every insert on a check constraint, the API threw, and
     // the button did nothing at all, visibly, from the day it was written.
     const result = await sendJson<{ runId: string }>(
-      `/api/engagements/${engagementId}/runs`, 'POST', { mode: 'assessment' });
+      `/api/engagements/${engagementId}/runs`, 'POST',
+      { mode: 'assessment', sourceConnectionId: source });
 
     if (result.error) setError(result.error);
 
@@ -69,7 +109,7 @@ export function RunsPage({ engagementId }: { engagementId: string }) {
   }
 
   return (
-    <>
+    <div className="runs-page">
       <section className="panel">
         <div className="panel-heading">
           <div>
@@ -80,9 +120,28 @@ export function RunsPage({ engagementId }: { engagementId: string }) {
               back forbidden reads as the product being broken rather than as the role
               working, which is a support call either way. */}
           {canRun && (
-            <button type="button" className="primary-button" disabled={starting} onClick={() => void startDiscovery()}>
-              {t('runs.mode.discover')}
-            </button>
+            <span className="run-source">
+              {sources && sources.length > 1 && (
+                <label className="run-source-pick">
+                  <span>{t('runs.read-from')}</span>
+                  <select value={source} onChange={(event) => setSource(event.target.value)}>
+                    {sources.map((one) => (
+                      <option key={one.connectionId} value={one.connectionId}>
+                        {one.name} · {t('source.' + one.mode)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+
+              <button
+                type="button"
+                className="primary-button"
+                disabled={starting || !source}
+                onClick={() => void startDiscovery()}>
+                {t('runs.mode.discover')}
+              </button>
+            </span>
           )}
         </div>
 
@@ -90,6 +149,13 @@ export function RunsPage({ engagementId }: { engagementId: string }) {
             apply needs an approval, and offering a button that cannot work is worse than
             not offering one. */}
         <p className="panel-note">{t('runs.writes-nothing')}</p>
+
+        {/* Said rather than left to the button being grey. A disabled control with no
+            explanation is the same support call as one that does nothing. */}
+        {canRun && sources?.length === 0 && (
+          <p className="curation-message danger">{t('runs.nothing-to-read')}</p>
+        )}
+
         {error && <p className="curation-message danger">{error}</p>}
       </section>
 
@@ -131,7 +197,7 @@ export function RunsPage({ engagementId }: { engagementId: string }) {
           </div>
         )}
       </section>
-    </>
+    </div>
   );
 }
 

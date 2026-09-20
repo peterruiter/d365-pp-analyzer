@@ -189,7 +189,7 @@ export function NarrativePage({ engagementId }: { engagementId: string }) {
   }
 
   return (
-    <>
+    <div className="narrative-page">
       <section className="panel">
         <div className="panel-heading">
           <div>
@@ -205,7 +205,7 @@ export function NarrativePage({ engagementId }: { engagementId: string }) {
       </section>
 
       {sections.map((section) => (
-        <div key={section.id}>
+        <div className="narrative-group" key={section.id}>
           <SectionEditor
             section={section}
             existing={written.find((entry) => entry.sectionId === section.id)}
@@ -221,6 +221,6 @@ export function NarrativePage({ engagementId }: { engagementId: string }) {
           )}
         </div>
       ))}
-    </>
+    </div>
   );
 }

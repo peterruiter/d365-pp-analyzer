@@ -99,19 +99,16 @@ public sealed class RuleEngine
         {
             if (!context.Reach.CanRun(rule, out var missing))
             {
-                notAssessed.Add(new NotAssessed(
-                    rule.Id,
-                    $"This connection could not reach {missing}, which this rule needs. It has not been checked and is not reported as passing.",
-                    missing));
+                // A key, not a sentence. Composed in English here and stored, it printed in
+                // English on a German report, in the one section a client reads most
+                // carefully. The evidence source it names is stored beside it already.
+                notAssessed.Add(new NotAssessed(rule.Id, NotAssessedReasons.Unreachable, missing));
                 continue;
             }
 
             if (!handlers.TryGetValue(rule.Id, out var handler))
             {
-                notAssessed.Add(new NotAssessed(
-                    rule.Id,
-                    "This rule is declared in the catalogue and has no detection implemented yet.",
-                    null));
+                notAssessed.Add(new NotAssessed(rule.Id, NotAssessedReasons.NoHandler, null));
                 continue;
             }
 

@@ -1418,13 +1418,12 @@
    and then went unused for months, because nothing rendered a stage. It is the same markup
    there, deliberately: somebody who watches a run in one product should recognise the other
    without being told they are related. */
-.run-progress { display: grid; gap: 4px; }
-.run-progress-head { display: grid; grid-template-columns: auto minmax(80px, 1fr) auto; align-items: center; gap: 12px; padding: 14px 23px 16px; }
-.run-progress-head .tag { margin: 0; }
-.run-progress-head small { color: var(--cp-text-muted); font-size: 12px; text-align: right; }
-.run-progress-bar { display: block; height: 4px; background: var(--cp-surface-soft); }
-.run-progress-bar span { display: block; height: 100%; background: var(--brand-cyan); transition: width .3s ease; }
-.stage-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; color: var(--cp-text-muted); font-size: 12px; }
+.run-watch { display: grid; gap: 4px; }
+.run-watch-head { display: grid; grid-template-columns: auto minmax(80px, 1fr) auto; align-items: center; gap: 12px; padding: 14px 23px 16px; }
+.run-watch-head .tag { margin: 0; }
+.run-watch-head small { color: var(--cp-text-muted); font-size: 12px; text-align: right; }
+.run-watch-bar { display: block; height: 4px; background: var(--cp-surface-soft); }
+.run-watch-bar span { display: block; height: 100%; background: var(--brand-cyan); transition: width .3s ease; }
 .stage-pending .stage-marker { background: var(--cp-border); }
 .stage-partial .stage-marker { background: var(--cp-warning); }
 .stage-skipped .stage-marker { background: var(--cp-border); }
@@ -1459,8 +1458,38 @@
 .solution-picker-foot { margin-top: 18px; }
 
 @media (max-width: 680px) {
-  .run-progress-head { grid-template-columns: 1fr; }
-  .run-progress-head small { text-align: left; }
+  .run-watch-head { grid-template-columns: 1fr; }
+  .run-watch-head small { text-align: left; }
   .solution-picker { margin-left: 14px; margin-right: 14px; padding: 14px; }
   .solution-item { flex-wrap: wrap; }
+}
+
+/* ------------------------------------------------- pages that stack panels -- */
+/* A panel carries its own border and nothing separates two of them, so a page that
+   returns a list of panels renders them welded into one tall box. .findings-page had
+   solved this and nothing else had: the narrative is eight panels in a column and read
+   as one undifferentiated form.
+
+   The same gap as findings, because a reader moving between the two screens should not
+   feel the rhythm change. */
+.narrative-page, .runs-page { display: grid; gap: 22px; }
+
+/* The maturity panel belongs to the section above it and is still a panel, so it needs
+   the same air as everything else. */
+.narrative-group { display: grid; gap: 22px; }
+
+/* ------------------------------------------------------- choosing what to read -- */
+/* An engagement can hold an uploaded export and a live environment at once, and they
+   produce different reports. Which one a run used is part of what the report means, so
+   it is asked here rather than guessed from whichever sorts first. */
+.run-source { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.run-source-pick { display: flex; align-items: center; gap: 9px; color: var(--cp-text-muted); font-size: 12px; }
+.run-source-pick select { padding: 9px 11px; border: 1px solid var(--cp-border); background: var(--cp-surface); color: var(--cp-text); font: inherit; font-size: 13px; }
+.run-source-pick select:focus { border-color: var(--cp-accent); outline: 2px solid var(--cp-accent-soft); outline-offset: 1px; }
+
+@media (max-width: 680px) {
+  .narrative-page, .runs-page, .narrative-group { gap: 16px; }
+  .run-source { width: 100%; }
+  .run-source-pick { width: 100%; }
+  .run-source-pick select { flex: 1; min-width: 0; }
 }

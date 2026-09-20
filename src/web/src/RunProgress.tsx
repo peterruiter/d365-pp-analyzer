@@ -99,12 +99,12 @@ export function RunProgress({ runId, onChanged }: { runId: string; onChanged?: (
   const progress = detail.stagesTotal === 0 ? 0 : (detail.stagesComplete / detail.stagesTotal) * 100;
 
   return (
-    <div className="run-progress">
-      <div className="run-progress-head">
+    <div className="run-watch">
+      <div className="run-watch-head">
         <span className="tag muted">
           {t('runs.stages-complete-of', detail.stagesComplete, detail.stagesTotal)}
         </span>
-        <span className="run-progress-bar" aria-hidden="true"><span style={{ width: `${progress}%` }} /></span>
+        <span className="run-watch-bar" aria-hidden="true"><span style={{ width: `${progress}%` }} /></span>
         <small>{summary(t, detail)}</small>
       </div>
 

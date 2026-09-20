@@ -569,6 +569,29 @@ app.MapPost("/api/engagements/{engagementId:guid}/runs",
         });
     }
 
+    // Refused here rather than queued to fail at the first stage.
+    //
+    // A run with no source reaches connect, fails, and sits in the list saying "stopped at
+    // check connections", which reads as a broken connection rather than as one that was
+    // never chosen. The engagement's connections are right here and the answer is knowable
+    // before anything is written.
+    if (request.Mode != "publish" && request.SourceConnectionId is null)
+    {
+        var sources = (await store.ListConnectionsAsync(engagementId, context.RequestAborted))
+            .Where(connection => connection.Mode != "azureDevOps")
+            .ToList();
+
+        return Results.BadRequest(new
+        {
+            error = sources.Count == 0
+                ? "This engagement has nothing to read. Add a connection to an environment, or upload a "
+                  + "solution export, before starting a run."
+                : "No source was chosen. This engagement has "
+                  + $"{string.Join(" and ", sources.Select(source => $"'{source.Name}'"))}, "
+                  + "and a run has to say which one it read."
+        });
+    }
+
     var run = new AnalysisRun(
         Guid.NewGuid(),
         engagementId,

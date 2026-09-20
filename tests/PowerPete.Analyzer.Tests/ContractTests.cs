@@ -962,6 +962,86 @@ public class DataLayerTests
         return found;
     }
 
+    [Fact]
+    public void Writes_no_sentence_into_a_document_without_asking_the_translator()
+    {
+        // A German assessment carried sixteen lines of English in the section that explains
+        // what the product did not look at, because those sentences were composed in code
+        // and never went near a bundle. Several more were hardcoded in the renderer beside
+        // labels that were translated, so the same page mixed two languages.
+        //
+        // Every lookup carries its English as a fallback, which is what made this invisible:
+        // the document renders perfectly in all six languages and is only right in one.
+        //
+        // A sentence, not a word. Short literals are column keys, format strings, file
+        // names and units, and demanding a translation for each would make the test noise
+        // that somebody eventually deletes.
+        var source = File.ReadAllText(
+            Path.Combine(Solution(), "PowerPete.Analyzer.Export", "AssessmentReportPdf.cs"));
+
+        const char Quote = (char)34;
+
+        var untranslated = new List<string>();
+
+        foreach (var line in source.Split('\n'))
+        {
+            var text = line.Trim();
+
+            // Comments are prose on purpose.
+            if (text.StartsWith("//", StringComparison.Ordinal) || text.StartsWith("///", StringComparison.Ordinal)) continue;
+
+            foreach (Match literal in Regex.Matches(
+                text, @"""(?<value>[^""\\]{25,})""", RegexOptions.None, TimeSpan.FromSeconds(5)))
+            {
+                var value = literal.Groups["value"].Value;
+
+                // An interpolation hole can hold a string of its own, and a naive scan for
+                // a quoted span cuts through the middle of one and reports the wreckage as
+                // an untranslated sentence. Unbalanced braces are what that looks like.
+                if (value.Count(character => character == '{') != value.Count(character => character == '}')) continue;
+
+                // What is left once the interpolation holes are taken out. A layout string
+                // of three values and two separators is long and has no words in it, and
+                // there is nothing for anybody to translate.
+                var words = Regex.Replace(
+                    value, @"\{[^}]*\}", " ", RegexOptions.None, TimeSpan.FromSeconds(5));
+
+                if (words.Count(char.IsLetter) < 20) continue;
+
+                // Four words or more is a sentence. Below that it is a label, and labels
+                // are looked up by the key beside them.
+                if (words.Trim().Count(char.IsWhiteSpace) < 3) continue;
+
+                // A key, which is the thing being looked up rather than the thing printed.
+                if (value.Contains('.', StringComparison.Ordinal) && !value.Contains(' ', StringComparison.Ordinal)) continue;
+
+                // Inside a lookup: Text["key", "the English"] or Rules["key", "..."]. The
+                // English fallback is exactly where a sentence belongs.
+                var before = text[..literal.Index];
+
+                if (before.Contains("Text[", StringComparison.Ordinal)
+                    || before.Contains("Rules[", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                // A continuation of one. A long fallback is written over several lines and
+                // only the first carries the bracket.
+                if (text.StartsWith("+ \"", StringComparison.Ordinal)
+                    || text.StartsWith(Quote))
+                {
+                    continue;
+                }
+
+                untranslated.Add(value.Length <= 70 ? value : value[..70] + "...");
+            }
+        }
+
+        untranslated.Should().BeEmpty(
+            "every sentence in the report has to be looked up, or it renders in English inside a document "
+            + "written in another language and nothing fails while it does");
+    }
+
     /// <summary>Every environment variable name the container definition sets.</summary>
     private static List<string> WrittenByTheInfrastructure()
     {
