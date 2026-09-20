@@ -131,10 +131,35 @@ public sealed class Worker(WorkerSettings settings)
         Console.WriteLine($"Worker {settings.WorkerId} running version {settings.Version}.");
         Console.WriteLine($"Polling every {settings.PollInterval.TotalSeconds:0} seconds.");
 
-        // Applied on start rather than by a deployment step. A container that carries its own
-        // schema cannot be pointed at a database it does not know how to build.
-        var migrations = await new DatabaseMigrator(settings.ConnectionString).ApplyAsync(progress: null, cancellationToken).ConfigureAwait(false);
-        Console.WriteLine($"{migrations.Count(result => result.Applied)} migration(s) applied, {migrations.Count} in total.");
+        // Checked on start, not applied. This called ApplyAsync, which was fine for as long
+        // as every migration had already been applied out of band by a person, and threw an
+        // unhandled exception the first time one had not: the managed identity holds
+        // db_datareader and db_datawriter and nothing else, deliberately, and cannot alter a
+        // table. The container then restarted every five minutes with a stack trace nobody
+        // was reading.
+        //
+        // Grant-DatabaseAccess.ps1 is explicit that this is the intended arrangement, and it
+        // is the right one. A container that reads a client's estate should not be able to
+        // reshape the database it writes to.
+        var migrator = new DatabaseMigrator(settings.ConnectionString);
+        var pending = await migrator.PendingAsync(cancellationToken).ConfigureAwait(false);
+
+        if (pending.Count > 0)
+        {
+            // Loud, and repeated on every poll below rather than said once at startup and
+            // scrolled away. A worker sitting idle against a database it does not match is
+            // the exact failure this repository keeps finding: something that looks healthy
+            // and does nothing.
+            Console.Error.WriteLine(
+                $"The database is behind this build by {pending.Count} migration(s): {string.Join(", ", pending)}.");
+            Console.Error.WriteLine(
+                "No work will be claimed until they are applied. Run ./build/Initialize-Database.ps1 as "
+                + "somebody who can change the schema; this worker cannot and is not meant to be able to.");
+        }
+        else
+        {
+            Console.WriteLine($"Schema is current, {DatabaseMigrator.LoadMigrations().Count} migration(s).");
+        }
 
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -142,6 +167,24 @@ public sealed class Worker(WorkerSettings settings)
 
             try
             {
+                if (pending.Count > 0)
+                {
+                    // Re-checked rather than latched, so the worker picks itself up the
+                    // moment somebody applies the migrations, without a restart.
+                    pending = await migrator.PendingAsync(cancellationToken).ConfigureAwait(false);
+
+                    if (pending.Count > 0)
+                    {
+                        Console.Error.WriteLine(
+                            $"Still waiting: {pending.Count} migration(s) unapplied. Claiming nothing.");
+
+                        await Task.Delay(settings.PollInterval, cancellationToken).ConfigureAwait(false);
+                        continue;
+                    }
+
+                    Console.WriteLine("Schema is current now. Claiming work.");
+                }
+
                 command = await workspace.ClaimCommandAsync(settings.WorkerId, settings.Version, cancellationToken)
                     .ConfigureAwait(false);
 

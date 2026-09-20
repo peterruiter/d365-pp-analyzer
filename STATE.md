@@ -5,7 +5,7 @@ where the build is. Update it at the end of every working session, in the same c
 the work.
 
 **Version:** 1.0.0
-**Last updated:** 2026-09-19
+**Last updated:** 2026-09-20
 **Current block:** it is deployed and serving. A demonstration engagement seeds itself on
 every start, the reports render with charts in six languages, the offline upload works end
 to end, and a run queued through the API is picked up by the worker and produces findings
@@ -17,11 +17,16 @@ for three reasons at once. They are recorded below. The line stays because it is
 and this paragraph stays because the distinction between "the product does this" and "the
 product did this once, locally" is the whole point of the file.
 
-**What has never happened is a read of a live client environment.** Interactive sign-in has
-never completed a round trip: it needs an account in a client tenant and a browser, and it
-is the last unproven path of consequence. An earlier version of this line said interactive
-sign-in works. It does not, and a state file that overstates the product is the one kind of
-inaccuracy this repository cannot afford.
+**Interactive sign-in completes a round trip now.** It was reported working from the
+deployed product on 20 September 2026, after the Key Vault setting defect below was fixed.
+Two earlier versions of this line were wrong in both directions: one claimed it worked
+before it ever had, and one kept saying it did not after it did.
+
+**What has still never happened is a discovery run against a live client environment.** The
+path is built end to end and no part of it has been exercised by a person: a run stops to
+ask which solutions to read, and nobody has answered that question on a real estate yet.
+Everything below about the picker is true of the code and the schema, and is unproven in
+front of a client.
 
 ---
 
@@ -1061,6 +1066,119 @@ permanent and silent, and it survived because the thing that would have revealed
 one path nobody had run end to end. The lesson is not about settings or about Docker. It is
 that a component with no output is a component with no evidence, and this product now has
 three tests whose whole job is to be that evidence.
+
+## Three buttons that had never worked, and what they had in common
+
+Reported as two complaints: signing in lands in the demonstration estate, and the Discover
+button does nothing. Neither was a symptom of the thing it looked like.
+
+### Discover posted a run mode that does not exist here
+
+`RunsPage.tsx` was ported from the migrator, which has five modes and calls the first one
+`discover`. This product has four: `quickScan`, `assessment`, `publish` and `compare`. The
+page kept the mode string when it was copied.
+
+Every click inserted a row that `CK_AnalysisRun_Mode` refused. The API threw, the response
+was a problem document rather than the `{error}` shape the page reads, and the button did
+nothing at all, visibly, from the day it was written. The live database confirmed it: not
+one run has ever been queued from that button.
+
+Nothing could have found this by reading either side. The page was internally consistent and
+so was the schema, and the only place they met was a string.
+
+### The solution scope had never been applied
+
+`DataverseReader.ReadAsync` takes `solutionUniqueNames`. It is documented as "which solutions
+are in scope. Empty reads every unmanaged solution." Its only caller passed `[]`, and the
+method never read the parameter at all.
+
+So every run against a live environment read all of it, including the forty-odd solutions
+Microsoft ships. That is the longest part of a run and it produces findings about Dynamics
+rather than about the work a client paid somebody to do.
+
+This is the fourth member of the family recorded in this file: a declared capability with
+no implementation behind it, which fails by being quiet rather than by being wrong.
+
+### The engagement was never persisted
+
+The shell ran `setEngagement(current ?? list[0])` on every load and stored the choice
+nowhere. A refresh reset it, and so did signing in, because an Entra redirect returns to a
+freshly loaded page. Every reader therefore landed in whichever engagement sorted first,
+which is the demonstration estate, on precisely the occasion they had just signed in to look
+at a client's.
+
+It is recorded against the person now, beside the language and the theme, and carried in the
+URL as well so a link opens what the sender was looking at. Validated on read rather than
+trusted: an engagement can be deleted and a grant revoked between one sign-in and the next,
+and failing a sign-in over a stale preference would be worse than the bug it fixes.
+
+## A run stops and asks what to read
+
+The picker is the feature the mode defect was hiding. A run lists the environment, records
+everything it found, stops at `awaitingSelection` and waits.
+
+One run that pauses rather than two runs, so a discovery is one row and one timeline, and
+the question "what did this report cover" has one answer. `selectSolutions` already existed
+as a stage and the contract already said it "records which were chosen"; there was no UI and
+nothing persisted.
+
+**Microsoft's own solutions start unticked.** That is a judgement rather than a fact the
+platform states, and it is arranged so being wrong is cheap: the only consequence is a box in
+the wrong position, next to the publisher and the component count, which somebody can move.
+Nothing is hidden and everything found is recorded whether or not it was chosen, because a
+report covering four of nineteen solutions and one covering all nineteen look identical on
+the cover page.
+
+Three checks can be turned off: the solution checker, model estimates and environment health.
+Turning the checker off reports every rule that depends on it as not assessed, never as
+passing, which is the same rule the rest of the product follows about absent evidence.
+
+### Watching it happen, and running a stage again
+
+`ops.RunStage` had recorded per stage status, attempts and timings since the first migration
+and nothing had ever rendered it. The stylesheet for the timeline was in this repository too,
+ported with the rest of `workspaces.css` and unused, so the screen that watches a run is the
+sibling product's markup against the sibling product's CSS and looks like it on purpose.
+
+Running a stage again discards everything after it, which the button says out loud before it
+does it. A stage re-run alone would write over what the stages behind it had already
+consumed, leaving a run whose findings came from one extraction and whose score came from
+another, looking perfectly healthy.
+
+### Two more found by the guards rather than by reading
+
+`analysis-stages.json` declared `score` before `estimate` and the worker ran the reverse. The
+worker is right: `score` is the stage that persists the findings and `estimate` is what
+attaches an estimate to each one, so scoring first would save every finding with none. The
+contract had been wrong for months with nothing holding the two together.
+
+`CK_RunCommand_Command` did not allow `resume`, which is the mode defect again, one line
+away, in a migration written in the same hour as the fix for it.
+
+`Never_writes_a_value_a_check_constraint_would_refuse` now holds every literal the code
+writes into one of those columns against what the constraint accepts. Its first version
+checked only values written through a helper, passed cleanly against the missing `resume` it
+was written to catch, and had to be fixed before it meant anything. Both halves were then
+checked by reintroducing their defect.
+
+## The worker could never have applied a migration
+
+Found by breaking it. The first migration this product ever needed the deployed worker to
+apply was the one above, and the worker crash looped on it every five minutes.
+
+`Grant-DatabaseAccess.ps1` gives the managed identity `db_datareader` and `db_datawriter` and
+says why beside it: "the containers never change the schema: that is Initialize-Database.ps1,
+run by a person as themselves." That is the right call, and the worker did not know about it.
+It called `ApplyAsync` on every start and treated failure as fatal.
+
+The contradiction was invisible for the life of the deployment because every migration had
+always been applied out of band before the worker saw it, so the call had never done anything
+but confirm six rows.
+
+The worker asks now instead of applying. A database behind the code is reported on every
+poll, with the command to fix it, and nothing is claimed until it is current; the worker picks
+itself up without a restart the moment somebody applies them. Refusing to work is right, and
+crash looping with a stack trace nobody reads is not.
 
 ## What was ported rather than invented
 

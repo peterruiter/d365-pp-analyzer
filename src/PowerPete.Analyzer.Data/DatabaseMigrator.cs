@@ -149,6 +149,43 @@ public sealed partial class DatabaseMigrator(string connectionString)
         return results;
     }
 
+    /// <summary>
+    /// Which migrations this database is missing, without trying to apply any of them.
+    /// </summary>
+    /// <remarks>
+    /// For a caller that is not allowed to change the schema, which is every container this
+    /// product deploys. Grant-DatabaseAccess.ps1 gives the managed identity db_datareader and
+    /// db_datawriter and says why in as many words: the containers never change the schema,
+    /// that is a person running Initialize-Database.ps1 as themselves.
+    ///
+    /// The worker did not know that. It called ApplyAsync on every start, which was fine for
+    /// as long as every migration had already been applied out of band, and threw an
+    /// unhandled exception the first time one had not. The container then restarted, every
+    /// five minutes, with a stack trace nobody was reading.
+    ///
+    /// So the worker asks this instead. A database behind the code is a real problem and it
+    /// says so on every poll, loudly and with the command to fix it, rather than either
+    /// crashing or quietly running against a schema it does not match.
+    /// </remarks>
+    /// <param name="cancellationToken">Cancellation.</param>
+    /// <returns>The names of the migrations that have not been applied, in order.</returns>
+    public async Task<IReadOnlyList<string>> PendingAsync(CancellationToken cancellationToken)
+    {
+        await using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await EnsureLedgerAsync(connection, cancellationToken);
+        var applied = await ReadLedgerAsync(connection, cancellationToken);
+
+        return
+        [
+            .. LoadMigrations()
+                .Where(migration => !applied.TryGetValue(migration.Name, out var hash)
+                    || (hash != Hash(migration.Sql) && !IsGenerated(migration.Name)))
+                .Select(migration => migration.Name)
+        ];
+    }
+
     private static async Task<int> ExecuteAsync(
         SqlConnection connection,
         string sql,
