@@ -2,8 +2,12 @@
 
 ## Anmelden
 
-Melden Sie sich mit Ihrem Microsoft-Geschäftskonto an. Jeder im Tenant kann sich anmelden; das
-allein bringt Ihnen nichts.
+Melden Sie sich mit Ihrem Microsoft-Geschäftskonto an. Mit jedem Microsoft-Geschäftskonto, in jeder
+Organisation: Sie müssen nicht im selben Tenant wie das Produkt sein, und niemand muss Sie
+zuerst als Gast einladen. Das allein bringt Ihnen nichts.
+
+Das ist Absicht. Die Kunden einer Beratung sitzen nicht im Tenant der Beratung, und ein
+Kunde, der seine eigene Bewertung lesen möchte, sollte dafür kein zweites Konto brauchen.
 
 Ein Werkzeug, das die gesamte Lösungslandschaft eines Kunden liest, ist keines, in das jeder
 im Tenant einfach hineinspazieren können sollte. Angemeldet sein und zugelassen sein sind also

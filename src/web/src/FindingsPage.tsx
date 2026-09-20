@@ -36,6 +36,11 @@ interface Finding {
 
 interface NotAssessed {
   ruleId: string;
+
+  /** The rule's name, in the reader's language. The identifier is for a consultant, not a client. */
+  ruleName: string;
+
+  /** A finished sentence, not a lookup key. Composed by the API from the key and the evidence it needed. */
   reason: string;
   missingEvidence: string | null;
 }
@@ -240,7 +245,15 @@ export function FindingsPage({ engagementId }: { engagementId: string }) {
         <p className="muted">{t('findings.not-assessed-explain')}</p>
         <ul>
           {data.notAssessed.map(entry => (
-            <li key={entry.ruleId}><code>{entry.ruleId}</code> {entry.reason}</li>
+            <li key={entry.ruleId}>
+              {/* The rule's name and the sentence, both from the API in the reader's
+                  language. This was the identifier and the lookup key side by side, which
+                  is the product talking to itself on the page a careful reader reads
+                  first. */}
+              <strong>{entry.ruleName}</strong>
+              <span>{entry.reason}</span>
+              <code>{entry.ruleId}</code>
+            </li>
           ))}
         </ul>
       </section>

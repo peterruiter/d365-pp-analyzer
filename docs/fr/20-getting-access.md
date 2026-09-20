@@ -2,8 +2,14 @@
 
 ## Se connecter
 
-Connectez-vous avec votre compte professionnel Microsoft. N'importe qui dans le tenant peut se
-connecter ; à soi seul cela ne vous donne rien.
+Connectez-vous avec votre compte professionnel Microsoft. N'importe quel compte professionnel Microsoft,
+dans n'importe quelle organisation : vous n'avez pas besoin d'être dans le même tenant que
+le produit, et personne n'a à vous inviter d'abord comme invité. À soi seul cela ne vous
+donne rien.
+
+C'est délibéré. Les clients d'un cabinet de conseil ne sont pas dans le tenant du cabinet,
+et un client qui veut lire sa propre évaluation ne devrait pas avoir besoin d'un second
+compte pour cela.
 
 Un outil qui lit l'ensemble du patrimoine de solutions d'un client n'est pas un outil où tout
 le monde dans le tenant devrait pouvoir entrer, donc être connecté et être admis sont deux

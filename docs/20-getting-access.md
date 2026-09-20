@@ -2,8 +2,12 @@
 
 ## Signing in
 
-Sign in with your Microsoft work account. Anybody in the tenant can sign in; that on its own
-gets you nothing.
+Sign in with your Microsoft work account. Any Microsoft work account, in any organisation:
+you do not need to be in the same tenant as the product, and nobody has to invite you as a
+guest first. That on its own gets you nothing.
+
+That is deliberate. A consultancy's clients are not in the consultancy's tenant, and a
+client who wants to read their own assessment should not need a second account to do it.
 
 A tool that reads a client's entire solution estate is not one that everybody in the tenant
 should be able to wander into, so being signed in and being admitted are two separate things.

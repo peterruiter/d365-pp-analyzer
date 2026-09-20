@@ -1068,7 +1068,12 @@
 .not-assessed p { margin: 8px 0 0; max-width: 78ch; font-size: 13px; line-height: 1.6; }
 .not-assessed ul { margin: 14px 0 0; padding-left: 20px; display: grid; gap: 7px; }
 .not-assessed li { font-size: 13px; line-height: 1.55; }
-.not-assessed code { color: var(--cp-accent); font-size: 12px; }
+
+/* The rule's name, then why it could not run, then the identifier last and quietly. A
+   client reads the first two and a consultant greps the third. */
+.not-assessed li strong { display: block; color: var(--brand-ink); font-weight: 600; }
+.not-assessed li span { display: block; margin-top: 2px; }
+.not-assessed code { display: block; margin-top: 3px; color: var(--cp-text-soft); font-size: 11px; }
 
 .detail-row td { background: var(--cp-surface-soft); }
 .finding-detail { display: grid; gap: 4px; padding: 6px 0 10px; }

@@ -140,6 +140,23 @@ param(
 
     [string] $AdminContactEmail,
 
+    # Who may sign in.
+    #
+    # "organizations" is any Entra tenant, which is what a consultancy needs: its clients
+    # are not in its tenant, and inviting every client contact as a guest is a week of
+    # somebody's life per engagement. Signing in proves who somebody is and grants them
+    # nothing — a person with no row in ops.SystemUser has no engagements, not even the
+    # demonstration one — so an administrator admitting them by name remains the only way
+    # in.
+    #
+    # A tenant id here instead restricts sign-in to that one tenant.
+    #
+    # Either way it has to match the app registration's sign-in audience:
+    # AzureADMultipleOrgs for "organizations", AzureADMyOrg for a single tenant. Set to
+    # "organizations" against a single tenant registration, nobody can sign in at all,
+    # including the people who could before.
+    [string] $SignInAudience = 'organizations',
+
     [switch] $SkipFirewall
 )
 
@@ -223,7 +240,7 @@ $parameters = @(
     "administratorName=$($signedIn.userPrincipalName)"
     'administratorType=User'
     "clientIpAddress=$clientIp"
-    "azureAdTenantId=$($account.tenantId)"
+    "azureAdTenantId=$SignInAudience"
 )
 
 if ($AzureAdClientId)

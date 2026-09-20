@@ -2,8 +2,13 @@
 
 ## Accedere
 
-Accedete con il vostro account aziendale Microsoft. Chiunque nel tenant può accedere; da solo
-questo non vi dà nulla.
+Accedete con il vostro account aziendale Microsoft. Qualunque account aziendale Microsoft, in qualunque
+organizzazione: non dovete trovarvi nello stesso tenant del prodotto e nessuno deve
+invitarvi prima come ospite. Da solo questo non vi dà nulla.
+
+È voluto. I clienti di una società di consulenza non sono nel tenant della società, e un
+cliente che vuole leggere la propria valutazione non dovrebbe avere bisogno di un secondo
+account per farlo.
 
 Uno strumento che legge l'intero patrimonio di soluzioni di un cliente non è uno strumento in
 cui chiunque nel tenant debba poter entrare, quindi essere autenticati ed essere ammessi sono

@@ -2,8 +2,13 @@
 
 ## Aanmelden
 
-Meld u aan met uw Microsoft-werkaccount. Iedereen in de tenant kan zich aanmelden; dat op
-zichzelf levert u niets op.
+Meld u aan met uw Microsoft-werkaccount. Met elk Microsoft-werkaccount, in elke organisatie:
+u hoeft niet in dezelfde tenant te zitten als het product en niemand hoeft u eerst als gast
+uit te nodigen. Dat op zichzelf levert u niets op.
+
+Dat is bewust zo. De klanten van een consultancy zitten niet in de tenant van die
+consultancy, en een klant die zijn eigen beoordeling wil lezen zou daarvoor geen tweede
+account nodig moeten hebben.
 
 Een hulpmiddel dat het volledige solutionlandschap van een klant leest, is er niet een waar
 iedereen in de tenant zomaar binnen zou moeten kunnen lopen, dus aangemeld zijn en toegelaten

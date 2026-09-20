@@ -992,6 +992,58 @@ public class DataLayerTests
             + "the same way however many times somebody presses the button");
     }
 
+    [Fact]
+    public void Signing_in_cannot_admit_you()
+    {
+        // The one property the whole product rests on, and it now rests on it harder.
+        //
+        // Sign-in accepts any work account in any Entra tenant, because a consultancy's
+        // clients are not in the consultancy's tenant and inviting every one of them as a
+        // guest is a week of somebody's life per engagement. What keeps that safe is that
+        // authentication proves who somebody is and grants them nothing: a person with no
+        // row in ops.SystemUser has no engagements, not even the demonstration one.
+        //
+        // So exactly two places may create that row, and both are somebody with the
+        // authority to do it deciding to: an administrator admitting a person, and the
+        // configured first administrator being written on startup. If a third ever appears
+        // — most plausibly a well meant "record who just signed in" — the product would
+        // admit the internet to itself, one visitor at a time, and every screen would still
+        // look correct.
+        var source = File.ReadAllText(Path.Combine(
+            Directory.GetParent(Solution())!.FullName,
+            "src", "PowerPete.Analyzer.Data", "Access.cs"));
+
+        // Each INSERT with the method that contains it, found by walking back to the
+        // nearest signature above it.
+        var admitting = new[] { "AdmitAsync", "EnsureInitialGlobalAdminAsync" };
+
+        var offending = new List<string>();
+
+        foreach (Match insert in Regex.Matches(
+            source,
+            @"INSERT \(UserId,",
+            RegexOptions.None,
+            TimeSpan.FromSeconds(5)))
+        {
+            var before = source[..insert.Index];
+
+            var method = Regex.Matches(before, @"public async Task[^\n]*?(?<name>\w+)\(", RegexOptions.None, TimeSpan.FromSeconds(5))
+                .Select(match => match.Groups["name"].Value)
+                .LastOrDefault() ?? "(none)";
+
+            if (!admitting.Contains(method, StringComparer.Ordinal)) offending.Add(method);
+        }
+
+        offending.Should().BeEmpty(
+            "only admitting somebody may create a user row. Anything else that creates one turns signing in "
+            + "into being admitted, and sign-in is open to every Entra tenant there is");
+
+        // And the guard has to be able to see the inserts it is guarding, or it passes by
+        // finding nothing at all.
+        Regex.Matches(source, @"INSERT \(UserId,", RegexOptions.None, TimeSpan.FromSeconds(5))
+            .Should().HaveCountGreaterThan(0, "Access.cs has to be readable for this to mean anything");
+    }
+
     /// <summary>One foreign key, as the migrations declare it.</summary>
     /// <param name="Name">Its constraint name, for the failure message.</param>
     /// <param name="Table">The table that holds it.</param>

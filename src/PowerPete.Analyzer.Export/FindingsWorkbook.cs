@@ -1,5 +1,6 @@
 namespace PowerPete.Analyzer.Export;
 
+using System.Globalization;
 using ClosedXML.Excel;
 using PowerPete.Analyzer.Analysis;
 using PowerPete.Analyzer.DevOps;
@@ -326,31 +327,49 @@ public sealed class FindingsWorkbook
     {
         var sheet = workbook.Worksheets.Add(model.Text["inventory.sheet.notAssessed", "Not assessed"]);
 
-        sheet.Cell(1, 1).Value = $"{model.Score.NotAssessed.Count} of {RuleCatalogue.All.Count} checks could not run";
+        // Both of these were English whatever language the workbook was written in, on the
+        // one sheet that says what the product did not look at.
+        sheet.Cell(1, 1).Value = string.Format(
+            CultureInfo.InvariantCulture,
+            model.Text["inventory.checksCouldNotRun", "{0} of {1} checks could not run"],
+            model.Score.NotAssessed.Count,
+            RuleCatalogue.All.Count);
+
         sheet.Cell(1, 1).Style.Font.Bold = true;
-        sheet.Cell(2, 1).Value =
-            "None of these is reported as passing anywhere in this workbook. A short findings list is not the " +
-            "same thing as a clean estate.";
+
+        sheet.Cell(2, 1).Value = model.Text["inventory.noneReportedAsPassing",
+            "None of these is reported as passing anywhere in this workbook. A short findings list is not the "
+            + "same thing as a clean estate."];
+
         sheet.Range(2, 1, 2, 5).Merge().Style.Alignment.WrapText = true;
 
         var header = 4;
         sheet.Cell(header, 1).Value = model.Text["inventory.rule", "Rule"];
-        sheet.Cell(header, 2).Value = model.Text["inventory.whyItCouldNotRun", "Why it could not run"];
-        sheet.Cell(header, 3).Value = model.Text["inventory.missingEvidence", "Missing evidence"];
-        sheet.Range(header, 1, header, 3).Style.Font.Bold = true;
+        sheet.Cell(header, 2).Value = model.Text["inventory.identifier", "Identifier"];
+        sheet.Cell(header, 3).Value = model.Text["inventory.whyItCouldNotRun", "Why it could not run"];
+        sheet.Cell(header, 4).Value = model.Text["inventory.missingEvidence", "Missing evidence"];
+        sheet.Range(header, 1, header, 4).Style.Font.Bold = true;
 
         var row = header + 1;
 
         foreach (var entry in model.Score.NotAssessed.OrderBy(entry => entry.RuleId, StringComparer.Ordinal))
         {
-            sheet.Cell(row, 1).Value = entry.RuleId;
-            sheet.Cell(row, 2).Value = entry.Reason;
-            sheet.Cell(row, 3).Value = entry.MissingEvidence ?? "";
+            // The name a person reads, then the identifier a consultant greps for. It was
+            // the identifier alone, and the reason beside it was the lookup key rather than
+            // the sentence: this sheet printed "notAssessed.unreachable" in every language,
+            // English included. The report had been fixed and the workbook had not.
+            sheet.Cell(row, 1).Value = model.Rules[$"finding.{entry.RuleId}.name",
+                RuleCatalogue.Find(entry.RuleId)?.Name ?? entry.RuleId];
+
+            sheet.Cell(row, 2).Value = entry.RuleId;
+            sheet.Cell(row, 3).Value = NotAssessedReasons.Describe(model.Text, entry);
+            sheet.Cell(row, 4).Value = entry.MissingEvidence ?? "";
             row++;
         }
 
         sheet.Column(1).Width = 45;
-        sheet.Column(2).Width = 80;
+        sheet.Column(2).Width = 38;
+        sheet.Column(3).Width = 80;
     }
 
     private static void Header(IXLWorksheet sheet, params string[] labels)

@@ -1,4 +1,5 @@
 using Azure;
+using PowerPete.Analyzer.Domain.Localization;
 using Azure.Identity;
 using System.Security.Claims;
 using System.Text.Json;
@@ -942,6 +943,27 @@ app.MapPost("/api/runs/{runId:guid}/approve",
     });
 }).RequireAuthorization();
 
+// ------------------------------------------------------ the reader's language --
+
+// Every screen that shows rule text needs it, and until now none of them asked.
+//
+// The reports have localised since the first release: the PDF and the workbook take the
+// engagement's language and look every sentence up. The JSON endpoints behind the screens
+// did not, so a consultant reading in German got a German shell around English rule names,
+// English explanations and, where the sentence was composed by the engine rather than
+// written by hand, a raw lookup key.
+//
+// The reader's own language rather than the engagement's. A report is a document for the
+// client and is written in the language the engagement chose; a screen is being read right
+// now by whoever is looking at it.
+async Task<string> LanguageFor(HttpContext context)
+{
+    var access = context.RequestServices.GetRequiredService<AccessStore>();
+    var preferences = await access.GetPreferencesAsync(UserId(context.User), context.RequestAborted);
+
+    return LocaleCatalogue.Resolve(preferences.Language).Code;
+}
+
 // -------------------------------------------------------------------- findings --
 
 // The same sentence every time, so it is built once rather than on every request.
@@ -954,6 +976,13 @@ app.MapGet("/api/engagements/{engagementId:guid}/findings",
     async (HttpContext context, AnalysisStore store, Guid engagementId, Guid? runId) =>
 {
     if (await Denied(context, engagementId, EngagementRoles.Viewer) is { } denied) return denied;
+
+    // Two namespaces, because the text comes from two places: a rule's name and explanation
+    // are written per rule, and the sentence saying why a check could not run is composed
+    // from a key and the evidence it needed.
+    var language = await LanguageFor(context);
+    var ruleText = new Localiser("finding", language);
+    var reportText = new Localiser("report", language);
 
     // Latest run that got as far as scoring, not latest that was started. Defaulting to a run
     // that died during extraction would show an empty estate and look like a finished one.
@@ -988,7 +1017,22 @@ app.MapGet("/api/engagements/{engagementId:guid}/findings",
         runId = run,
         ruleCount = RuleCatalogue.All.Count,
         caveats,
-        notAssessed = notAssessed.Select(entry => new { entry.RuleId, entry.Reason, entry.MissingEvidence }),
+        // The rule's name and a finished sentence, not an identifier and a lookup key.
+        //
+        // This section is the one a careful reader reads first, because it is the shape of
+        // the hole around every number above it. It was printing
+        // "lifecycle.classicWorkflowDormant notAssessed.unreachable", which is the product
+        // talking to itself in front of a client.
+        notAssessed = notAssessed.Select(entry => new
+        {
+            entry.RuleId,
+            ruleName = ruleText[$"finding.{entry.RuleId}.name", RuleCatalogue.Find(entry.RuleId)?.Name ?? entry.RuleId],
+            // Rebuilt into the domain record the describer takes. The store hands back a
+            // tuple, which is the same three fields under a different name.
+            reason = NotAssessedReasons.Describe(
+                reportText, new NotAssessed(entry.RuleId, entry.Reason, entry.MissingEvidence)),
+            entry.MissingEvidence,
+        }),
         findings = findings.Select(finding =>
         {
             // The rule's own text is joined on here rather than stored per finding. It is the
@@ -1001,7 +1045,7 @@ app.MapGet("/api/engagements/{engagementId:guid}/findings",
                 finding.FindingId,
                 finding.StableKey,
                 finding.RuleId,
-                ruleName = rule?.Name ?? finding.RuleId,
+                ruleName = ruleText[$"finding.{finding.RuleId}.name", rule?.Name ?? finding.RuleId],
                 finding.Category,
                 finding.Severity,
                 finding.ComponentName,
@@ -1016,9 +1060,11 @@ app.MapGet("/api/engagements/{engagementId:guid}/findings",
                 estimateLayer = finding.Layer,
                 finding.Rationale,
                 finding.FlaggedReason,
-                why = rule?.Why,
-                recommendation = rule?.Recommendation,
-                falsePositive = rule?.FalsePositive,
+                why = rule is null ? null : ruleText[$"finding.{finding.RuleId}.why", rule.Why],
+                recommendation = rule is null ? null : ruleText[$"finding.{finding.RuleId}.recommendation", rule.Recommendation],
+                falsePositive = rule?.FalsePositive is null
+                    ? null
+                    : ruleText[$"finding.{finding.RuleId}.falsePositive", rule.FalsePositive],
                 roadmap = rule is null ? null : new { rule.RoadmapRow, rule.RoadmapColumn, rule.RoadmapBand }
             };
         })

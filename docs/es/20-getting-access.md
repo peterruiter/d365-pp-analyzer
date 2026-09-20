@@ -2,8 +2,13 @@
 
 ## Iniciar sesión
 
-Inicie sesión con su cuenta profesional de Microsoft. Cualquiera del tenant puede iniciar
-sesión; eso por sí solo no le da nada.
+Inicie sesión con su cuenta profesional de Microsoft. Cualquier cuenta profesional de Microsoft, en
+cualquier organización: no necesita estar en el mismo tenant que el producto, y nadie tiene
+que invitarle primero como invitado. Eso por sí solo no le da nada.
+
+Es deliberado. Los clientes de una consultora no están en el tenant de la consultora, y un
+cliente que quiera leer su propia evaluación no debería necesitar una segunda cuenta para
+hacerlo.
 
 Una herramienta que lee todo el patrimonio de soluciones de un cliente no es una herramienta
 en la que cualquiera del tenant deba poder entrar, así que haber iniciado sesión y estar

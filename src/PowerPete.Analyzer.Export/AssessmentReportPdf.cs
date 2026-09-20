@@ -954,7 +954,11 @@ public sealed partial class AssessmentReportPdf
 
             foreach (var entry in model.Score.NotAssessed.OrderBy(entry => entry.RuleId, StringComparer.Ordinal))
             {
-                table.Cell(entry.RuleId);
+                // The rule's name, in the report's language. It was the identifier, so the
+                // section a client reads most carefully listed things like
+                // "lifecycle.classicWorkflowDormant" down the page: the product's internal
+                // vocabulary, in English, in a German document.
+                table.Cell(RuleName(model, entry.RuleId));
 
                 // Resolved here rather than stored as a sentence. The reason was composed
                 // in English by the rule engine, so a German report carried English in the
@@ -1130,6 +1134,12 @@ public sealed partial class AssessmentReportPdf
     /// </remarks>
     private static string RuleName(Model model, Finding finding) =>
         model.Rules[$"finding.{finding.RuleId}.name", finding.Rule?.Name ?? finding.RuleId];
+
+    /// <summary>The same, for a rule that has no finding because it could not run.</summary>
+    /// <param name="model">The report.</param>
+    /// <param name="ruleId">Which rule.</param>
+    private static string RuleName(Model model, string ruleId) =>
+        model.Rules[$"finding.{ruleId}.name", RuleCatalogue.Find(ruleId)?.Name ?? ruleId];
 
     /// <summary>One of a rule's paragraphs, in the document's language.</summary>
     /// <param name="model">The document.</param>

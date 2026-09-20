@@ -1546,6 +1546,85 @@ conflict is not: something still points at what is being deleted and it will poi
 just as firmly next time. The two now say different things, and the second one says it is a
 defect in the product rather than something the reader did wrong.
 
+## A model is actually connected now
+
+Asked whether the product uses a model to judge quality. It does not, and it was not using
+one for anything at all.
+
+**What a model is for here, and only this:** pricing one already identified finding. Whether
+something is a problem is decided by 44 deterministic rules reading a solution file, the
+metadata, or Microsoft's checker; severity comes from the rule catalogue; the ratio, score
+and roadmap are arithmetic; the narrative is typed by a consultant. The model is asked for
+hours, story points, a rationale and assumptions, one finding at a time, at temperature
+zero, and its answer is rejected for a non range, a missing rationale, a high over low ratio
+above eight, an off scale point value or anything over twenty times the band, and flagged
+over four times.
+
+**And none of that had ever run.** `OpenAi__Endpoint` and `OpenAi__Deployment` were not set
+on the deployed worker, so `BuildEstimator` returned the band only estimator and every
+estimate in every report was a band default. That degraded visibly rather than silently —
+the score carries "N of M estimates are band defaults" — but the picker offered "Model
+estimates", ticked, with nothing behind it.
+
+Now deployed: `ppanalyzer-openai` in `rg-ppanalyzer`, gpt-4.1-mini, DataZoneStandard so the
+inference stays in the EU data zone, key authentication turned off, and the product's managed
+identity holding Cognitive Services OpenAI User on it. The same argument as the storage
+account: a key in a container's environment is a key in every diagnostic dump.
+
+## Sign-in was one tenant, and a consultancy's clients are not in it
+
+Reported as AADSTS50020 signing in as `peter.ruiter@capgemini.com`: the app registration is
+`AzureADMyOrg`, so only the PowerPete tenant could sign in, and anybody else had to be
+invited as a guest first.
+
+**What makes opening this safe is already true.** `GetAccessAsync` returns `UserAccess.None`
+for anybody with no row in `ops.SystemUser` — no engagements, not even the demonstration
+one — and `RecordDisplayNameAsync` is deliberately incapable of creating a row, so signing
+in cannot admit you. Authentication proves who somebody is; an administrator admitting them
+by name is the only way in. People are keyed by `preferred_username`, which for a
+cross-tenant user is their real home UPN, and that is exactly the string an administrator
+types into the admit box.
+
+That property was load-bearing before and is now the only thing between the product and
+every Entra tenant there is, so it has a guard:
+`Signing_in_cannot_admit_you` scans `Access.cs` and fails if anything other than admitting
+somebody creates a user row. Verified by making `RecordDisplayNameAsync` a MERGE, which is
+the well meant version of the mistake.
+
+Still to do by hand, in this order, because doing them the other way round locks everybody
+out: the app registration has to become `AzureADMultipleOrgs`, and only then
+`AzureAd__TenantId` on the API becomes `organizations`. The deployment script now takes a
+`-SignInAudience` parameter defaulting to `organizations`, so a redeploy does not undo it.
+
+## The screens never translated anything
+
+Reported twice, in the report and on the screen. The not assessed list read
+"lifecycle.classicWorkflowDormant notAssessed.unreachable": an internal identifier and a
+lookup key, side by side, in the section a careful reader reads first.
+
+The reports have localised since the first release. The JSON endpoints behind the screens
+never did — they returned `rule.Name` and `rule.Why` straight out of the generated
+catalogue, which is English — so a consultant reading in German got a German shell around
+English rule text, and where a sentence was composed by the engine rather than written by
+hand, a raw key in every language including English.
+
+Three separate holes, one cause:
+
+| Where | What it printed |
+|---|---|
+| The findings screen | The rule's identifier and the reason's lookup key; rule names and explanations always English |
+| The workbook's Not assessed sheet | The same, plus two hardcoded English sentences |
+| The report | The reason correctly localised, the rule named by its identifier |
+
+The report had been half fixed when `NotAssessedReasons` was written: the *reason* was
+turned into a key rendered at read time, and the *rule name* beside it was left as the
+identifier. The workbook was not touched at all.
+
+Now: the findings endpoint resolves both namespaces in the reader's own language — their
+language, not the engagement's, because a report is a document for the client and a screen
+is being read right now by whoever is looking at it — and the workbook and the report both
+name the rule.
+
 ## What was ported rather than invented
 
 | From | What |

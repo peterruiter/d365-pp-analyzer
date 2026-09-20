@@ -37,7 +37,7 @@ param vaultPurgeProtection bool = false
 @description('Image the API and the worker run. Empty on a first deployment, before anything has been built.')
 param containerImage string = ''
 
-@description('Entra tenant for sign in. Empty leaves authentication off, which is only ever right on a developer machine.')
+@description('Who may sign in. "organizations" is any Entra tenant, which is what a consultancy needs. A tenant id restricts it to that one tenant. Empty leaves authentication off, which is only ever right on a developer machine.')
 param azureAdTenantId string = ''
 
 @description('Entra application id for sign in.')
