@@ -55,6 +55,12 @@ param dataProtectionKeyUri string = ''
 @description('Where an uploaded solution file goes.')
 param uploadContainerUri string = ''
 
+@description('The Azure OpenAI resource that estimates a finding. Empty means every estimate is the band default, which the report says out loud.')
+param openAiEndpoint string = ''
+
+@description('Which deployment on it, recorded against every estimate the model produced.')
+param openAiDeployment string = ''
+
 @description('Entra tenant for sign in. Empty leaves authentication off, which is only ever right on a developer machine.')
 param azureAdTenantId string = ''
 
@@ -154,6 +160,16 @@ var commonEnv = [
   { name: 'Support__AdminContact', value: adminContactEmail }
   { name: 'Access__InitialGlobalAdminUpn', value: initialGlobalAdminUpn }
   { name: 'Access__GlobalAdminContactEmail', value: adminContactEmail }
+
+  // The estimator's model. Read by the worker, which is the only thing that estimates;
+  // the API is given them so the health page can say whether estimates are model or band.
+  //
+  // These were set by hand for an afternoon and were not in this file, which meant the
+  // next infrastructure deployment would have quietly turned the model off again and
+  // every estimate would have gone back to being a band default. The report would still
+  // have said so, in a caveat, at the bottom, which is how nobody would have noticed.
+  { name: 'OpenAi__Endpoint', value: openAiEndpoint }
+  { name: 'OpenAi__Deployment', value: openAiDeployment }
 ]
 
 // Held by the platform rather than written into the container definition. An absent secret

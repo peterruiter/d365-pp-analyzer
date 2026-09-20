@@ -112,6 +112,15 @@ module storage 'modules/storage.bicep' = {
   }
 }
 
+module openAi 'modules/openai.bicep' = {
+  name: 'openai'
+  params: {
+    location: location
+    namePrefix: namePrefix
+    identityPrincipalId: identity.properties.principalId
+  }
+}
+
 module monitoring 'modules/monitoring.bicep' = {
   name: 'monitoring'
   params: {
@@ -138,6 +147,8 @@ module containers 'modules/containerapps.bicep' = {
     sqlConnectionString: '${sql.outputs.connectionString}Authentication=Active Directory Default;Connect Timeout=90;'
     keyVaultUri: keyVault.outputs.vaultUri
     uploadContainerUri: storage.outputs.uploadContainerUri
+    openAiEndpoint: openAi.outputs.endpoint
+    openAiDeployment: openAi.outputs.deploymentName
     dataProtectionBlobUri: storage.outputs.dataProtectionBlobUri
     dataProtectionKeyUri: keyVault.outputs.dataProtectionKeyUri
     azureAdTenantId: azureAdTenantId
@@ -168,6 +179,10 @@ output keyVaultName string = keyVault.outputs.vaultName
 
 @description('What goes in KeyVault:Uri. Without it the product refuses to store a credential rather than putting one in the database.')
 output keyVaultUri string = keyVault.outputs.vaultUri
+
+@description('What goes in OpenAi:Endpoint and OpenAi:Deployment. Without them every estimate is a band default.')
+output openAiEndpoint string = openAi.outputs.endpoint
+output openAiDeployment string = openAi.outputs.deploymentName
 
 @description('Where the API keeps the keys that sign a sign-in, and the vault key they are wrapped with.')
 output dataProtectionBlobUri string = storage.outputs.dataProtectionBlobUri
