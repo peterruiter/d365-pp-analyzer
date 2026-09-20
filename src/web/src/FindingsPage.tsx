@@ -127,6 +127,13 @@ export function FindingsPage({ engagementId }: { engagementId: string }) {
         </span>
       </section>
 
+      {/*
+        Wrapped, because a table is the one thing on a page that refuses to be narrower than
+        its contents. Without this the table pushed the whole page sideways and the detail
+        under a finding ran off the right of the window mid-sentence. The wrapper scrolls its
+        own overflow; the rule that lets it is the min-width on the page's grid children.
+      */}
+      <div className="table-wrap">
       <table className="findings-table">
         <thead>
           <tr>
@@ -200,7 +207,17 @@ export function FindingsPage({ engagementId }: { engagementId: string }) {
                       <p className="muted">{t('evidence.explain')}</p>
                       <dl>
                         {Object.entries(finding.evidence).map(([key, value]) => (
-                          <div key={key}><dt>{key}</dt><dd>{value}</dd></div>
+                          /*
+                            Rendered through String(), because React draws false as nothing
+                            at all. The evidence for "cloud flow with no failure path" is
+                            hasFailurePath: false, and the screen showed the label with an
+                            empty space beside it: the single most important piece of
+                            evidence on the finding, displayed as though it were missing.
+                          */
+                          <div key={key}>
+                            <dt>{key}</dt>
+                            <dd>{value === null || value === undefined ? '—' : String(value)}</dd>
+                          </div>
                         ))}
                       </dl>
 
@@ -235,6 +252,7 @@ export function FindingsPage({ engagementId }: { engagementId: string }) {
           ))}
         </tbody>
       </table>
+      </div>
 
       {/*
         Its own section rather than a footnote. Everything above is a number and this is the
