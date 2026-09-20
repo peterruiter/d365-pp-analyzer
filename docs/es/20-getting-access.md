@@ -31,11 +31,7 @@ en otro.
 |---|---|
 | **Lector** | Leer todo lo del encargo: inventario, hallazgos, estimaciones, backlog, informes. |
 | **Colaborador** | Todo lo que puede un Lector, más configurar conexiones, iniciar ejecuciones y ajustar estimaciones. |
-| **Administrador** | Todo lo que puede un Colaborador, más dar acceso a otras personas y aprobar un backlog para su publicación. |
-
-Aprobar un backlog es deliberadamente una acción de Administrador y deliberadamente distinta
-de iniciar una ejecución. Es la puerta entre una evaluación y el proyecto de Azure DevOps de
-alguien.
+| **Administrador** | Todo lo que puede un Colaborador, más dar acceso a otras personas. |
 
 ## Administradores globales
 

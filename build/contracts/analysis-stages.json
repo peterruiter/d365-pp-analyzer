@@ -4,10 +4,10 @@
   "description": "Every stage an analysis run passes through, in order, plus the run modes and the one gate that matters. Generates the stage enumeration, the resume logic and the status screens.",
   "principles": {
     "nothingWritesToThePlatform": "No stage writes to a Power Platform environment in any mode. There is no flag that changes this, because the value of a discovery that is safe to run in a first meeting exceeds anything a write would add.",
-    "publishIsTheOnlyWrite": "The publish stage writes work items to Azure DevOps and is the only stage in the product that writes anywhere outside its own database. It sits behind an approval recorded against a named person and the exact backlog they saw.",
-    "approvalBindsToAHash": "The approval records a hash of the backlog as it was presented. A backlog that changes afterwards no longer matches and the publish refuses. Approving one thing and publishing another is the failure this exists to prevent.",
+    "publishIsTheOnlyWrite": "The publish stage writes work items to Azure DevOps and is the only stage in the product that writes anywhere outside its own database. Nothing is published that somebody did not choose on the backlog screen, and every item carries a deterministic key so a second publish updates rather than duplicates.",
     "resumable": "Every stage checkpoints. A run that dies during extraction resumes rather than restarting, because re-extracting a large estate costs an hour and re-running a checker job costs a queue place.",
-    "idempotentPublish": "Publishing twice creates no duplicates. Every work item carries a deterministic key derived from the engagement, the rule and the component, and an existing item is updated rather than added."
+    "idempotentPublish": "Publishing twice creates no duplicates. Every work item carries a deterministic key derived from the engagement, the rule and the component, and an existing item is updated rather than added.",
+    "publishingIsDeliberate": "There is no approval step. There was one, and it recorded that a named person had read a backlog before it reached a client's project, bound to a hash of exactly what they saw. It was removed because it was a second button in front of a button: the person who publishes is the person who read the list, choosing the items, and a click that means 'yes I meant the thing I am about to do' is not evidence of review. What remains is the dry run, which shows what would land and writes nothing."
   },
   "modes": [
     {
@@ -17,7 +17,6 @@
       "stopsAfter": "score",
       "runsChecker": false,
       "estimates": "bandDefault",
-      "requiresApproval": false,
       "exportsSolutions": false
     },
     {
@@ -27,18 +26,16 @@
       "stopsAfter": "backlog",
       "runsChecker": true,
       "estimates": "model",
-      "requiresApproval": false,
       "exportsSolutions": true
     },
     {
       "id": "publish",
       "name": "Publish to Azure DevOps",
-      "purpose": "Writes the approved backlog into a project as work items. The only mode that writes anything to a client system.",
+      "purpose": "Writes the backlog into a project as work items. The only mode that writes anything to a client system.",
       "stopsAfter": "publish",
       "runsChecker": false,
       "estimates": "asApproved",
-      "requiresApproval": true,
-      "note": "Runs against an existing assessment rather than re-analysing. Re-analysing here would mean the thing published is not the thing approved.",
+      "note": "Runs against an existing assessment rather than re-analysing. Re-analysing here would mean the thing published is not the thing somebody read.",
       "exportsSolutions": false
     },
     {
@@ -48,7 +45,6 @@
       "stopsAfter": "score",
       "runsChecker": true,
       "estimates": "model",
-      "requiresApproval": false,
       "exportsSolutions": true
     }
   ],
@@ -152,7 +148,7 @@
       "name": "Build the backlog",
       "order": 100,
       "writes": "own",
-      "description": "Findings grouped into work items per devops-mapping.json, with acceptance criteria and test requirements written per rule. Produces the hash the approval binds to.",
+      "description": "Findings grouped into work items per devops-mapping.json, with acceptance criteria and test requirements written per rule.",
       "retryable": true,
       "maxAttempts": 2,
       "failureIsFatal": true

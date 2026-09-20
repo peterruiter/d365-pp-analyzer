@@ -1796,6 +1796,42 @@ geography, what the service replied, and — for an unauthorised answer specific
 token for the environment is not a token for the checker. A ruleset list that comes back
 without "Solution Checker" in it is a third thing again, and says what it did offer.
 
+## The approval is gone, and the backlog shows what it publishes
+
+Two reports, one screen.
+
+**The screen showed less than its own output.** Every backlog item carries a description —
+what was found, which component in which solution, why it matters, what to do, the table of
+covered components — and it was written, stored and published to Azure DevOps. The one place
+it was never shown was the product that produced it, because the API projection left
+`DescriptionHtml` out. A consultant reading the app got a title and an acceptance criterion
+and had to open DevOps to see the rest.
+
+It renders from our own markup, parsed into elements rather than injected. The criteria
+renderer beside it already made that choice for the same reason: a Dataverse display name is
+whatever a maker typed, and this page would run it.
+
+**And the approval step is removed**, on the argument that it adds a button and not a review.
+That is the product owner's call and it is a reasonable one: the person who publishes is the
+person who read the list and ticked the items, and a second click saying "yes, I meant that"
+is not evidence that anybody read anything.
+
+What went: the endpoint, the gate in the publish endpoint, the hash comparison in both
+publishers, the stage's refusal, the approve command, the step on the overview, the strings
+in six languages, the section in six guides, and the principle in the contract that said a
+publish sits behind an approval.
+
+What stayed, deliberately: the dry run, which shows exactly what would land and writes
+nothing and is the useful half of what the gate was pretending to be; the refusal of more
+than two hundred items without a confirmed count; the deterministic key, so a second publish
+updates rather than duplicates; and `findings.PublishedWorkItem`, which still records who
+published what, where, and when.
+
+`ops.RunApproval` is left in the database with its rows. Nothing writes to it and nothing
+reads it. Dropping a table that holds a real record of who approved what, on the day the
+feature is removed, is a decision for somebody who wants that record gone rather than a
+tidy-up.
+
 ## What was ported rather than invented
 
 | From | What |

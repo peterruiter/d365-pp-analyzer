@@ -33,11 +33,7 @@ n'avoir rien sur une autre.
 |---|---|
 | **Lecteur** | Lire tout sur la mission : inventaire, constats, estimations, backlog, rapports. |
 | **Contributeur** | Tout ce que peut un Lecteur, plus configurer des connexions, lancer des exécutions et ajuster des estimations. |
-| **Administrateur** | Tout ce que peut un Contributeur, plus accorder l'accès à d'autres et approuver un backlog pour publication. |
-
-Approuver un backlog est délibérément une action d'Administrateur et délibérément distincte du
-lancement d'une exécution. C'est la porte entre une évaluation et le projet Azure DevOps de
-quelqu'un.
+| **Administrateur** | Tout ce que peut un Contributeur, plus accorder l'accès à d'autres. |
 
 ## Administrateurs globaux
 

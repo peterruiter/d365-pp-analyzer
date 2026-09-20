@@ -17,9 +17,9 @@ oder geben ihm eine exportierte Lösungsdatei, es liest, was da ist, und es lief
 Einstellung, die das ändert. Sie können eine Erkundung in einem ersten Gespräch durchführen,
 ohne ein Change Advisory Board, und genau darum geht es.
 
-Das Einzige, was es irgendwohin schreibt, sind Arbeitselemente in Azure DevOps, und erst
-nachdem jemand mit der Rolle Administrator im Engagement genau den Backlog freigegeben hat,
-der veröffentlicht wird.
+Das Einzige, was es irgendwohin schreibt, sind Arbeitselemente in Azure DevOps, und nur die,
+die jemand im Backlog-Bildschirm ausgewählt hat. Es gibt einen Probelauf, der genau zeigt,
+was landen würde, und nichts schreibt.
 
 **Es ist kein Ersatz für den Power Apps Checker.** Es ruft den Checker auf und fügt die
 Ergebnisse unter Microsofts eigenen Regelkennungen ein. Die Regeln, die es selbst deklariert,

@@ -30,7 +30,7 @@ und in einem anderen nichts haben.
 |---|---|
 | **Leser** | Alles im Engagement lesen: Inventar, Befunde, Schätzungen, Backlog, Berichte. |
 | **Mitwirkender** | Alles, was ein Leser kann, plus Verbindungen konfigurieren, Läufe starten und Schätzungen anpassen. |
-| **Administrator** | Alles, was ein Mitwirkender kann, plus anderen Zugang gewähren und einen Backlog zur Veröffentlichung freigeben. |
+| **Administrator** | Alles, was ein Mitwirkender kann, plus anderen Zugang gewähren. |
 
 Einen Backlog freizugeben ist bewusst eine Administratoraktion und bewusst getrennt vom
 Starten eines Laufs. Es ist das Tor zwischen einer Bewertung und jemandes Azure-DevOps-Projekt.

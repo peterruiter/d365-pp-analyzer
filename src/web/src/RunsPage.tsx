@@ -145,9 +145,8 @@ export function RunsPage({ engagementId }: { engagementId: string }) {
           )}
         </div>
 
-        {/* Only discovery can be started from here. A plan needs a target connection and an
-            apply needs an approval, and offering a button that cannot work is worse than
-            not offering one. */}
+        {/* Only discovery can be started from here. Publishing needs a target connection
+            and happens on the backlog screen, where the items are. */}
         <p className="panel-note">{t('runs.writes-nothing')}</p>
 
         {/* Said rather than left to the button being grey. A disabled control with no

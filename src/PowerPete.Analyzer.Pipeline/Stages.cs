@@ -38,7 +38,7 @@ public sealed record StageServices(
     Func<Stream, CancellationToken, Task<CheckerOutcome>> RunChecker,
     Estimator Estimator,
     BacklogBuilder BacklogBuilder,
-    Func<Guid, IReadOnlyList<BacklogItem>, string, CancellationToken, Task<int>> Publish,
+    Func<Guid, IReadOnlyList<BacklogItem>, CancellationToken, Task<int>> Publish,
     IRunPersistence Persist,
     IReadOnlyList<FixedCost> FixedCosts,
     IReadOnlyDictionary<string, EstimateBand> Bands,
@@ -181,10 +181,6 @@ public interface IRunPersistence
     /// <param name="cancellationToken">Cancellation.</param>
     Task SaveBacklogAsync(Guid runId, Guid engagementId, IReadOnlyList<BacklogItem> items, CancellationToken cancellationToken);
 
-    /// <summary>The hash somebody approved, or null.</summary>
-    /// <param name="runId">Which run.</param>
-    /// <param name="cancellationToken">Cancellation.</param>
-    Task<string?> GetApprovedHashAsync(Guid runId, CancellationToken cancellationToken);
 }
 
 /// <summary>Shared plumbing for the stages below.</summary>
@@ -842,18 +838,9 @@ public sealed class PublishStage(StageServices services) : StageBase(services)
     {
         ArgumentNullException.ThrowIfNull(state);
 
-        var approved = await Services.Persist.GetApprovedHashAsync(state.RunId, cancellationToken).ConfigureAwait(false);
-
-        if (approved is null)
-        {
-            return StageOutcome.Failed(
-                "Nobody has approved this backlog. Approval is a row inserted by a named person against the exact " +
-                "backlog they were looking at, and there is no setting that skips it.");
-        }
-
         if (state.BacklogHash is null)
         {
-            return StageOutcome.Failed("The backlog stage did not run, so there is nothing to compare the approval against.");
+            return StageOutcome.Failed("The backlog stage did not run, so there is nothing to publish.");
         }
 
         var byKey = state.Components.ToDictionary(component => component.StableKey, StringComparer.Ordinal);
@@ -865,7 +852,7 @@ public sealed class PublishStage(StageServices services) : StageBase(services)
                 entry.Finding.ComponentKey is null ? null : byKey.GetValueOrDefault(entry.Finding.ComponentKey)))],
             $"Published from run {state.RunId}.");
 
-        var created = await Services.Publish(state.RunId, items, approved, cancellationToken).ConfigureAwait(false);
+        var created = await Services.Publish(state.RunId, items, cancellationToken).ConfigureAwait(false);
 
         return StageOutcome.Succeeded(Checkpoint.Write(new { created }));
     }

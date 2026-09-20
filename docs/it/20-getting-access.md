@@ -31,11 +31,7 @@ non avere nulla su un altro.
 |---|---|
 | **Lettore** | Leggere tutto sull'incarico: inventario, rilievi, stime, backlog, rapporti. |
 | **Collaboratore** | Tutto ciò che può un Lettore, più configurare connessioni, avviare esecuzioni e correggere stime. |
-| **Amministratore** | Tutto ciò che può un Collaboratore, più dare accesso ad altri e approvare un backlog per la pubblicazione. |
-
-Approvare un backlog è deliberatamente un'azione da Amministratore e deliberatamente distinta
-dall'avvio di un'esecuzione. È la porta fra una valutazione e il progetto Azure DevOps di
-qualcuno.
+| **Amministratore** | Tutto ciò che può un Collaboratore, più dare accesso ad altri. |
 
 ## Amministratori globali
 

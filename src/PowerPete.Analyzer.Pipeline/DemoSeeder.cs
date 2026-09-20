@@ -68,9 +68,7 @@ public sealed class DemoSeeder(string connectionString)
         await ClearAsync(connection, cancellationToken).ConfigureAwait(false);
         await WriteEngagementAsync(connection, cancellationToken).ConfigureAwait(false);
 
-        var persistence = new StorePersistence(
-            new AnalysisStore(connectionString),
-            new WorkspaceStore(connectionString));
+        var persistence = new StorePersistence(new AnalysisStore(connectionString));
 
         await persistence.SaveSolutionsAsync(DemoEstate.RunId, estate.Solutions, cancellationToken).ConfigureAwait(false);
         await persistence.SaveComponentsAsync(DemoEstate.RunId, estate.Components, cancellationToken).ConfigureAwait(false);
@@ -92,7 +90,6 @@ public sealed class DemoSeeder(string connectionString)
         await persistence.SaveBacklogAsync(DemoEstate.RunId, DemoEstate.EngagementId, estate.Backlog, cancellationToken)
             .ConfigureAwait(false);
 
-        await ApproveAsync(connection, estate, cancellationToken).ConfigureAwait(false);
         await StampAsync(connection, cancellationToken).ConfigureAwait(false);
 
         return true;
@@ -238,32 +235,6 @@ public sealed class DemoSeeder(string connectionString)
                 },
                 cancellationToken: cancellationToken)).ConfigureAwait(false);
         }
-    }
-
-    /// <summary>
-    /// Approves the backlog, so the demonstration shows an engagement past the gate.
-    /// </summary>
-    /// <remarks>
-    /// The publish stage is still skipped and there is no Azure DevOps connection on this
-    /// engagement, so nothing can be published from it. What the approval buys is the half of
-    /// the product that only appears once somebody has approved something: the backlog screen
-    /// in its approved state, and the hash that binds it.
-    /// </remarks>
-    private static async Task ApproveAsync(SqlConnection connection, DemoEstate.Result estate, CancellationToken cancellationToken)
-    {
-        await connection.ExecuteAsync(new CommandDefinition(
-            """
-            INSERT INTO ops.RunApproval (RunId, BacklogHash, ItemCount, ApprovedBy, ApprovedByName)
-            VALUES (@runId, @hash, @count, 'system', @name);
-            """,
-            new
-            {
-                runId = DemoEstate.RunId,
-                hash = estate.BacklogHash,
-                count = estate.Backlog.Count,
-                name = "Demonstration"
-            },
-            cancellationToken: cancellationToken)).ConfigureAwait(false);
     }
 
     private static async Task StampAsync(SqlConnection connection, CancellationToken cancellationToken)

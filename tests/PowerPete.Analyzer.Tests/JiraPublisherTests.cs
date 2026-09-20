@@ -79,7 +79,7 @@ public class JiraPublisherTests
     {
         var (publisher, recorder) = Build();
 
-        await publisher.PublishAsync([Item("pp-alm-001", "task")], "hash", "hash", false, 1, CancellationToken.None);
+        await publisher.PublishAsync([Item("pp-alm-001", "task")], false, 1, CancellationToken.None);
 
         var create = recorder.Sent.Single(sent => sent.Method == "POST");
         var labels = Fields(create.Body).GetProperty("labels").EnumerateArray()
@@ -95,7 +95,7 @@ public class JiraPublisherTests
     {
         var (publisher, recorder) = Build();
 
-        await publisher.PublishAsync([Item("pp-alm-001", "task")], "hash", "hash", false, 1, CancellationToken.None);
+        await publisher.PublishAsync([Item("pp-alm-001", "task")], false, 1, CancellationToken.None);
 
         var search = recorder.Sent.First();
 
@@ -117,7 +117,7 @@ public class JiraPublisherTests
     {
         var (publisher, recorder) = Build();
 
-        await publisher.PublishAsync([Item("k", ours)], "hash", "hash", false, 1, CancellationToken.None);
+        await publisher.PublishAsync([Item("k", ours)], false, 1, CancellationToken.None);
 
         var create = recorder.Sent.Single(sent => sent.Method == "POST");
 
@@ -132,7 +132,7 @@ public class JiraPublisherTests
         // that would otherwise fail a publish outright.
         var (publisher, recorder) = Build(new Dictionary<string, string>(StringComparer.Ordinal) { ["task"] = "9" });
 
-        await publisher.PublishAsync([Item("k", "epic")], "hash", "hash", false, 1, CancellationToken.None);
+        await publisher.PublishAsync([Item("k", "epic")], false, 1, CancellationToken.None);
 
         var create = recorder.Sent.Single(sent => sent.Method == "POST");
 
@@ -147,7 +147,7 @@ public class JiraPublisherTests
 
         await publisher.PublishAsync(
             [Item("k", "task", html: "<h3>Why it matters</h3><p>A &amp; B<br/>C</p><ul><li>One</li></ul>")],
-            "hash", "hash", false, 1, CancellationToken.None);
+            false, 1, CancellationToken.None);
 
         var description = Fields(recorder.Sent.Single(sent => sent.Method == "POST").Body)
             .GetProperty("description");
@@ -180,7 +180,7 @@ public class JiraPublisherTests
 
         await publisher.PublishAsync(
             [Item("parent", "epic"), Item("child", "story", parent: "parent")],
-            "hash", "hash", false, 2, CancellationToken.None);
+            false, 2, CancellationToken.None);
 
         var creates = recorder.Sent.Where(sent => sent.Method == "POST").ToList();
 
@@ -192,26 +192,12 @@ public class JiraPublisherTests
     }
 
     [Fact]
-    public async Task Refuses_a_backlog_that_changed_since_it_was_approved()
-    {
-        var (publisher, recorder) = Build();
-
-        var attempt = async () => await publisher.PublishAsync(
-            [Item("k", "task")], "approved-hash", "a-different-hash", false, 1, CancellationToken.None);
-
-        await attempt.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*changed since it was approved*");
-
-        recorder.Sent.Should().BeEmpty("nothing is sent when the approval does not match");
-    }
-
-    [Fact]
     public async Task Calls_nothing_on_a_dry_run()
     {
         var (publisher, recorder) = Build();
 
         var result = await publisher.PublishAsync(
-            [Item("k", "task")], "hash", "hash", dryRun: true, confirmedCount: 1, CancellationToken.None);
+            [Item("k", "task")], dryRun: true, confirmedCount: 1, CancellationToken.None);
 
         recorder.Sent.Should().BeEmpty();
         result.Should().ContainSingle().Which.Action.Should().Be("skipped");
@@ -224,7 +210,7 @@ public class JiraPublisherTests
 
         var spaced = Item("k", "task") with { Tags = ["two words"] };
 
-        await publisher.PublishAsync([spaced], "hash", "hash", false, 1, CancellationToken.None);
+        await publisher.PublishAsync([spaced], false, 1, CancellationToken.None);
 
         var labels = Fields(recorder.Sent.Single(sent => sent.Method == "POST").Body)
             .GetProperty("labels").EnumerateArray().Select(label => label.GetString()).ToList();

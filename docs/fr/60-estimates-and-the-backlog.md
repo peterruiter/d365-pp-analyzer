@@ -50,20 +50,10 @@ test, tous deux issus du contrat plutôt qu'écrits élément par élément. Ils
 la langue de backlog de la mission, qui se règle par mission et qui est distincte de la langue
 dans laquelle vous lisez le produit.
 
-## Approuver
-
-La publication vers Azure DevOps exige une approbation, et seul un Administrateur de la
-mission peut la donner.
-
-L'approbation consigne le backlog exact qui a été approuvé, sous forme d'empreinte. Si le
-backlog change ensuite — parce que quelqu'un a relancé l'analyse, ou ajusté une estimation —
-l'empreinte ne correspond plus et la publication refuse. Approuver une chose et en publier une
-autre est l'échec que cette porte existe pour empêcher.
-
 ## Publier
 
 Une publication écrit des éléments de travail dans le projet Azure DevOps configuré sur la
-mission. Elle ne réanalyse rien : elle publie le backlog approuvé et rien d'autre.
+mission. Elle ne réanalyse rien : elle publie les éléments choisis et rien d'autre.
 
 Chaque élément de travail porte une étiquette déterministe dérivée de la mission et de la clé
 de l'élément, si bien que publier deux fois met à jour les éléments existants au lieu de créer

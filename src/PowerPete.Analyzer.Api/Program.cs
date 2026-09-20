@@ -572,15 +572,15 @@ app.MapPost("/api/engagements/{engagementId:guid}/runs",
 {
     if (await Denied(context, engagementId, EngagementRoles.Contributor) is { } denied) return denied;
 
-    // A publish is the only mode that writes anywhere, and it may only work from an assessment
-    // somebody already approved. Both constraints exist in the database as well; this one is
-    // here so the message names the reason rather than a constraint.
+    // A publish is the only mode that writes anywhere, and it works from an assessment that
+    // already exists rather than making a new one. The constraint is in the database as
+    // well; this one is here so the message names the reason rather than a constraint.
     if (request.Mode == "publish" && request.BasedOnRunId is null)
     {
         return Results.BadRequest(new
         {
             error = "A publish works from an existing assessment rather than re-analysing. " +
-                    "Re-analysing would mean the thing published is not the thing that was approved."
+                    "Re-analysing first would mean the thing published is not the thing somebody read."
         });
     }
 
@@ -919,48 +919,6 @@ app.MapPost("/api/runs/{runId:guid}/stages/{stageId}/retry",
     });
 }).RequireAuthorization();
 
-// -------------------------------------------------------------- approval --
-
-// -------------------------------------------------------------------- approval --
-app.MapPost("/api/runs/{runId:guid}/approve",
-    async (HttpContext context, WorkspaceStore store, AnalysisStore analysis, Guid runId) =>
-{
-    var run = await store.GetRunAsync(runId, context.RequestAborted);
-    if (run is null) return Results.NotFound();
-
-    // Admin only, and only ever a person. Approving is the gate between a backlog and a
-    // client's DevOps project, and a role that can start a run is not the same as one that can
-    // write into somebody else's board.
-    if (await Denied(context, run.EngagementId, EngagementRoles.Admin) is { } denied) return denied;
-
-    // The hash is computed here, from what is stored, rather than taken from the caller.
-    //
-    // It used to arrive in the request body, which asked a browser to reproduce a SHA256 of
-    // a canonical form it cannot see, and made the one value the whole gate rests on
-    // something a client could send anything for. Nothing ever called it, so nothing ever
-    // noticed.
-    var items = await analysis.GetPublishableBacklogAsync(runId, context.RequestAborted);
-
-    if (items.Count == 0)
-    {
-        return Results.BadRequest(new { error = "There is no backlog on this run to approve." });
-    }
-
-    var hash = BacklogHash.Of(items.Select(item =>
-        (item.Key, item.Title, item.AcceptanceCriteria, item.LowHours ?? 0, item.HighHours ?? 0, item.StoryPoints)));
-
-    await store.ApproveAsync(runId, hash, items.Count,
-        UserId(context.User), DisplayName(context.User), context.RequestAborted);
-
-    return Results.Ok(new
-    {
-        approved = true,
-        itemCount = items.Count,
-        note = $"Recorded against your name and these {items.Count} items. A backlog that changes afterwards "
-             + "no longer matches and the publish refuses."
-    });
-}).RequireAuthorization();
-
 // ------------------------------------------------------ the reader's language --
 
 // Every screen that shows rule text needs it, and until now none of them asked.
@@ -1127,7 +1085,7 @@ app.MapPost("/api/engagements/{engagementId:guid}/overrides",
 }).RequireAuthorization();
 
 app.MapGet("/api/engagements/{engagementId:guid}/backlog",
-    async (HttpContext context, AnalysisStore store, WorkspaceStore workspaceStore, Guid engagementId, Guid? runId) =>
+    async (HttpContext context, AnalysisStore store, Guid engagementId, Guid? runId) =>
 {
     if (await Denied(context, engagementId, EngagementRoles.Viewer) is { } denied) return denied;
 
@@ -1136,30 +1094,9 @@ app.MapGet("/api/engagements/{engagementId:guid}/backlog",
 
     var items = await store.GetBacklogAsync(run.Value, context.RequestAborted);
 
-    // Whether this exact backlog has been approved, so the screen can offer the approval
-    // rather than only refusing the publish. The gate existed and nothing anywhere let
-    // anybody through it.
-    var approvedHash = await workspaceStore.GetApprovedHashAsync(run.Value, context.RequestAborted);
-
-    var publishable = await store.GetPublishableBacklogAsync(run.Value, context.RequestAborted);
-
-    var currentHash = publishable.Count == 0
-        ? null
-        : BacklogHash.Of(publishable.Select(item =>
-            (item.Key, item.Title, item.AcceptanceCriteria, item.LowHours ?? 0, item.HighHours ?? 0, item.StoryPoints)));
-
     return Results.Ok(new
     {
         runId = run,
-
-        approval = new
-        {
-            given = approvedHash is not null,
-
-            // Approved, and then something changed. The publish would refuse and this is
-            // where somebody finds out why, rather than at the end.
-            stale = approvedHash is not null && currentHash is not null && approvedHash != currentHash
-        },
 
         items = items.Select(item => new
         {
@@ -1167,6 +1104,13 @@ app.MapGet("/api/engagements/{engagementId:guid}/backlog",
             item.ParentItemId,
             item.WorkItemType,
             item.Title,
+
+            // The body, which the screen never had. It is what makes an item groomable:
+            // what was found, where it is, which component in which solution, why it
+            // matters and what to do. All of it was written, stored and published to
+            // Azure DevOps, and the one place it was not shown was the product that
+            // produced it, so the app read as a thinner version of its own output.
+            item.DescriptionHtml,
             item.AcceptanceCriteria,
             item.TestRequirement,
             item.Priority,
@@ -1180,8 +1124,8 @@ app.MapGet("/api/engagements/{engagementId:guid}/backlog",
 
 // The steps, and where each one is done. Built once rather than on every request to a screen
 // somebody opens at the start of every session.
-string[] stepIds = ["connect", "discover", "review", "approve", "publish"];
-string[] stepWorkspaces = ["Connections", "Runs", "Findings", "Backlog", "Backlog"];
+string[] stepIds = ["connect", "discover", "review", "publish"];
+string[] stepWorkspaces = ["Connections", "Runs", "Findings", "Backlog"];
 
 // -------------------------------------------------------------------- reports --
 // Composed on demand rather than produced by a run and kept. A client's estate in a document
@@ -1524,9 +1468,8 @@ app.MapGet("/api/engagements/{engagementId:guid}/connections/{connectionId:guid}
 
 // Publishing a chosen set of the backlog into a chosen project.
 //
-// Both halves are the point. The worker's publish run mode sends the whole approved backlog
-// to the project named on the connection, which is right for a pipeline and wrong for a
-// person: the usual case is a consultant walking a client through the backlog and agreeing
+// Both halves are the point. The worker's publish run mode sends the whole backlog to the
+// project named on the connection, which is right for a pipeline and wrong for a person: the usual case is a consultant walking a client through the backlog and agreeing
 // that this epic and those four tasks go in now. So the items are chosen here and the
 // project is chosen here, and neither is remembered on the connection.
 app.MapPost("/api/engagements/{engagementId:guid}/publish",
@@ -1558,27 +1501,6 @@ app.MapPost("/api/engagements/{engagementId:guid}/publish",
     var run = await analysis.GetLatestScoredRunAsync(engagementId, context.RequestAborted);
 
     if (run is null) return Results.BadRequest(new { error = "Nothing has been analysed, so there is no backlog." });
-
-    // The approval, and what it was bound to. Publishing something nobody approved is the
-    // failure the approval exists to prevent, and it is worth refusing here as well as in
-    // the publisher: this endpoint does not go through a run.
-    //
-    // A dry run is exempt, and refusing one was wrong. It writes nothing: it authenticates,
-    // reads the project and reports what would be created. That is how somebody checks the
-    // connection works and sees what would land, which is the thing they do *before*
-    // deciding whether to approve. Requiring an approval first made the gate a door with
-    // the handle on the far side.
-    var approved = await workspace.GetApprovedHashAsync(run.Value, context.RequestAborted);
-
-    if (approved is null && !request.DryRun)
-    {
-        return Results.BadRequest(new
-        {
-            error = "This backlog has not been approved. Approve it on this screen first: the approval is what "
-                + "records that somebody read these items before they landed in a client's project. "
-                + "\"Show what would happen\" needs no approval and writes nothing."
-        });
-    }
 
     var all = await analysis.GetPublishableBacklogAsync(run.Value, context.RequestAborted);
 
@@ -1636,9 +1558,8 @@ app.MapPost("/api/engagements/{engagementId:guid}/publish",
     try
     {
         // The two publishers answer the same shape and nothing below this line cares which
-        // one ran. Both refuse a backlog that has changed since it was approved, both
-        // refuse more than two hundred items without a confirmed count, and neither
-        // reopens anything somebody closed.
+        // one ran. Both refuse more than two hundred items without a confirmed count, and
+        // neither reopens anything somebody closed.
         IReadOnlyList<(string Key, string Id, string Url, string Action)> published;
 
         if (jira)
@@ -1653,7 +1574,7 @@ app.MapPost("/api/engagements/{engagementId:guid}/publish",
             var types = await JiraProjects.IssueTypesAsync(jiraClient, host, request.Project, context.RequestAborted);
 
             var result = await new JiraPublisher(jiraClient, host, request.Project, types).PublishAsync(
-                items, approved ?? string.Empty, approved ?? string.Empty, request.DryRun, confirmedCount: items.Count, context.RequestAborted);
+                items, request.DryRun, confirmedCount: items.Count, context.RequestAborted);
 
             published = [.. result.Select(entry => (entry.Key, entry.IssueKey, entry.Url, entry.Action))];
         }
@@ -1669,7 +1590,7 @@ app.MapPost("/api/engagements/{engagementId:guid}/publish",
             var shape = await WorkItemPublisher.ReadShapeAsync(client, host, request.Project, context.RequestAborted);
 
             var result = await new WorkItemPublisher(client, host, request.Project, shape).PublishAsync(
-                items, approved ?? string.Empty, approved ?? string.Empty, request.DryRun, confirmedCount: items.Count, context.RequestAborted);
+                items, request.DryRun, confirmedCount: items.Count, context.RequestAborted);
 
             published = [.. result.Select(entry => (
                 entry.Key,
@@ -1805,12 +1726,6 @@ app.MapGet("/api/engagements/{engagementId:guid}/next-steps",
     var connected = connections.Count > 0;
     var analysed = scored is not null;
 
-    var approved = false;
-    if (scored is not null)
-    {
-        approved = await workspace.GetApprovedHashAsync(scored.Value, context.RequestAborted) is not null;
-    }
-
     var published = runs.Any(run =>
         string.Equals(run.Mode, "publish", StringComparison.Ordinal)
         && string.Equals(run.Status, "succeeded", StringComparison.Ordinal));
@@ -1818,7 +1733,7 @@ app.MapGet("/api/engagements/{engagementId:guid}/next-steps",
     // Exactly one step is current: the first thing that is not done. Everything after it is
     // blocked, because offering a button for work that cannot start yet is how somebody ends
     // up publishing a backlog from an analysis that never ran.
-    var done = new[] { connected, analysed, analysed, approved, published };
+    var done = new[] { connected, analysed, analysed, published };
 
     var current = Array.IndexOf(done, false);
 

@@ -123,6 +123,9 @@ export type BacklogItem = {
   parentItemId: string | null;
   workItemType: string;
   title: string;
+
+  /** The body: what was found, where, why it matters and what to do. Our own markup. */
+  descriptionHtml: string;
   acceptanceCriteria: string;
   testRequirement: string | null;
   priority: number;
@@ -149,9 +152,6 @@ export type Run = {
 export type Backlog = {
   runId: string | null;
   items: BacklogItem[];
-
-  /** Whether this exact backlog has been approved, and whether it has moved since. */
-  approval?: { given: boolean; stale: boolean };
 };
 
 /**

@@ -31,10 +31,7 @@ hebben op een andere.
 |---|---|
 | **Lezer** | Alles op de opdracht lezen: inventarisatie, bevindingen, ramingen, backlog, rapporten. |
 | **Bijdrager** | Alles wat een Lezer kan, plus verbindingen configureren, runs starten en ramingen bijstellen. |
-| **Beheerder** | Alles wat een Bijdrager kan, plus anderen toegang geven en een backlog goedkeuren voor publicatie. |
-
-Een backlog goedkeuren is bewust een Beheerdersactie en bewust gescheiden van het starten van
-een run. Het is de poort tussen een beoordeling en iemands Azure DevOps-project.
+| **Beheerder** | Alles wat een Bijdrager kan, plus anderen toegang geven. |
 
 ## Globale beheerders
 

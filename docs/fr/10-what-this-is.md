@@ -19,8 +19,8 @@ ne change cela. Vous pouvez lancer une découverte dès le premier entretien san
 consultatif du changement, et c'est tout l'intérêt.
 
 La seule chose qu'il écrit quelque part, ce sont des éléments de travail dans Azure DevOps, et
-seulement après que quelqu'un disposant du rôle Administrateur sur la mission a approuvé le
-backlog exact qui sera publié.
+uniquement ceux que quelqu'un a choisis sur l'écran du backlog. Il existe une exécution à
+blanc qui montre exactement ce qui atterrirait et n'écrit rien.
 
 **Il ne remplace pas le Power Apps checker.** Il appelle le checker et intègre les résultats
 sous les identifiants de règle de Microsoft. Les règles qu'il déclare lui-même sont justement

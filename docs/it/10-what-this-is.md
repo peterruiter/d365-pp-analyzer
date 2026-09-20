@@ -17,9 +17,9 @@ gli consegnate un file di soluzione esportato, legge quello che c'è, e produce 
 che lo cambi. Potete eseguire una ricognizione nel primo colloquio senza un comitato di
 approvazione delle modifiche, ed è proprio questo il punto.
 
-L'unica cosa che scrive da qualche parte sono elementi di lavoro in Azure DevOps, e solo dopo
-che qualcuno con il ruolo di Amministratore sull'incarico ha approvato esattamente il backlog
-che viene pubblicato.
+L'unica cosa che scrive da qualche parte sono elementi di lavoro in Azure DevOps, e solo
+quelli che qualcuno ha scelto nella schermata del backlog. C'è un'esecuzione a vuoto che
+mostra esattamente cosa atterrerebbe e non scrive nulla.
 
 **Non sostituisce il Power Apps checker.** Richiama il checker e integra i risultati sotto gli
 identificatori di regola di Microsoft. Le regole che dichiara da sé sono proprio quelle che il

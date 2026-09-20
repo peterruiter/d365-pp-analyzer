@@ -636,18 +636,18 @@ public sealed class AnalysisStore(string connectionString)
     /// <param name="runId">Which run.</param>
     /// <param name="cancellationToken">Cancellation.</param>
     public async Task<IReadOnlyList<(Guid BacklogItemId, Guid? ParentItemId, string WorkItemType, string Title,
-        string AcceptanceCriteria, string TestRequirement, int Priority, int? StoryPoints,
+        string DescriptionHtml, string AcceptanceCriteria, string TestRequirement, int Priority, int? StoryPoints,
         decimal? LowHours, decimal? HighHours, string DeterministicKey)>> GetBacklogAsync(
         Guid runId,
         CancellationToken cancellationToken)
     {
         await using var connection = Connect();
 
-        var rows = await connection.QueryAsync<(Guid, Guid?, string, string, string, string, int, int?, decimal?, decimal?, string)>(
+        var rows = await connection.QueryAsync<(Guid, Guid?, string, string, string, string, string, int, int?, decimal?, decimal?, string)>(
             new CommandDefinition(
                 """
-                SELECT BacklogItemId, ParentItemId, WorkItemType, Title, AcceptanceCriteria, TestRequirement,
-                       Priority, StoryPoints, LowHours, HighHours, DeterministicKey
+                SELECT BacklogItemId, ParentItemId, WorkItemType, Title, DescriptionHtml, AcceptanceCriteria,
+                       TestRequirement, Priority, StoryPoints, LowHours, HighHours, DeterministicKey
                 FROM findings.BacklogItem
                 WHERE RunId = @runId
                 ORDER BY CASE WorkItemType

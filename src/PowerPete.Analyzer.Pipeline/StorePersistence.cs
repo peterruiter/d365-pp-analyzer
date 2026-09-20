@@ -9,7 +9,7 @@ using PowerPete.Analyzer.Extraction;
 using PowerPete.Analyzer.Pipeline.Stages;
 
 /// <summary>Writes what a run found.</summary>
-public sealed class StorePersistence(AnalysisStore analysis, WorkspaceStore workspace) : IRunPersistence
+public sealed class StorePersistence(AnalysisStore analysis) : IRunPersistence
 {
     /// <inheritdoc />
     public Task RecordReadAsync(Guid runId, string componentTypeId, string evidenceSource, bool succeeded, int? count, string? reason, CancellationToken cancellationToken) =>
@@ -121,10 +121,6 @@ public sealed class StorePersistence(AnalysisStore analysis, WorkspaceStore work
                 item.Key))],
             cancellationToken);
     }
-
-    /// <inheritdoc />
-    public Task<string?> GetApprovedHashAsync(Guid runId, CancellationToken cancellationToken) =>
-        workspace.GetApprovedHashAsync(runId, cancellationToken);
 
     private static string Layer(EstimateLayer layer) => layer switch
     {

@@ -48,20 +48,10 @@ aus dem Vertrag statt je Element geschrieben. Sie entstehen in der Backlog-Sprac
 Engagements, die je Engagement gesetzt wird und von der Sprache getrennt ist, in der Sie das
 Produkt lesen.
 
-## Freigeben
-
-Die Veröffentlichung nach Azure DevOps erfordert eine Freigabe, und nur ein Administrator im
-Engagement kann sie erteilen.
-
-Die Freigabe hält genau den Backlog fest, der freigegeben wurde, als Hash. Ändert sich der
-Backlog danach — weil jemand die Analyse erneut ausgeführt oder eine Schätzung angepasst hat —
-passt der Hash nicht mehr und die Veröffentlichung verweigert sich. Das eine freizugeben und
-das andere zu veröffentlichen ist der Fehlschlag, für den es dieses Tor gibt.
-
 ## Veröffentlichen
 
 Eine Veröffentlichung schreibt Arbeitselemente in das Azure-DevOps-Projekt, das im Engagement
-konfiguriert ist. Sie analysiert nichts neu: sie veröffentlicht den freigegebenen Backlog und
+konfiguriert ist. Sie analysiert nichts neu: sie veröffentlicht die gewählten Elemente und
 sonst nichts.
 
 Jedes Arbeitselement trägt eine deterministische Kennzeichnung, abgeleitet aus dem Engagement

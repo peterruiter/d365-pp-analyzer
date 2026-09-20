@@ -588,9 +588,9 @@ public sealed class BacklogBuilder
 /// Writes work items into Azure DevOps.
 /// </summary>
 /// <remarks>
-/// The only thing in this product that writes to a client system. It refuses without an
-/// approval whose hash matches the backlog it was given, and it defaults to a dry run on the
-/// first publish against a project.
+/// The only thing in this product that writes to a client system. It refuses more than two
+/// hundred items without a confirmed count, never reopens anything somebody closed, and
+/// updates rather than duplicates because every item carries a deterministic key.
 /// </remarks>
 public sealed class WorkItemPublisher
 {
@@ -737,28 +737,17 @@ public sealed class WorkItemPublisher
     /// somebody else's backlog, and the one time it happens is the time the tool never gets
     /// used at that client again.
     /// </remarks>
-    /// <param name="items">The approved backlog.</param>
-    /// <param name="approvedHash">The hash the approval was bound to.</param>
-    /// <param name="backlogHash">The hash of the backlog being published.</param>
+    /// <param name="items">The backlog.</param>
     /// <param name="dryRun">When true, returns what would be created and calls nothing.</param>
     /// <param name="confirmedCount">The count the person confirmed, when there are more than two hundred items.</param>
     /// <param name="cancellationToken">Cancellation.</param>
     public async Task<IReadOnlyList<Published>> PublishAsync(
         IReadOnlyList<BacklogItem> items,
-        string approvedHash,
-        string backlogHash,
         bool dryRun,
         int? confirmedCount,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(items);
-
-        if (!string.Equals(approvedHash, backlogHash, StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException(
-                "The backlog has changed since it was approved. Approving one thing and publishing another is " +
-                "the failure the approval exists to prevent, so this publish is refused. Re-approve the current backlog.");
-        }
 
         if (items.Count > 200 && confirmedCount != items.Count)
         {

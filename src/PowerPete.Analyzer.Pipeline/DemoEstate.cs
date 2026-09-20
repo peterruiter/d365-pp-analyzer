@@ -27,8 +27,8 @@ using PowerPete.Analyzer.Extraction;
 ///
 /// The estate is built deterministically, from a fixed sequence rather than a seeded
 /// <see cref="Random"/>, because the backlog hash is computed from what comes out of here.
-/// A hash that changes between two containers running the same version is an approval that
-/// silently detaches itself.
+/// A hash that changes between two containers running the same version makes a backlog look
+/// edited when nothing touched it.
 /// </remarks>
 public static class DemoEstate
 {
@@ -91,7 +91,7 @@ public static class DemoEstate
     /// <param name="Customisation">The components by customisation chart.</param>
     /// <param name="Roadmap">The roadmap grid.</param>
     /// <param name="Backlog">The work items.</param>
-    /// <param name="BacklogHash">What an approval would bind to.</param>
+    /// <param name="BacklogHash">What the backlog stage records, so a changed backlog is visible as a changed hash.</param>
     public sealed record Result(
         IReadOnlyList<SolutionZipReader.SolutionHeader> Solutions,
         IReadOnlyList<DiscoveredComponent> Components,

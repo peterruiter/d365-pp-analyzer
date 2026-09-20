@@ -7,7 +7,7 @@
 | **Scansione rapida** | Legge il patrimonio e applica ogni regola, usando fasce di stima anziché stime individuali. | Minuti. |
 | **Valutazione** | Una scansione rapida, più una stima per rilievo e un backlog curato. | Di più, e richiama un modello linguistico. |
 | **Confronta** | Una valutazione misurata rispetto a un'esecuzione precedente, per mostrare che cosa è cambiato. | Come una valutazione. |
-| **Pubblica** | Scrive il backlog approvato in Azure DevOps. Non legge nulla e non rianalizza nulla. | Minuti. |
+| **Pubblica** | Scrive gli elementi di backlog scelti in Azure DevOps. Non legge nulla e non rianalizza nulla. | Minuti. |
 
 Iniziate con una scansione rapida. È la modalità che si può eseguire senza rischi in un
 colloquio commerciale, e risponde alla maggior parte delle domande di un primo incontro.
@@ -53,7 +53,7 @@ durata ciascuna e su quale si trova ora:
 7. **Stima** — mette un intervallo di ore su ogni rilievo. Saltata da una scansione rapida.
 8. **Punteggio** — calcola il rapporto, il grafico delle personalizzazioni e la roadmap.
 9. **Backlog** — trasforma i rilievi in elementi di lavoro che qualcuno curerebbe davvero.
-10. **Pubblicazione** — scrive in Azure DevOps o Jira. Solo in modalità pubblicazione, solo dopo l'approvazione.
+10. **Pubblicazione** — scrive in Azure DevOps o Jira. Solo in modalità pubblicazione, e solo gli elementi che qualcuno ha scelto.
 
 La fase in corso dice cosa sta facendo mentre lo fa — quale soluzione sta esportando, quale ha
 il checker, a che punto è nell'ambiente — e la schermata si aggiorna da sola. Una fase che

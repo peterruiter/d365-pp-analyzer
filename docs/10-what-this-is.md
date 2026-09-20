@@ -17,8 +17,9 @@ an exported solution file, it reads what is there, and it produces four things:
 that changes that. You can run a discovery in a first conversation without a change advisory
 board, which is the point.
 
-The only thing it writes anywhere is work items into Azure DevOps, and only after somebody
-with the Admin role on the engagement has approved the exact backlog being published.
+The only thing it writes anywhere is work items into Azure DevOps, and only the ones
+somebody picked on the backlog screen. There is a dry run that shows exactly what would
+land and writes nothing.
 
 **It is not a replacement for the Power Apps checker.** It calls the checker and folds the
 results in under Microsoft's own rule identifiers. The rules it declares itself are the ones

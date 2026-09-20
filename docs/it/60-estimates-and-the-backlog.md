@@ -49,20 +49,10 @@ entrambi dal contratto anziché scritti elemento per elemento. Vengono prodotti 
 backlog dell'incarico, che si imposta per incarico ed è distinta dalla lingua in cui leggete
 il prodotto.
 
-## Approvare
-
-La pubblicazione su Azure DevOps richiede un'approvazione, e solo un Amministratore
-dell'incarico può darla.
-
-L'approvazione registra esattamente il backlog che è stato approvato, come un hash. Se il
-backlog cambia dopo — perché qualcuno ha rieseguito l'analisi o corretto una stima — l'hash
-non corrisponde più e la pubblicazione rifiuta. Approvare una cosa e pubblicarne un'altra è il
-fallimento per cui quella porta esiste.
-
 ## Pubblicare
 
 Una pubblicazione scrive elementi di lavoro nel progetto Azure DevOps configurato
-sull'incarico. Non rianalizza nulla: pubblica il backlog approvato e nient'altro.
+sull'incarico. Non rianalizza nulla: pubblica gli elementi scelti e nient'altro.
 
 Ogni elemento di lavoro porta un tag deterministico derivato dall'incarico e dalla chiave
 dell'elemento, così pubblicare due volte aggiorna gli elementi esistenti anziché creare una

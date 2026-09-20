@@ -7,7 +7,7 @@
 | **Quick scan** | Reads the estate and applies every rule, using estimate bands rather than individual estimates. | Minutes. |
 | **Assessment** | A quick scan, plus an estimate per finding and a groomed backlog. | Longer, and it calls a language model. |
 | **Compare** | An assessment measured against an earlier run, so you can show what changed. | As an assessment. |
-| **Publish** | Writes the approved backlog into Azure DevOps. Reads nothing and re-analyses nothing. | Minutes. |
+| **Publish** | Writes the chosen backlog items into Azure DevOps. Reads nothing and re-analyses nothing. | Minutes. |
 
 Start with a quick scan. It is the mode that is safe to run in a sales conversation, and it
 answers most of the questions a first meeting has.
@@ -53,7 +53,7 @@ which one it is on now:
 7. **Estimate** — puts a range of hours on each finding. Skipped by a quick scan.
 8. **Score** — computes the ratio, the customisation chart and the roadmap.
 9. **Backlog** — turns findings into work items somebody would actually groom.
-10. **Publish** — writes to Azure DevOps or Jira. Only in publish mode, only after approval.
+10. **Publish** — writes to Azure DevOps or Jira. Only in publish mode, and only the items somebody chose.
 
 The stage that is running says what it is doing while it does it — which solution it is
 exporting, which one the checker has, how far through the environment it is — and the screen

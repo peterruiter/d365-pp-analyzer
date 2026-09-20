@@ -50,20 +50,10 @@ ambos del contrato en lugar de escritos elemento a elemento. Se producen en el i
 backlog del encargo, que se configura por encargo y es distinto del idioma en el que usted lee
 el producto.
 
-## Aprobar
-
-Publicar en Azure DevOps exige una aprobación, y solo un Administrador del encargo puede
-darla.
-
-La aprobación registra el backlog exacto que se aprobó, como un hash. Si el backlog cambia
-después —porque alguien volvió a ejecutar el análisis o ajustó una estimación— el hash deja de
-coincidir y la publicación se niega. Aprobar una cosa y publicar otra es el fallo que esa
-puerta existe para evitar.
-
 ## Publicar
 
 Una publicación escribe elementos de trabajo en el proyecto de Azure DevOps configurado en el
-encargo. No vuelve a analizar nada: publica el backlog aprobado y nada más.
+encargo. No vuelve a analizar nada: publica los elementos elegidos y nada más.
 
 Cada elemento de trabajo lleva una etiqueta determinista derivada del encargo y de la clave
 del elemento, de modo que publicar dos veces actualiza los elementos existentes en lugar de

@@ -369,7 +369,7 @@ public sealed class StageServicesFactory(
             Estimator: estimator,
             BacklogBuilder: new BacklogBuilder(engagementId, engagementName, criteria, backlogLanguage),
 
-            Publish: async (runId, items, approvedHash, token) =>
+            Publish: async (runId, items, token) =>
             {
                 if (target is null)
                 {
@@ -383,8 +383,8 @@ public sealed class StageServicesFactory(
                     devOpsSettings.Organisation ?? throw new InvalidOperationException("No Azure DevOps organisation is set."),
                     devOpsSettings.Project ?? throw new InvalidOperationException("No Azure DevOps project is set."));
 
-                var published = await publisher.PublishAsync(items, approvedHash, approvedHash,
-                    dryRun: false, confirmedCount: items.Count, token).ConfigureAwait(false);
+                var published = await publisher.PublishAsync(
+                    items, dryRun: false, confirmedCount: items.Count, token).ConfigureAwait(false);
 
                 // The run and the key, not Guid.Empty twice. This recorded a publish against
                 // no run and no backlog item, which the foreign key would have refused had
@@ -397,7 +397,7 @@ public sealed class StageServicesFactory(
                 return published.Count;
             },
 
-            Persist: new StorePersistence(analysis, workspace),
+            Persist: new StorePersistence(analysis),
             FixedCosts: [.. EstimateCatalogue.FixedCosts.Select(cost => new FixedCost(cost.Id, cost.Name, cost.Low, cost.High))],
             Bands: EstimateCatalogue.Bands,
             ComplexityRules: ComplexityRule.FromContract(),

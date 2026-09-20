@@ -17,9 +17,9 @@ entrega un archivo de solución exportado, lee lo que hay, y produce cuatro cosa
 cambie. Puede ejecutar un descubrimiento en una primera conversación sin comité de cambios, y
 ese es precisamente el objetivo.
 
-Lo único que escribe en algún sitio son elementos de trabajo en Azure DevOps, y solo después
-de que alguien con el rol de Administrador en el encargo haya aprobado el backlog exacto que
-se va a publicar.
+Lo único que escribe en algún sitio son elementos de trabajo en Azure DevOps, y solo los que
+alguien ha elegido en la pantalla del backlog. Hay una ejecución en seco que muestra
+exactamente qué aterrizaría y no escribe nada.
 
 **No sustituye al Power Apps checker.** Llama al checker e incorpora los resultados bajo los
 identificadores de regla de Microsoft. Las reglas que declara por su cuenta son justamente las

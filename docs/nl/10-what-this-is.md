@@ -17,8 +17,9 @@ geeft het een geëxporteerd solutionbestand, het leest wat er is, en het levert 
 instelling die dat verandert. U kunt een verkenning uitvoeren in een eerste gesprek zonder
 change advisory board, en dat is precies het punt.
 
-Het enige dat het ergens wegschrijft zijn werkitems in Azure DevOps, en pas nadat iemand met
-de rol Beheerder op de opdracht de exacte backlog heeft goedgekeurd die gepubliceerd wordt.
+Het enige dat het ergens wegschrijft zijn werkitems in Azure DevOps, en alleen de items die
+iemand op het backlogscherm heeft uitgekozen. Er is een proefrun die precies laat zien wat
+er zou landen en niets wegschrijft.
 
 **Het is geen vervanging van de Power Apps checker.** Het roept de checker aan en voegt de
 resultaten in onder Microsofts eigen regelidentificaties. De regels die het zelf declareert

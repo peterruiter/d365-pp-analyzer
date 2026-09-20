@@ -7,7 +7,7 @@
 | **Analyse rapide** | Lit le patrimoine et applique chaque règle, avec des fourchettes d'estimation plutôt que des estimations individuelles. | Des minutes. |
 | **Évaluation** | Une analyse rapide, plus une estimation par constat et un backlog affiné. | Plus longtemps, et elle appelle un modèle de langage. |
 | **Comparer** | Une évaluation mesurée par rapport à une exécution antérieure, pour montrer ce qui a changé. | Comme une évaluation. |
-| **Publier** | Écrit le backlog approuvé dans Azure DevOps. Ne lit rien et ne réanalyse rien. | Des minutes. |
+| **Publier** | Écrit les éléments de backlog choisis dans Azure DevOps. Ne lit rien et ne réanalyse rien. | Des minutes. |
 
 Commencez par une analyse rapide. C'est le mode que l'on peut lancer sans risque dans un
 entretien commercial, et il répond à la plupart des questions d'un premier rendez-vous.
@@ -54,7 +54,7 @@ temps chacune a pris et sur laquelle elle travaille :
 7. **Estimer** — pose une fourchette d'heures sur chaque constat. Ignorée par une analyse rapide.
 8. **Scorer** — calcule le ratio, le graphique de personnalisation et la feuille de route.
 9. **Backlog** — transforme les constats en éléments de travail que quelqu'un affinerait vraiment.
-10. **Publier** — écrit dans Azure DevOps ou Jira. Seulement en mode publication, seulement après approbation.
+10. **Publier** — écrit dans Azure DevOps ou Jira. Seulement en mode publication, et seulement les éléments que quelqu'un a choisis.
 
 L'étape en cours dit ce qu'elle fait pendant qu'elle le fait — quelle solution elle exporte,
 laquelle est chez le checker, où elle en est dans l'environnement — et l'écran se met à jour

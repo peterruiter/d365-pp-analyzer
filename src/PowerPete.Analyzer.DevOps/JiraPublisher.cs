@@ -60,28 +60,17 @@ public sealed partial class JiraPublisher
     /// <summary>
     /// Publishes a backlog.
     /// </summary>
-    /// <param name="items">The approved backlog.</param>
-    /// <param name="approvedHash">The hash the approval was bound to.</param>
-    /// <param name="backlogHash">The hash of the backlog being published.</param>
+    /// <param name="items">The backlog.</param>
     /// <param name="dryRun">When true, returns what would be created and calls nothing.</param>
     /// <param name="confirmedCount">The count the person confirmed, when there are more than two hundred items.</param>
     /// <param name="cancellationToken">Cancellation.</param>
     public async Task<IReadOnlyList<Published>> PublishAsync(
         IReadOnlyList<BacklogItem> items,
-        string approvedHash,
-        string backlogHash,
         bool dryRun,
         int? confirmedCount,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(items);
-
-        if (!string.Equals(approvedHash, backlogHash, StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException(
-                "The backlog has changed since it was approved. Approving one thing and publishing another is " +
-                "the failure the approval exists to prevent, so this publish is refused. Re-approve the current backlog.");
-        }
 
         if (items.Count > 200 && confirmedCount != items.Count)
         {

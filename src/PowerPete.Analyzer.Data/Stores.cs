@@ -81,7 +81,7 @@ public sealed record AnalysisRun(
 /// <summary>What the API asked the worker to do.</summary>
 /// <param name="CommandId">Its identifier.</param>
 /// <param name="RunId">Which run.</param>
-/// <param name="Command">start, resume, retryStage, cancel, approve or publish.</param>
+/// <param name="Command">start, resume, retryStage, cancel or publish.</param>
 /// <param name="StageId">Which stage, on a retry.</param>
 /// <param name="RequestedBy">Who asked.</param>
 public sealed record RunCommand(Guid CommandId, Guid RunId, string Command, string? StageId, string RequestedBy);
@@ -686,52 +686,6 @@ public sealed class WorkspaceStore(string connectionString)
         return rows.ToDictionary(row => row.StageId, row => row.CheckpointJson, StringComparer.Ordinal);
     }
 
-    /// <summary>
-    /// Records an approval against the exact backlog somebody looked at.
-    /// </summary>
-    /// <remarks>
-    /// An insert rather than a flag, so approving cannot happen as a side effect of updating
-    /// something else, and so the absence of a row is the default state rather than something
-    /// anybody has to remember to reset.
-    /// </remarks>
-    /// <param name="runId">Which run.</param>
-    /// <param name="backlogHash">What they saw.</param>
-    /// <param name="itemCount">How many items. Printed back at them before they confirm.</param>
-    /// <param name="userId">Who.</param>
-    /// <param name="displayName">Their name, so the record reads as a person.</param>
-    /// <param name="cancellationToken">Cancellation.</param>
-    public async Task ApproveAsync(
-        Guid runId,
-        string backlogHash,
-        int itemCount,
-        string userId,
-        string displayName,
-        CancellationToken cancellationToken)
-    {
-        await using var connection = Connect();
-
-        await connection.ExecuteAsync(new CommandDefinition(
-            """
-            INSERT INTO ops.RunApproval (RunId, BacklogHash, ItemCount, ApprovedBy, ApprovedByName)
-            VALUES (@runId, @backlogHash, @itemCount, @userId, @displayName);
-            """,
-            new { runId, backlogHash, itemCount, userId = AccessStore.Normalise(userId), displayName },
-            cancellationToken: cancellationToken));
-    }
-
-    /// <summary>The hash an approval was bound to, or null when nobody has approved anything.</summary>
-    /// <param name="runId">Which run.</param>
-    /// <param name="cancellationToken">Cancellation.</param>
-    public async Task<string?> GetApprovedHashAsync(Guid runId, CancellationToken cancellationToken)
-    {
-        await using var connection = Connect();
-
-        return await connection.ExecuteScalarAsync<string?>(new CommandDefinition(
-            "SELECT BacklogHash FROM ops.RunApproval WHERE RunId = @runId;",
-            new { runId },
-            cancellationToken: cancellationToken));
-    }
-
     /// <summary>Every run on one engagement, newest first.</summary>
     /// <param name="engagementId">Which engagement.</param>
     /// <param name="cancellationToken">Cancellation.</param>
@@ -1188,7 +1142,7 @@ public sealed class WorkspaceStore(string connectionString)
     /// fails on a foreign key with a message naming a constraint rather than a reason.
     ///
     /// A run that another run was based on cannot go. A publish records what it wrote from
-    /// the assessment somebody approved, and removing that assessment would leave a record
+    /// the assessment it was published from, and removing that assessment would leave a record
     /// of work items raised from nothing. The caller is told which run is holding it.
     ///
     /// What this cannot undo is a publish. Work items already in Azure DevOps or Jira stay
@@ -1256,7 +1210,7 @@ public sealed class WorkspaceStore(string connectionString)
             while (removed > 0);
         }
 
-        // Whatever is left cascades: the score, the approval, the commands, the solutions
+        // Whatever is left cascades: the score, the commands, the solutions
         // the picker recorded, and the run itself.
         await connection.ExecuteAsync(new CommandDefinition(
             "DELETE FROM ops.AnalysisRun WHERE RunId = @runId;",

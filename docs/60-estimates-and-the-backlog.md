@@ -45,20 +45,10 @@ from the contract rather than written per item. They are produced in the engagem
 language, which is set per engagement and is separate from the language you read the product
 in.
 
-## Approving
-
-Publishing to Azure DevOps requires an approval, and only an Admin on the engagement can give
-one.
-
-The approval records the exact backlog that was approved, as a hash. If the backlog changes
-afterwards — because somebody re-ran the analysis, or adjusted an estimate — the hash no
-longer matches and the publish refuses. Approving one thing and publishing another is the
-failure that gate exists to prevent.
-
 ## Publishing
 
 A publish writes work items into the Azure DevOps project configured on the engagement. It
-re-analyses nothing: it publishes the approved backlog and nothing else.
+re-analyses nothing: it publishes the items that were chosen and nothing else.
 
 Each work item carries a deterministic tag derived from the engagement and the item's key, so
 publishing twice updates the existing items rather than creating a second copy of everything.

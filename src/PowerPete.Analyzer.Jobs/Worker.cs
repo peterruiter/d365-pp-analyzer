@@ -258,11 +258,10 @@ public sealed class Worker(WorkerSettings settings)
         AnalysisStore analysis,
         CancellationToken cancellationToken)
     {
-        if (command.Command is "cancel" or "approve")
+        if (command.Command is "cancel")
         {
-            // Both are recorded by the API against a person. The worker has nothing to do with
-            // either, and a worker that could approve on somebody's behalf would make the gate
-            // meaningless.
+            // Recorded by the API against a person. A run stops because somebody stopped it,
+            // and the worker's part is to notice rather than to decide.
             return;
         }
 

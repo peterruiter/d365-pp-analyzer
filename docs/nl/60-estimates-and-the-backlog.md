@@ -48,20 +48,10 @@ Elk item draagt acceptatiecriteria in given/when/then-vorm en een testvereiste, 
 contract in plaats van per item geschreven. Ze worden gemaakt in de backlogtaal van de
 opdracht, die per opdracht wordt ingesteld en losstaat van de taal waarin u het product leest.
 
-## Goedkeuren
-
-Publiceren naar Azure DevOps vereist een goedkeuring, en alleen een Beheerder op de opdracht
-kan die geven.
-
-De goedkeuring legt de exacte backlog vast die is goedgekeurd, als een hash. Verandert de
-backlog daarna — omdat iemand de analyse opnieuw heeft uitgevoerd, of een raming heeft
-bijgesteld — dan komt de hash niet meer overeen en weigert de publicatie. Het ene goedkeuren
-en het andere publiceren is de mislukking waarvoor die poort bestaat.
-
 ## Publiceren
 
 Een publicatie schrijft werkitems in het Azure DevOps-project dat op de opdracht is
-geconfigureerd. Er wordt niets opnieuw geanalyseerd: de goedgekeurde backlog wordt
+geconfigureerd. Er wordt niets opnieuw geanalyseerd: de gekozen items worden
 gepubliceerd en verder niets.
 
 Elk werkitem draagt een deterministische tag die is afgeleid van de opdracht en de sleutel van

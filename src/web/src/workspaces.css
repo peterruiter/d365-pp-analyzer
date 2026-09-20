@@ -1221,6 +1221,22 @@
 .backlog-hours { color: var(--cp-text-muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 .backlog-body { padding: 0 16px 16px 30px; }
+
+/* The item's own body: what was found, where it is, why it matters and what to do. The
+   same text Azure DevOps receives, which is where a consultant was reading it before. */
+.backlog-detail { margin: 0 0 14px; color: var(--cp-text); font-size: 13px; line-height: 1.6; }
+.backlog-detail h3 { margin: 14px 0 4px; color: var(--brand-ink); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.backlog-detail h3:first-child { margin-top: 0; }
+.backlog-detail p { margin: 0 0 8px; max-width: 90ch; }
+.backlog-detail ul, .backlog-detail ol { margin: 0 0 8px; padding-left: 20px; }
+.backlog-detail li { margin-bottom: 3px; }
+
+/* The table of components. It is the part a consultant actually works from, so it gets to
+   be readable rather than merely present. */
+.backlog-detail table { width: 100%; margin: 0 0 10px; border-collapse: collapse; font-size: 12px; }
+.backlog-detail th { padding: 5px 8px; border-bottom: 1px solid var(--cp-border); color: var(--cp-text-soft); font-size: 10px; font-weight: 600; letter-spacing: .05em; text-align: left; text-transform: uppercase; }
+.backlog-detail td { padding: 5px 8px; border-bottom: 1px solid var(--cp-surface-soft); vertical-align: top; }
+.backlog-detail tr:last-child td { border-bottom: none; }
 .backlog-children { display: grid; gap: 8px; margin-top: 14px; }
 
 /* The acceptance criteria, as the clauses they are rather than as the markup

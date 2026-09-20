@@ -29,10 +29,7 @@ on another.
 |---|---|
 | **Viewer** | Read everything on the engagement: inventory, findings, estimates, backlog, reports. |
 | **Contributor** | Everything a Viewer can, plus configure connections, start runs, and adjust estimates. |
-| **Admin** | Everything a Contributor can, plus grant access to other people and approve a backlog for publishing. |
-
-Approving a backlog is deliberately an Admin action and deliberately separate from starting a
-run. It is the gate between an assessment and somebody's Azure DevOps project.
+| **Admin** | Everything a Contributor can, plus grant access to other people. |
 
 ## Global administrators
 
