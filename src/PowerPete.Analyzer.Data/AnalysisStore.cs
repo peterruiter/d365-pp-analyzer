@@ -148,6 +148,24 @@ public sealed class AnalysisStore(string connectionString)
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
 
+        // What this run wrote last time, gone before it writes again.
+        //
+        // Every stage in this pipeline can be run again, and the ones around this already
+        // survived it: components, solutions, reads, not-assessed and the score all merge.
+        // Findings and estimates plain inserted, so re-running analyse after a retry hit
+        // UQ_Finding_RunStableKey and failed the score stage with a duplicate key, on a run
+        // that was otherwise perfectly healthy.
+        //
+        // Scoped to this run, so a retry never touches another one. Estimates go first
+        // because they point at the findings.
+        await connection.ExecuteAsync(new CommandDefinition(
+            "DELETE FROM findings.Estimate WHERE RunId = @runId;",
+            new { runId }, transaction, cancellationToken: cancellationToken));
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            "DELETE FROM findings.Finding WHERE RunId = @runId;",
+            new { runId }, transaction, cancellationToken: cancellationToken));
+
         await connection.ExecuteAsync(new CommandDefinition(
             """
             INSERT INTO findings.Finding
@@ -322,6 +340,21 @@ public sealed class AnalysisStore(string connectionString)
         if (items.Count == 0) return;
 
         await using var connection = Connect();
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+
+        // Replaced, for the same reason as the findings above. The backlog stage can be run
+        // again, and a backlog appended to rather than rebuilt would show a client every
+        // work item twice with no indication which half was current.
+        //
+        // Children first: an item points at its parent.
+        await connection.ExecuteAsync(new CommandDefinition(
+            "DELETE FROM findings.BacklogItem WHERE RunId = @runId AND ParentItemId IS NOT NULL;",
+            new { runId }, transaction, cancellationToken: cancellationToken));
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            "DELETE FROM findings.BacklogItem WHERE RunId = @runId;",
+            new { runId }, transaction, cancellationToken: cancellationToken));
 
         await connection.ExecuteAsync(new CommandDefinition(
             """
@@ -350,7 +383,9 @@ public sealed class AnalysisStore(string connectionString)
                 item.TagsJson,
                 item.DeterministicKey
             }),
-            cancellationToken: cancellationToken));
+            transaction, cancellationToken: cancellationToken));
+
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Records what a publish created, so a publish into the wrong project can be found rather than hunted.</summary>

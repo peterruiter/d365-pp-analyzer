@@ -1103,6 +1103,62 @@ public class DataLayerTests
             + "per guide fallback means nothing fails while it does");
     }
 
+    [Fact]
+    public void Writes_nothing_a_second_run_of_the_same_stage_would_duplicate()
+    {
+        // "A stage that fails can be retried on its own" is a promise the runs screen makes
+        // and the pipeline is built around. It only holds if every write a stage makes can
+        // happen twice.
+        //
+        // Most of them already could: components, solutions, entity reads, not-assessed and
+        // the score all merge, and one of them says in a comment that a replayed
+        // normalisation would otherwise double every count in the report. Findings,
+        // estimates and backlog items plain inserted. Re-running analyse after a retry hit
+        // UQ_Finding_RunStableKey and failed the score stage on a run that was otherwise
+        // healthy, and the two writes with no unique constraint would have silently doubled
+        // instead.
+        //
+        // Per method rather than per file, because what matters is that the write and the
+        // thing that makes room for it are in the same place.
+        var source = File.ReadAllText(
+            Path.Combine(Solution(), "PowerPete.Analyzer.Data", "AnalysisStore.cs"));
+
+        // Recorded rather than rebuilt, deliberately. It is the audit of what was actually
+        // written into somebody's board, and a partial publish followed by a retry must not
+        // erase the record of the half that went.
+        var exempt = new[] { "findings.PublishedWorkItem" };
+
+        var offenders = new List<string>();
+
+        // A method body, roughly: from a signature to the next one. Good enough, because
+        // the question is only whether a delete or a merge sits near the insert.
+        foreach (var method in Regex.Split(source, @"\n    public async Task").Skip(1))
+        {
+            foreach (Match insert in Regex.Matches(
+                method,
+                @"INSERT INTO (?<table>[a-z]+\.[A-Za-z]+)\s*\((?<columns>[^)]*)\)",
+                RegexOptions.Singleline,
+                TimeSpan.FromSeconds(5)))
+            {
+                var table = insert.Groups["table"].Value;
+
+                // Only the run scoped ones. An engagement scoped table outlives a run and
+                // has its own rules about replacing a row.
+                if (!insert.Groups["columns"].Value.Contains("RunId", StringComparison.Ordinal)) continue;
+                if (exempt.Contains(table, StringComparer.Ordinal)) continue;
+
+                var replaces = method.Contains($"DELETE FROM {table} WHERE RunId", StringComparison.Ordinal)
+                    || method.Contains($"MERGE {table}", StringComparison.Ordinal);
+
+                if (!replaces) offenders.Add(table);
+            }
+        }
+
+        offenders.Distinct(StringComparer.Ordinal).Should().BeEmpty(
+            "running a stage again has to replace what it wrote rather than add to it: with a unique "
+            + "constraint that fails the run, and without one it doubles every number in the report");
+    }
+
     /// <summary>Every environment variable name the container definition sets.</summary>
     private static List<string> WrittenByTheInfrastructure()
     {
