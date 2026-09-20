@@ -1557,7 +1557,12 @@ app.MapPost("/api/engagements/{engagementId:guid}/publish",
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
                 "Basic", Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes($":{token}")));
 
-            var result = await new WorkItemPublisher(client, host, request.Project).PublishAsync(
+            // What the project actually accepts, read before anything is written. A project
+            // on the Basic process has Epic, Issue and Task and none of the Agile fields,
+            // and publishing a feature into it returned 400 with no explanation.
+            var shape = await WorkItemPublisher.ReadShapeAsync(client, host, request.Project, context.RequestAborted);
+
+            var result = await new WorkItemPublisher(client, host, request.Project, shape).PublishAsync(
                 items, approved ?? string.Empty, approved ?? string.Empty, request.DryRun, confirmedCount: items.Count, context.RequestAborted);
 
             published = [.. result.Select(entry => (

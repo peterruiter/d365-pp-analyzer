@@ -595,18 +595,131 @@ public sealed class BacklogBuilder
 public sealed class WorkItemPublisher
 {
     private readonly HttpClient client;
+
+    /// <summary>
+    /// The organisation's address, with no trailing slash.
+    /// </summary>
+    /// <remarks>
+    /// An address, not a name. Every caller stores and passes
+    /// "https://dev.azure.com/contoso" - it is what the connection wizard asks for and what
+    /// the project list reads - and this class pasted it into a template that already had
+    /// the host in it, producing a URL with "https://dev.azure.com/" twice. Azure DevOps
+    /// answered 400 and the publish reported "Bad Request".
+    ///
+    /// The project list worked throughout, because it treats the same value as an address,
+    /// which is why the connection looked healthy right up to the publish.
+    /// </remarks>
     private readonly string organisation;
     private readonly string project;
+    private readonly ProjectShape shape;
+
+    /// <summary>
+    /// What a project will actually accept.
+    /// </summary>
+    /// <remarks>
+    /// Read from the project rather than assumed, which is what the Jira publisher beside
+    /// this one already did. This one hardcoded Epic, Feature, User Story, Bug and Task,
+    /// which are the Agile process's names. A project on the Basic process has Epic, Issue
+    /// and Task and nothing else, so publishing a feature returned 400 and the message said
+    /// only "Bad Request".
+    /// </remarks>
+    /// <param name="Types">The work item type names the project offers.</param>
+    /// <param name="Fields">The field reference names each of those types has.</param>
+    public sealed record ProjectShape(
+        IReadOnlyList<string> Types,
+        IReadOnlyDictionary<string, IReadOnlySet<string>> Fields)
+    {
+        /// <summary>What to assume when the project could not be read.</summary>
+        /// <remarks>
+        /// Empty, which makes every lookup below fall through to Task and skip every
+        /// optional field. A publish that lands as a flat list of tasks is recoverable; one
+        /// that fails on the ninth of nine items is not.
+        /// </remarks>
+        public static ProjectShape Unknown { get; } =
+            new([], new Dictionary<string, IReadOnlySet<string>>(StringComparer.OrdinalIgnoreCase));
+    }
 
     /// <summary>Builds a publisher.</summary>
     /// <param name="client">Authenticated against Azure DevOps. The caller owns the credential.</param>
     /// <param name="organisation">The organisation.</param>
     /// <param name="project">The project.</param>
-    public WorkItemPublisher(HttpClient client, string organisation, string project)
+    /// <param name="shape">What the project accepts, from <see cref="ReadShapeAsync"/>.</param>
+    public WorkItemPublisher(HttpClient client, string organisation, string project, ProjectShape? shape = null)
     {
+        ArgumentNullException.ThrowIfNull(organisation);
+
         this.client = client;
-        this.organisation = organisation;
+        this.organisation = organisation.TrimEnd('/');
         this.project = project;
+        this.shape = shape ?? ProjectShape.Unknown;
+    }
+
+    /// <summary>
+    /// Asks a project which work item types it has and what fields each one carries.
+    /// </summary>
+    /// <remarks>
+    /// Two calls rather than one, because the type list does not carry the fields and a
+    /// field that does not exist on a type is a 400 on the whole item. A failure here is not
+    /// fatal: the caller gets <see cref="ProjectShape.Unknown"/> and the publish degrades to
+    /// tasks with no optional fields rather than refusing to run.
+    /// </remarks>
+    /// <param name="client">Authenticated against Azure DevOps.</param>
+    /// <param name="organisation">The organisation.</param>
+    /// <param name="project">The project.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public static async Task<ProjectShape> ReadShapeAsync(
+        HttpClient client, string organisation, string project, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(client);
+
+        try
+        {
+            using var response = await client.GetAsync(
+                new Uri($"{organisation.TrimEnd('/')}/{Uri.EscapeDataString(project)}/_apis/wit/workitemtypes?api-version=7.1"),
+                cancellationToken).ConfigureAwait(false);
+
+            if (!response.IsSuccessStatusCode) return ProjectShape.Unknown;
+
+            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (!document.RootElement.TryGetProperty("value", out var values)) return ProjectShape.Unknown;
+
+            var types = new List<string>();
+            var fields = new Dictionary<string, IReadOnlySet<string>>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var type in values.EnumerateArray())
+            {
+                if (!type.TryGetProperty("name", out var name) || name.GetString() is not { Length: > 0 } typeName)
+                {
+                    continue;
+                }
+
+                types.Add(typeName);
+
+                var carries = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                if (type.TryGetProperty("fields", out var typeFields))
+                {
+                    foreach (var field in typeFields.EnumerateArray())
+                    {
+                        if (field.TryGetProperty("referenceName", out var reference)
+                            && reference.GetString() is { Length: > 0 } referenceName)
+                        {
+                            carries.Add(referenceName);
+                        }
+                    }
+                }
+
+                fields[typeName] = carries;
+            }
+
+            return new ProjectShape(types, fields);
+        }
+        catch (Exception failure) when (failure is HttpRequestException or JsonException or TaskCanceledException)
+        {
+            return ProjectShape.Unknown;
+        }
     }
 
     /// <summary>What a publish did.</summary>
@@ -685,7 +798,7 @@ public sealed class WorkItemPublisher
         };
 
         using var response = await client.PostAsJsonAsync(
-            $"https://dev.azure.com/{organisation}/{project}/_apis/wit/wiql?api-version=7.1",
+            $"{organisation}/{Uri.EscapeDataString(project)}/_apis/wit/wiql?api-version=7.1",
             query,
             cancellationToken).ConfigureAwait(false);
 
@@ -711,24 +824,24 @@ public sealed class WorkItemPublisher
                 value = new
                 {
                     rel = "System.LinkTypes.Hierarchy-Reverse",
-                    url = $"https://dev.azure.com/{organisation}/_apis/wit/workItems/{parentId}"
+                    url = $"{organisation}/_apis/wit/workItems/{parentId}"
                 }
             });
         }
 
         using var content = new StringContent(JsonSerializer.Serialize(operations), Encoding.UTF8, "application/json-patch+json");
         using var response = await client.PostAsync(
-            new Uri($"https://dev.azure.com/{organisation}/{project}/_apis/wit/workitems/${MapType(item.Type)}?api-version=7.1"),
+            new Uri($"{organisation}/{Uri.EscapeDataString(project)}/_apis/wit/workitems/${Uri.EscapeDataString(ResolveType(item.Type))}?api-version=7.1"),
             content,
             cancellationToken).ConfigureAwait(false);
 
-        response.EnsureSuccessStatusCode();
+        await ThrowIfRefusedAsync(response, item, ResolveType(item.Type), cancellationToken).ConfigureAwait(false);
 
         using var document = JsonDocument.Parse(
             await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false));
 
         var id = document.RootElement.GetProperty("id").GetInt32();
-        return new Published(item.Key, id, $"https://dev.azure.com/{organisation}/{project}/_workitems/edit/{id}", "created");
+        return new Published(item.Key, id, $"{organisation}/{Uri.EscapeDataString(project)}/_workitems/edit/{id}", "created");
     }
 
     /// <summary>
@@ -747,40 +860,51 @@ public sealed class WorkItemPublisher
 
         using var content = new StringContent(JsonSerializer.Serialize(operations), Encoding.UTF8, "application/json-patch+json");
         using var response = await client.PatchAsync(
-            new Uri($"https://dev.azure.com/{organisation}/{project}/_apis/wit/workitems/{workItemId}?api-version=7.1"),
+            new Uri($"{organisation}/{Uri.EscapeDataString(project)}/_apis/wit/workitems/{workItemId}?api-version=7.1"),
             content,
             cancellationToken).ConfigureAwait(false);
 
-        response.EnsureSuccessStatusCode();
+        await ThrowIfRefusedAsync(response, item, ResolveType(item.Type), cancellationToken).ConfigureAwait(false);
 
         return new Published(item.Key, workItemId,
-            $"https://dev.azure.com/{organisation}/{project}/_workitems/edit/{workItemId}", "updated");
+            $"{organisation}/{Uri.EscapeDataString(project)}/_workitems/edit/{workItemId}", "updated");
     }
 
-    private static List<object> Patch(BacklogItem item)
+    private List<object> Patch(BacklogItem item)
     {
+        var resolved = ResolveType(item.Type);
+
         var operations = new List<object>
         {
             Add("/fields/System.Title", item.Title),
             Add("/fields/System.Description", item.DescriptionHtml),
-            Add("/fields/Microsoft.VSTS.Common.Priority", item.Priority),
             Add("/fields/System.Tags", string.Join("; ", item.Tags.Append(item.Key)))
         };
 
-        // Acceptance criteria is not a field on every type in every process. Where it is
-        // absent the criterion goes into the description instead of failing the publish, and
-        // the caller is told which items that happened to.
-        if (item.Type is "story" or "feature" or "bug")
+        // Every optional field is asked for rather than assumed. Priority is on most types
+        // and not on all of them, acceptance criteria is an Agile field, story points do not
+        // exist on the Basic process at all, and any one of them absent is a 400 that fails
+        // the whole item and says only "Bad Request".
+        if (Carries(resolved, "Microsoft.VSTS.Common.Priority"))
+        {
+            operations.Add(Add("/fields/Microsoft.VSTS.Common.Priority", item.Priority));
+        }
+
+        if (item.Type is "story" or "feature" or "bug"
+            && Carries(resolved, "Microsoft.VSTS.Common.AcceptanceCriteria"))
         {
             operations.Add(Add("/fields/Microsoft.VSTS.Common.AcceptanceCriteria", item.AcceptanceCriteria));
         }
 
-        if (item.StoryPoints is { } points && item.Type is "story" or "feature")
+        if (item.StoryPoints is { } points
+            && item.Type is "story" or "feature"
+            && Carries(resolved, "Microsoft.VSTS.Scheduling.StoryPoints"))
         {
             operations.Add(Add("/fields/Microsoft.VSTS.Scheduling.StoryPoints", points));
         }
 
-        if (item.LowHours is { } low && item.HighHours is { } high)
+        if (item.LowHours is { } low && item.HighHours is { } high
+            && Carries(resolved, "Microsoft.VSTS.Scheduling.OriginalEstimate"))
         {
             // The one place a range becomes a single number, because the field holds one.
             // The range and its rationale are in the description of the same item, so the
@@ -791,16 +915,91 @@ public sealed class WorkItemPublisher
         return operations;
     }
 
+    /// <summary>
+    /// Turns a refusal into a sentence naming the item and what the platform objected to.
+    /// </summary>
+    /// <remarks>
+    /// EnsureSuccessStatusCode throws away the response body, and the body is the only part
+    /// with any information in it. Azure DevOps answers a bad field or an unknown work item
+    /// type with a precise message and this reported "Bad Request", which sent somebody
+    /// reading source code to find out that their project was on the Basic process.
+    /// </remarks>
+    /// <param name="response">What came back.</param>
+    /// <param name="item">The item being published.</param>
+    /// <param name="resolved">The work item type it was published as.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    private static async Task ThrowIfRefusedAsync(
+        HttpResponseMessage response, BacklogItem item, string resolved, CancellationToken cancellationToken)
+    {
+        if (response.IsSuccessStatusCode) return;
+
+        var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        var detail = body;
+
+        try
+        {
+            using var document = JsonDocument.Parse(body);
+
+            if (document.RootElement.TryGetProperty("message", out var message)
+                && message.GetString() is { Length: > 0 } text)
+            {
+                detail = text;
+            }
+        }
+        catch (JsonException)
+        {
+            // Not JSON. The body as it stands is still better than the status code alone.
+        }
+
+        throw new InvalidOperationException(
+            $"Azure DevOps refused '{item.Title}' as a {resolved} ({(int)response.StatusCode}): {detail}");
+    }
+
     private static object Add(string path, object value) => new { op = "add", path, value };
 
-    private static string MapType(string type) => type switch
+    /// <summary>
+    /// The nearest thing this project has to the kind of item being published.
+    /// </summary>
+    /// <remarks>
+    /// In order of preference, ending at Task, which every process has. Agile calls a story
+    /// a User Story, Scrum calls it a Product Backlog Item, Basic has neither and calls
+    /// everything below an epic an Issue. Publishing the wrong one is a 400 on that item.
+    /// </remarks>
+    /// <param name="type">What the backlog builder produced.</param>
+    private string ResolveType(string type)
     {
-        "epic" => "Epic",
-        "feature" => "Feature",
-        "story" => "User%20Story",
-        "bug" => "Bug",
-        _ => "Task"
-    };
+        string[] preferences = type switch
+        {
+            "epic" => ["Epic", "Feature", "Issue", "Task"],
+            "feature" => ["Feature", "Epic", "User Story", "Product Backlog Item", "Issue", "Task"],
+            "story" => ["User Story", "Product Backlog Item", "Issue", "Task"],
+            "bug" => ["Bug", "Issue", "Task"],
+            _ => ["Task", "Issue"],
+        };
+
+        foreach (var candidate in preferences)
+        {
+            if (shape.Types.Contains(candidate, StringComparer.OrdinalIgnoreCase)) return candidate;
+        }
+
+        // Nothing matched, which means the project could not be read. Task is the one type
+        // every process in Azure DevOps has.
+        return "Task";
+    }
+
+    /// <summary>Whether a resolved type carries a field.</summary>
+    /// <remarks>
+    /// True when the project could not be read, because the alternative is dropping every
+    /// estimate and every acceptance criterion from a publish on the strength of a failed
+    /// metadata call. A field that is genuinely absent then fails that item, which is the
+    /// behaviour there was before and is visible rather than silent.
+    /// </remarks>
+    /// <param name="resolved">The work item type name.</param>
+    /// <param name="field">The field reference name.</param>
+    private bool Carries(string resolved, string field) =>
+        shape.Fields.Count == 0
+        || !shape.Fields.TryGetValue(resolved, out var carries)
+        || carries.Contains(field);
 }
 
 /// <summary>

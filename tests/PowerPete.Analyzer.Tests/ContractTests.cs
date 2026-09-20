@@ -1159,6 +1159,55 @@ public class DataLayerTests
             + "constraint that fails the run, and without one it doubles every number in the report");
     }
 
+    [Fact]
+    public void Builds_no_url_from_a_host_the_connection_already_carries()
+    {
+        // A connection stores the address of the thing it talks to, because that is what a
+        // consultant is given and what the wizard asks for: "https://dev.azure.com/contoso"
+        // or "https://contoso.atlassian.net". Everything downstream has to treat it as an
+        // address.
+        //
+        // The Azure DevOps publisher treated it as a bare organisation name and pasted it
+        // into a template that already had the host, so every URL it built carried
+        // "https://dev.azure.com/" twice. Publishing answered 400 and reported "Bad
+        // Request". The project list, which reads the same value correctly, worked
+        // throughout, so the connection looked healthy right up to the publish and the
+        // symptom pointed at the wrong half of the product.
+        //
+        // The Jira publisher beside it never had the bug. This is what stops one of them
+        // drifting back.
+        var offenders = new List<string>();
+
+        var hosts = new[] { "https://dev.azure.com", "atlassian.net" };
+
+        foreach (var file in Directory
+            .EnumerateFiles(Path.Combine(Solution(), "PowerPete.Analyzer.DevOps"), "*.cs", SearchOption.AllDirectories)
+            .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal)))
+        {
+            foreach (var line in File.ReadAllLines(file))
+            {
+                var text = line.Trim();
+
+                // A comment is where the address is explained, and an example in a doc
+                // comment is the right place for one.
+                if (text.StartsWith("//", StringComparison.Ordinal)) continue;
+
+                foreach (var host in hosts)
+                {
+                    if (text.Contains(host, StringComparison.OrdinalIgnoreCase))
+                    {
+                        offenders.Add($"{Path.GetFileName(file)}: {text[..Math.Min(90, text.Length)]}");
+                    }
+                }
+            }
+        }
+
+        offenders.Should().BeEmpty(
+            "the address comes from the connection, and a publisher that also knows the host builds a URL "
+            + "with the host in it twice, which is a 400 that says only Bad Request");
+    }
+
     /// <summary>Every environment variable name the container definition sets.</summary>
     private static List<string> WrittenByTheInfrastructure()
     {
