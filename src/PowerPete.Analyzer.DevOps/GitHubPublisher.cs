@@ -410,10 +410,14 @@ public sealed class GitHubPublisher
     /// Turns a refusal into a sentence naming what was refused and why.
     /// </summary>
     /// <remarks>
-    /// GitHub puts the reason in the body and the status alone does not carry it. The three
-    /// picked out here are the ones a consultant can actually do something about: a token
-    /// without issues write, a repository with issues switched off, and one that is archived.
-    /// All three answer 403 or 410 and none of them is a problem with the backlog.
+    /// GitHub puts the reason in the body and the status alone does not carry it.
+    ///
+    /// The 403 is the one worth getting right, because it is the one that happens. The first
+    /// version of this offered "a token without Issues: write, and an archived repository"
+    /// as equally likely, which sent the first person to hit it looking at a repository the
+    /// picker had already guaranteed was not archived. There is nothing to guess about:
+    /// GitHub returns X-Accepted-GitHub-Permissions on this exact refusal, naming the
+    /// permission it wanted, and that is more precise than anything written here could be.
     /// </remarks>
     private async Task ThrowIfRefusedAsync(
         HttpResponseMessage response, BacklogItem item, string verb, CancellationToken cancellationToken)
@@ -428,8 +432,11 @@ public sealed class GitHubPublisher
                 $"Issues are turned off for {owner}/{repository}. Somebody has to enable them in the "
                 + "repository's settings before a backlog can land there.",
             HttpStatusCode.Forbidden =>
-                $"GitHub refused the write to {owner}/{repository}. A token without Issues: write, and an "
-                + $"archived repository, both arrive here. ({Readable(body)})",
+                $"the token cannot write issues in {owner}/{repository}. {Wanted(response)}A fine grained "
+                + "token needs Issues: Read and write, and needs this repository named under its "
+                + "repository access; a classic token needs the repo scope. Reading the repository list, "
+                + "which is what the connection test does, needs neither of those, so a token can pass "
+                + $"that test and still arrive here. ({Readable(body)})",
             HttpStatusCode.NotFound =>
                 $"No repository answered at {owner}/{repository}. A private repository the token cannot see "
                 + "returns the same 404 as one that does not exist.",
@@ -438,6 +445,20 @@ public sealed class GitHubPublisher
 
         throw new InvalidOperationException($"GitHub refused to {verb} \"{item.Title}\": {reason}");
     }
+
+    /// <summary>What GitHub said it wanted, where it said so.</summary>
+    /// <remarks>
+    /// X-Accepted-GitHub-Permissions is a comma separated list of what the endpoint needs,
+    /// with semicolons between alternative sets. Quoted rather than interpreted, because it
+    /// is GitHub describing its own requirement and this product paraphrasing it would be
+    /// one more thing to keep current.
+    /// </remarks>
+    /// <param name="response">The refusal.</param>
+    private static string Wanted(HttpResponseMessage response) =>
+        response.Headers.TryGetValues("X-Accepted-GitHub-Permissions", out var values)
+            && string.Join(", ", values) is { Length: > 0 } permissions
+            ? $"GitHub says it wanted: {permissions}. "
+            : string.Empty;
 
     /// <summary>GitHub's error body, or the raw body where it is not one.</summary>
     private static string Readable(string body)

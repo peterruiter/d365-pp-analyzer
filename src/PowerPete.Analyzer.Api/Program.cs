@@ -1387,15 +1387,19 @@ app.MapPost("/api/engagements/{engagementId:guid}/connections/{connectionId:guid
                 succeeded = found.Error is null;
                 identity = owner;
 
-                // The count, and what was left out of it. A token that authenticates against
-                // an owner whose every repository has issues switched off is a target that
-                // will refuse the publish, and a tick beside it would be a lie.
+                // What this proved, and what it did not. Listing repositories needs only
+                // Metadata: Read, so a token that passes here can still be refused on the
+                // first issue it tries to create, which is exactly what happened the first
+                // time anybody published. "Can take a backlog" was a claim about writing
+                // made by a call that only read.
                 message = found.Error
-                    ?? $"Authenticated against {owner}, and {found.Repositories.Count} repository(s) can take "
-                        + "a backlog."
+                    ?? $"Authenticated against {owner}. {found.Repositories.Count} repository(s) are visible "
+                        + "and have issues enabled"
                         + (found.Hidden > 0
-                            ? $" {found.Hidden} more are archived or have issues turned off."
-                            : string.Empty);
+                            ? $", and {found.Hidden} more are archived or have issues turned off"
+                            : string.Empty)
+                        + ". This proves the token can read. Only a publish proves it can write issues: for "
+                        + "that a fine grained token needs Issues: Read and write on the repository.";
                 break;
             }
 

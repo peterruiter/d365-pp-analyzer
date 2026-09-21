@@ -72,6 +72,35 @@ public class GitHubPublisherTests
         }
     }
 
+    /// <summary>Refuses the write exactly as GitHub refuses a token without Issues: write.</summary>
+    private sealed class Refuses : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            if (request.Method == HttpMethod.Get)
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("[]", Encoding.UTF8, "application/json")
+                });
+            }
+
+            var refusal = new HttpResponseMessage(HttpStatusCode.Forbidden)
+            {
+                Content = new StringContent(
+                    """{"message":"Resource not accessible by personal access token"}""",
+                    Encoding.UTF8,
+                    "application/json")
+            };
+
+            // The header GitHub actually sends on this refusal, naming what it wanted.
+            refusal.Headers.Add("X-Accepted-GitHub-Permissions", "issues=write");
+
+            return Task.FromResult(refusal);
+        }
+    }
+
     private static BacklogItem Item(
         string key, string type, string? parent = null, string? html = null) =>
         new(key, type, $"Title for {key}", html ?? "<h3>Why it matters</h3><p>Because &amp; so on.</p>",
@@ -235,5 +264,32 @@ public class GitHubPublisherTests
         refusal.Message.Should().Contain("201");
         refusal.Message.Should().Contain("contoso/platform");
         recorder.Sent.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Says_what_github_asked_for_when_it_refuses_the_write()
+    {
+        var publisher = new GitHubPublisher(new HttpClient(new Refuses()), "contoso", "platform");
+
+        var refusal = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => publisher.PublishAsync([Item("ppa-0011223344556677", "task")], false, 1, CancellationToken.None));
+
+        // GitHub names the permission it wanted in a header on this exact refusal. The first
+        // version of this message guessed instead, and offered an archived repository as
+        // equally likely: the picker excludes archived repositories, so that half of the
+        // sentence sent the first person to hit it looking at something impossible.
+        refusal.Message.Should().Contain("issues=write");
+
+        // And the reason it is confusing: the connection test passes with a token that
+        // cannot do this, because listing repositories needs only Metadata: Read.
+        refusal.Message.Should().Contain("Issues: Read and write");
+        refusal.Message.Should().Contain("connection test");
+
+        refusal.Message.Should().NotContain("archived",
+            "the repository picker already excludes archived repositories, so naming one here "
+            + "sends somebody to check a thing the product has guaranteed");
+
+        // GitHub's own words survive too. They are what somebody will paste into a search.
+        refusal.Message.Should().Contain("Resource not accessible by personal access token");
     }
 }
