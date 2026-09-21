@@ -398,6 +398,7 @@ function PublishPanel({ engagementId, selected, total, onClear, t }: {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
+  const [landed, setLanded] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -441,9 +442,11 @@ function PublishPanel({ engagementId, selected, total, onClear, t }: {
     setBusy(true);
     setError(null);
     setResult(null);
+    setLanded(null);
 
     const answer = await sendJson<{
       published: number; requested: number; parentsIncluded: number; dryRun: boolean;
+      items: { key: string; id: string; url: string; action: string }[];
     }>(`/api/engagements/${engagementId}/publish`, 'POST', {
       connectionId,
       project,
@@ -454,13 +457,28 @@ function PublishPanel({ engagementId, selected, total, onClear, t }: {
     setBusy(false);
 
     if (answer.error) { setError(answer.error); return; }
-    if (!answer.data) return;
 
-    const { published, parentsIncluded } = answer.data;
+    // Never silently. This returned with no message and no error when the response had no
+    // body, which is indistinguishable from the button not working, and the button not
+    // appearing to work is the whole reason this function is being read.
+    if (!answer.data) { setError(t('backlog.publish.no-answer')); return; }
+
+    const { published, parentsIncluded, items } = answer.data;
+
+    // Created and updated separately. "23 work items created or updated" hides the thing
+    // worth knowing, which is that a second publish updated twenty-one and made two: that
+    // is the deterministic key working, and it is what somebody is checking for when they
+    // re-publish after a failure.
+    const created = items?.filter((one) => one.action === 'created').length ?? 0;
+    const updated = items?.filter((one) => one.action === 'updated').length ?? 0;
 
     setResult(dryRun
       ? t('backlog.publish.would', published)
-      : t('backlog.publish.done', published));
+      : t('backlog.publish.done', created, updated));
+
+    // Where they went. A count with no way to go and look at them is a receipt for a
+    // delivery to an address nobody printed.
+    setLanded(items?.find((one) => one.url?.length > 0)?.url ?? null);
 
     // Said because it is surprising: ticking a task pulls in the epic above it, and a
     // count larger than the boxes ticked needs a reason before somebody thinks it
@@ -482,6 +500,20 @@ function PublishPanel({ engagementId, selected, total, onClear, t }: {
   const count = selected.size;
   const ready = connectionId !== '' && project !== '' && count > 0 && !busy;
 
+  // Azure DevOps has projects, Jira has projects, GitHub has repositories, and calling a
+  // repository a project on the one screen where somebody picks one is how the panel read
+  // for the whole of the first GitHub publish. Literal keys rather than one assembled from
+  // the mode, so the vocabulary check can see them.
+  const targetMode = targets.find((one) => one.connectionId === connectionId)?.mode ?? '';
+
+  const whereLabel = targetMode === 'github'
+    ? t('backlog.publish.repository')
+    : t('backlog.publish.project');
+
+  const whereEmpty = targetMode === 'github'
+    ? t('backlog.publish.choose-repository')
+    : t('backlog.publish.choose-project');
+
   return (
     <div className="publish-panel">
       <h3>{t('backlog.publish')}</h3>
@@ -498,13 +530,13 @@ function PublishPanel({ engagementId, selected, total, onClear, t }: {
         </label>
 
         <label>
-          {t('backlog.publish.project')}
+          {whereLabel}
           <select
             value={project}
             disabled={loadingProjects || projects.length === 0}
             onChange={(event) => setProject(event.target.value)}>
             <option value="">
-              {loadingProjects ? t('common.loading') : t('backlog.publish.choose-project')}
+              {loadingProjects ? t('common.loading') : whereEmpty}
             </option>
             {projects.map((candidate) => (
               <option key={candidate.id} value={candidate.value}>{candidate.name}</option>
@@ -532,8 +564,25 @@ function PublishPanel({ engagementId, selected, total, onClear, t }: {
         </button>
       </div>
 
+      {/*
+        Said while it is happening. Each item is two or three calls to the target, so a
+        backlog of twenty-three takes the better part of a minute, and until this existed
+        the only thing that changed in that minute was that the buttons went grey. Twenty
+        three issues landed in a repository and the person who pressed the button had no
+        way of knowing anything at all had occurred.
+      */}
+      {busy && <p className="curation-message">{t('backlog.publish.working', count)}</p>}
+
       {error && <p className="error">{error}</p>}
-      {result && <p className="curation-message">{result}</p>}
+
+      {result && (
+        <p className="curation-message">
+          {result}
+          {landed && (
+            <> <a href={landed} target="_blank" rel="noreferrer">{t('backlog.publish.go-and-look')}</a></>
+          )}
+        </p>
+      )}
     </div>
   );
 }
