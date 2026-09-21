@@ -7,7 +7,7 @@
 | **Quick scan** | Reads the estate and applies every rule, using estimate bands rather than individual estimates. | Minutes. |
 | **Assessment** | A quick scan, plus an estimate per finding and a groomed backlog. | Longer, and it calls a language model. |
 | **Compare** | An assessment measured against an earlier run, so you can show what changed. | As an assessment. |
-| **Publish** | Writes the chosen backlog items into Azure DevOps. Reads nothing and re-analyses nothing. | Minutes. |
+| **Publish** | Writes the chosen backlog items into Azure DevOps, Jira or GitHub. Reads nothing and re-analyses nothing. | Minutes. |
 
 Start with a quick scan. It is the mode that is safe to run in a sales conversation, and it
 answers most of the questions a first meeting has.
@@ -53,7 +53,7 @@ which one it is on now:
 7. **Estimate** — puts a range of hours on each finding. Skipped by a quick scan.
 8. **Score** — computes the ratio, the customisation chart and the roadmap.
 9. **Backlog** — turns findings into work items somebody would actually groom.
-10. **Publish** — writes to Azure DevOps or Jira. Only in publish mode, and only the items somebody chose.
+10. **Publish** — writes to Azure DevOps, Jira or GitHub. Only in publish mode, and only the items somebody chose.
 
 The stage that is running says what it is doing while it does it — which solution it is
 exporting, which one the checker has, how far through the environment it is — and the screen
@@ -81,7 +81,7 @@ are looking for the one you mean. An Admin can remove a run and everything it pr
 
 Two things worth knowing. A run that a later run was built from cannot be removed, because
 that later run would be left describing an assessment that no longer exists. And work items
-already published to Azure DevOps or Jira stay exactly where they are: removing the run
+already published to Azure DevOps, Jira or GitHub stay exactly where they are: removing the run
 removes this product's record of having written them, and nothing in the client's board.
 
 The findings screens always read one run, never a pile of them, so removing old runs is

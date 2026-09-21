@@ -47,11 +47,20 @@ in.
 
 ## Publishing
 
-A publish writes work items into the Azure DevOps project configured on the engagement. It
+A publish writes the chosen items into an Azure DevOps project, a Jira project or a GitHub
+repository, picked at the time of publishing rather than stored on the connection. It
 re-analyses nothing: it publishes the items that were chosen and nothing else.
 
-Each work item carries a deterministic tag derived from the engagement and the item's key, so
-publishing twice updates the existing items rather than creating a second copy of everything.
+Each item carries a deterministic key derived from the engagement and the item's own key, so
+publishing twice updates what is there rather than creating a second copy of everything. It is
+a tag in Azure DevOps and a label in Jira and GitHub, which is the one field all three have
+without anybody configuring it first.
+
+The three targets do not offer the same shapes and the product does not pretend they do. Azure
+DevOps is asked which work item types the project has; Jira is asked for its issue types, and a
+level it does not have lands flat rather than failing; GitHub has no types at all, so ours
+become labels and the parent link is a sub-issue where the repository supports one. Nothing is
+ever closed or reopened on any of them.
 
 You can run a publish as a dry run first, which reports what it would create and update
 without writing anything.

@@ -17,7 +17,7 @@ an exported solution file, it reads what is there, and it produces four things:
 that changes that. You can run a discovery in a first conversation without a change advisory
 board, which is the point.
 
-The only thing it writes anywhere is work items into Azure DevOps, and only the ones
+The only thing it writes anywhere is work items into Azure DevOps, Jira or GitHub, and only the ones
 somebody picked on the backlog screen. There is a dry run that shows exactly what would
 land and writes nothing.
 

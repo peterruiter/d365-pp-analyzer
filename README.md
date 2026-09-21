@@ -5,7 +5,8 @@ technical debt, what the low code to high code ratio actually is, and what it wo
 put right.
 
 Produces a report a client reads, a workbook a consultant filters, and a backlog that can be
-published into Azure DevOps as work items with acceptance criteria, estimates and story points.
+published into Azure DevOps, Jira or GitHub as work items with acceptance criteria, estimates and
+story points.
 
 The third product in the suite, beside
 [Intent Miner](https://github.com/peterruiter/d365-contactcenter-intentminer), which answers
@@ -35,8 +36,10 @@ move. This product calls the checker and folds the results in under their own id
 declared here are the ones the checker does not have: lifecycle, cross component debt, usage,
 sprawl and solution hygiene.
 
-The one place it writes is Azure DevOps, behind an approval recorded against a named person
-and the exact backlog they saw.
+The only thing it writes anywhere is a backlog, into Azure DevOps, Jira or GitHub, and only the
+items somebody picked on the backlog screen. A dry run reports what would land without writing
+anything, and every item carries a deterministic key, so publishing twice updates what is there
+rather than creating a second copy.
 
 ## Run modes
 
@@ -45,7 +48,7 @@ and the exact backlog they saw.
 | Quick scan | Nothing | No | Counts, the ratio, lifecycle findings. Fifteen minutes |
 | Assessment | Nothing | Yes | The full finding set, estimates, report and backlog |
 | Compare | Nothing | Yes | This run against a previous one |
-| Publish | Azure DevOps | No | Work items, from an approved backlog |
+| Publish | Azure DevOps, Jira or GitHub | No | Work items, from a chosen backlog |
 
 ## Estimates
 

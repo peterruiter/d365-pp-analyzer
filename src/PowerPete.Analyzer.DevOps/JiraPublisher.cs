@@ -339,41 +339,14 @@ public sealed partial class JiraPublisher
     }
 
     /// <summary>The block elements in some of our own HTML, as a tag and its text.</summary>
+    /// <remarks>
+    /// Shared with the GitHub publisher rather than owned here. Both have to read the same
+    /// six sections out of the same markup, and two readers agree on the day they are
+    /// written and disagree the first time the builder emits a tag only one of them knows.
+    /// </remarks>
     /// <param name="html">The description or the criteria.</param>
-    private static IEnumerable<(string Tag, string Text)> Blocks(string? html)
-    {
-        if (string.IsNullOrWhiteSpace(html)) yield break;
-
-        var matches = BlockElement().Matches(html);
-
-        // Not everything handed to this is markup. The acceptance criteria are HTML and the
-        // test requirement is a plain sentence, and a regex over block elements finds
-        // nothing in a plain sentence: the heading was written and the text under it
-        // silently was not, which is a worse page than no heading at all.
-        if (matches.Count == 0)
-        {
-            var plain = Text(html);
-
-            if (plain.Length > 0) yield return ("p", plain);
-
-            yield break;
-        }
-
-        foreach (Match match in matches)
-        {
-            yield return (match.Groups["tag"].Value.ToLowerInvariant(), Text(match.Groups["body"].Value));
-        }
-    }
-
-    /// <summary>The text inside a block, with its inline markup removed and entities restored.</summary>
-    /// <param name="inner">The block's inner HTML.</param>
-    private static string Text(string inner)
-    {
-        var withBreaks = LineBreak().Replace(inner, " ");
-        var withoutTags = InlineTag().Replace(withBreaks, string.Empty);
-
-        return WhitespaceRun().Replace(System.Net.WebUtility.HtmlDecode(withoutTags), " ").Trim();
-    }
+    private static IEnumerable<(string Tag, string Text)> Blocks(string? html) =>
+        DescriptionHtml.Blocks(html);
 
     /// <summary>Jira's error body, or the status where it is not one.</summary>
     /// <param name="body">What came back.</param>
@@ -407,16 +380,6 @@ public sealed partial class JiraPublisher
             return fallback;
         }
     }
-
-    [GeneratedRegex(@"<(?<tag>h[1-6]|p|li)\b[^>]*>(?<body>.*?)</\k<tag>>",
-        RegexOptions.IgnoreCase | RegexOptions.Singleline, 5000)]
-    private static partial Regex BlockElement();
-
-    [GeneratedRegex(@"<br\s*/?>", RegexOptions.IgnoreCase, 5000)]
-    private static partial Regex LineBreak();
-
-    [GeneratedRegex("<[^>]+>", RegexOptions.None, 5000)]
-    private static partial Regex InlineTag();
 
     [GeneratedRegex(@"\s+", RegexOptions.None, 5000)]
     private static partial Regex WhitespaceRun();

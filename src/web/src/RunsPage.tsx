@@ -10,6 +10,11 @@ type Source = {
   connectionId: string;
   mode: string;
   name: string;
+
+  // source or target, decided by the API against its own list of publish targets. The
+  // screen asked whether the mode was azureDevOps, which was true of the only target there
+  // was on the day it was written and has been wrong since Jira was added.
+  direction: string;
 };
 
 /** What the discovery detail returns for one run. */
@@ -54,9 +59,11 @@ export function RunsPage({ engagementId }: { engagementId: string }) {
     void getJson<Source[]>(`/api/engagements/${engagementId}/connections`).then((result) => {
       if (cancelled) return;
 
-      // Azure DevOps is a place to publish to, not a place to read from, and offering it
-      // here would be offering a run that cannot do anything.
-      const readable = (result.data ?? []).filter((one) => one.mode !== 'azureDevOps');
+      // A place to publish to is not a place to read from, and offering one here would be
+      // offering a run that cannot do anything. Asked by direction rather than by naming
+      // the targets: this line named azureDevOps and so was silently wrong about Jira from
+      // the day Jira arrived, and would have been wrong about GitHub the same way.
+      const readable = (result.data ?? []).filter((one) => one.direction !== 'target');
 
       setSources(readable);
 

@@ -134,6 +134,23 @@
         "leastPrivilege": "Browse projects and Create issues on the one project the backlog lands in. An Atlassian API token carries the whole account rather than a scope, so the account it belongs to is the thing to keep small: a service account on that project beats a consultant’s own login."
       },
       "note": "The project is chosen per publish, the same as Azure DevOps. The issue types are read from the project rather than assumed, because a team managed project and a company managed one do not offer the same ones and neither always has Epic."
+    },
+    {
+      "id": "github",
+      "name": "GitHub",
+      "status": "supported",
+      "summary": "A GitHub repository’s issues, for the clients whose engineering lives there rather than in Azure DevOps. The same backlog, the same deterministic keys and the same refusal to reopen anything somebody closed.",
+      "auth": {
+        "type": "personalAccessToken",
+        "settings": [
+          "owner",
+          "repository",
+          "apiBaseUrl"
+        ],
+        "secretRef": "A GitHub personal access token in Key Vault, scoped to issues on the repositories the backlog lands in. Nothing about it reaches the database.",
+        "leastPrivilege": "Issues: read and write, on the repositories that will hold a backlog and no others. A fine grained token names its repositories, which is the smallest thing that works here; a classic token carries the whole repo scope and is worth avoiding for that reason alone. The token does not need code, actions, packages or administration."
+      },
+      "note": "The repository is chosen per publish, the same as the Azure DevOps project. Only repositories with issues enabled and not archived are offered, because publishing into either is a refusal on the first item rather than a partial success. GitHub has no work item types, so the type becomes a label, and the parent link is a sub-issue where the repository supports one."
     }
   ],
   "checkerGeographies": [

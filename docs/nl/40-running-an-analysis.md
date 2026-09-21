@@ -7,7 +7,7 @@
 | **Snelle scan** | Leest het landschap en past elke regel toe, met ramingsbandbreedtes in plaats van afzonderlijke ramingen. | Minuten. |
 | **Beoordeling** | Een snelle scan, plus een raming per bevinding en een gegroomde backlog. | Langer, en er wordt een taalmodel aangeroepen. |
 | **Vergelijken** | Een beoordeling afgezet tegen een eerdere run, zodat u kunt laten zien wat er is veranderd. | Als een beoordeling. |
-| **Publiceren** | Schrijft de gekozen backlogitems naar Azure DevOps. Leest niets en analyseert niets opnieuw. | Minuten. |
+| **Publiceren** | Schrijft de gekozen backlogitems naar Azure DevOps, Jira of GitHub. Leest niets en analyseert niets opnieuw. | Minuten. |
 
 Begin met een snelle scan. Dat is de modus die veilig is om in een verkoopgesprek uit te
 voeren, en hij beantwoordt de meeste vragen van een eerste afspraak.
@@ -53,7 +53,7 @@ en met welke hij nu bezig is:
 7. **Ramen** — zet een bandbreedte in uren op elke bevinding. Wordt overgeslagen bij een snelle scan.
 8. **Scoren** — berekent de verhouding, de maatwerkgrafiek en de roadmap.
 9. **Backlog** — maakt van bevindingen werkitems die iemand echt zou groomen.
-10. **Publiceren** — schrijft naar Azure DevOps of Jira. Alleen in publicatiemodus, en alleen de items die iemand heeft gekozen.
+10. **Publiceren** — schrijft naar Azure DevOps, Jira of GitHub. Alleen in publicatiemodus, en alleen de items die iemand heeft gekozen.
 
 De fase die draait vertelt wat hij aan het doen is terwijl hij het doet — welke oplossing hij
 exporteert, welke de checker onder handen heeft, hoe ver hij in de omgeving is — en het scherm
@@ -81,7 +81,7 @@ zoekt die u bedoelt. Een Beheerder kan een run verwijderen met alles wat hij hee
 
 Twee dingen zijn het weten waard. Een run waarop een latere run is gebouwd kan niet worden
 verwijderd, want die latere run zou dan een beoordeling beschrijven die niet meer bestaat. En
-werkitems die al naar Azure DevOps of Jira zijn gepubliceerd blijven precies waar ze zijn: het
+werkitems die al naar Azure DevOps, Jira of GitHub zijn gepubliceerd blijven precies waar ze zijn: het
 verwijderen van de run haalt de registratie van dit product weg dat het ze heeft geschreven,
 en niets in het bord van de klant.
 

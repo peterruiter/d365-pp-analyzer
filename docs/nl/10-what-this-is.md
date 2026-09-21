@@ -17,7 +17,7 @@ geeft het een geëxporteerd solutionbestand, het leest wat er is, en het levert 
 instelling die dat verandert. U kunt een verkenning uitvoeren in een eerste gesprek zonder
 change advisory board, en dat is precies het punt.
 
-Het enige dat het ergens wegschrijft zijn werkitems in Azure DevOps, en alleen de items die
+Het enige dat het ergens wegschrijft zijn werkitems in Azure DevOps, Jira of GitHub, en alleen de items die
 iemand op het backlogscherm heeft uitgekozen. Er is een proefrun die precies laat zien wat
 er zou landen en niets wegschrijft.
 

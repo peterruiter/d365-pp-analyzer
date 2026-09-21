@@ -369,6 +369,59 @@ public class DataLayerTests
             "an untranslated rule prints its own resource key into a client's report");
     }
 
+    [Fact]
+    public void Every_connection_setting_has_a_label_in_every_language()
+    {
+        // The sibling of the rule test above, for the other place this product renders a
+        // key it built at run time.
+        //
+        // The wizard draws t('field.' + setting) for every setting the contract declares.
+        // A setting with no entry in the bundle does not fail, warn, or look wrong to a
+        // compiler: the label above the text box reads "field.owner", on the screen where
+        // a consultant connects a client's system.
+        //
+        // There is already a test that every setting the code reads is one a screen
+        // collects. This is the other half of the same sentence: every setting a screen
+        // collects has to be one somebody can read.
+        var declared = Contracts.Read("extraction-sources");
+
+        var settings = new List<string>();
+
+        foreach (var group in new[] { "modes", "targets" })
+        {
+            foreach (var entry in declared.GetProperty(group).EnumerateArray())
+            {
+                settings.AddRange(entry.GetProperty("auth").GetProperty("settings")
+                    .EnumerateArray().Select(setting => setting.GetString()!));
+            }
+        }
+
+        settings.Should().NotBeEmpty("the contract has to be readable for this to mean anything");
+
+        var missing = new List<string>();
+
+        foreach (var language in Contracts.Read("locales").Array("locales").Select(locale => locale.Str("code")))
+        {
+            var path = Path.Combine(Resources(), $"ui.{language}.json");
+
+            File.Exists(path).Should().BeTrue($"the ui bundle for {language} has to exist");
+
+            var bundle = JsonDocument.Parse(File.ReadAllText(path)).RootElement;
+
+            // The hint as well as the label. The wizard draws both unconditionally, so a
+            // missing hint is a resource key printed in grey under the box rather than no
+            // hint at all, which is worse than either.
+            missing.AddRange(
+                from setting in settings.Distinct(StringComparer.Ordinal)
+                from part in new[] { string.Empty, ".hint" }
+                where !bundle.TryGetProperty($"field.{setting}{part}", out _)
+                select $"{language}: field.{setting}{part}");
+        }
+
+        missing.Should().BeEmpty(
+            "a setting with no words prints its own resource key onto the connection wizard");
+    }
+
     /// <summary>
     /// Component types the contract says travel in a solution file, that the offline reader
     /// has no reader for, each with the reason it is still on this list.

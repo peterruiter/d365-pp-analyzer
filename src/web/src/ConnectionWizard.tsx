@@ -24,7 +24,13 @@ const fields: Record<string, { type: string; placeholder?: string }> = {
   declaredEnvironmentName: { type: 'text', placeholder: 'Contoso production' },
   exportedOnUtc: { type: 'date' },
   organisationUrl: { type: 'url', placeholder: 'https://dev.azure.com/contoso' },
-  project: { type: 'text', placeholder: 'Contoso Platform' }
+  project: { type: 'text', placeholder: 'Contoso Platform' },
+  owner: { type: 'text', placeholder: 'contoso' },
+  repository: { type: 'text', placeholder: 'platform-backlog' },
+
+  // Empty is the right answer for github.com, so the placeholder shows the shape of the
+  // only thing that belongs here rather than suggesting something has to be typed.
+  apiBaseUrl: { type: 'url', placeholder: 'https://github.contoso.com/api/v3' }
 };
 
 /**

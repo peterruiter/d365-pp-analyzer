@@ -50,13 +50,21 @@ opdracht, die per opdracht wordt ingesteld en losstaat van de taal waarin u het 
 
 ## Publiceren
 
-Een publicatie schrijft werkitems in het Azure DevOps-project dat op de opdracht is
-geconfigureerd. Er wordt niets opnieuw geanalyseerd: de gekozen items worden
-gepubliceerd en verder niets.
+Een publicatie schrijft de gekozen items naar een Azure DevOps-project, een Jira-project of
+een GitHub-repository, gekozen op het moment van publiceren en niet opgeslagen op de
+verbinding. Er wordt niets opnieuw geanalyseerd: de gekozen items worden gepubliceerd en verder
+niets.
 
-Elk werkitem draagt een deterministische tag die is afgeleid van de opdracht en de sleutel van
-het item, zodat twee keer publiceren de bestaande items bijwerkt in plaats van een tweede kopie
-van alles te maken.
+Elk item draagt een deterministische sleutel die is afgeleid van de opdracht en de sleutel van
+het item, zodat twee keer publiceren bijwerkt wat er staat in plaats van een tweede kopie van
+alles te maken. In Azure DevOps is dat een tag, in Jira en GitHub een label: het enige veld dat
+alle drie hebben zonder dat iemand iets hoeft in te richten.
+
+De drie doelen bieden niet dezelfde vormen en het product doet niet alsof. Azure DevOps wordt
+gevraagd welke werkitemtypen het project heeft; Jira wordt om zijn issuetypen gevraagd, en een
+niveau dat het niet heeft landt vlak in plaats van te mislukken; GitHub heeft helemaal geen
+typen, dus de onze worden labels en de koppeling met de ouder is een sub-issue waar de
+repository die ondersteunt. Op geen van drieën wordt ooit iets gesloten of heropend.
 
 U kunt een publicatie eerst als proefronde uitvoeren, die meldt wat er aangemaakt en bijgewerkt
 zou worden zonder iets te schrijven.

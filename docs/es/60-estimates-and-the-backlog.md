@@ -52,12 +52,21 @@ el producto.
 
 ## Publicar
 
-Una publicación escribe elementos de trabajo en el proyecto de Azure DevOps configurado en el
-encargo. No vuelve a analizar nada: publica los elementos elegidos y nada más.
+Una publicación escribe los elementos elegidos en un proyecto de Azure DevOps, un proyecto de
+Jira o un repositorio de GitHub, elegido en el momento de publicar y no guardado en la
+conexión. No vuelve a analizar nada: publica los elementos elegidos y nada más.
 
-Cada elemento de trabajo lleva una etiqueta determinista derivada del encargo y de la clave
-del elemento, de modo que publicar dos veces actualiza los elementos existentes en lugar de
-crear una segunda copia de todo.
+Cada elemento lleva una clave determinista derivada del encargo y de la clave del elemento, de
+modo que publicar dos veces actualiza lo que hay en lugar de crear una segunda copia de todo.
+Es una etiqueta en Azure DevOps y un label en Jira y GitHub: el único campo que los tres tienen
+sin que nadie lo configure antes.
+
+Los tres destinos no ofrecen las mismas formas y el producto no finge que sí. A Azure DevOps se
+le pregunta qué tipos de elemento de trabajo tiene el proyecto; a Jira se le preguntan sus
+tipos de incidencia, y un nivel que no tiene aterriza plano en lugar de fallar; GitHub no tiene
+tipos en absoluto, así que los nuestros pasan a ser etiquetas y el vínculo con el padre es una
+sub-incidencia donde el repositorio la admite. En ninguno de los tres se cierra ni se reabre
+nunca nada.
 
 Puede ejecutar primero una publicación en seco, que informa de lo que crearía y actualizaría
 sin escribir nada.

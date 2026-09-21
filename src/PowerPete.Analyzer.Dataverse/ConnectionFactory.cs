@@ -31,6 +31,9 @@ public sealed class ConnectionFactory(ISecretStore secrets)
     /// <param name="CheckerGeography">Where the checker runs. Data residency, so never a silent default.</param>
     /// <param name="Organisation">Which Azure DevOps organisation, as its address.</param>
     /// <param name="Project">Which project the worker's publish mode writes to.</param>
+    /// <param name="Owner">Which GitHub organisation or user the repositories belong to.</param>
+    /// <param name="Repository">Which repository the worker's publish mode writes to.</param>
+    /// <param name="ApiBaseUrl">Which GitHub API, for an Enterprise Server installation. Empty means github.com.</param>
     /// <remarks>
     /// Every name here has to be one the contract declares, or nothing collects it. That is
     /// not a convention, it is the defect that kept the checker from ever running:
@@ -50,7 +53,15 @@ public sealed class ConnectionFactory(ISecretStore secrets)
         [property: JsonPropertyName("organisationUrl")] string? Organisation,
         string? Project,
         [property: JsonPropertyName("uploadedFile")] string? BlobName,
-        string? CheckerGeography);
+        string? CheckerGeography,
+
+        // GitHub's three. Owner and Repository are the same pair as Organisation and
+        // Project: the first sits on the connection, the second is the default a scheduled
+        // publish uses when nobody is there to pick one. ApiBaseUrl is empty for github.com
+        // and is the only way an Enterprise Server installation is reachable at all.
+        string? Owner,
+        string? Repository,
+        string? ApiBaseUrl);
 
     /// <summary>How a connection's settings are written and read. Both sides use this.</summary>
     private static readonly JsonSerializerOptions SettingsJson = new(JsonSerializerDefaults.Web);
@@ -66,7 +77,7 @@ public sealed class ConnectionFactory(ISecretStore secrets)
         // principal connection had no environment URL and failed at the point of reading the
         // estate, which reads as a permissions problem and is a serialiser setting.
         return JsonSerializer.Deserialize<Settings>(connection.SettingsJson, SettingsJson)
-            ?? new Settings(null, null, null, null, null, null, null);
+            ?? new Settings(null, null, null, null, null, null, null, null, null, null);
     }
 
     /// <summary>
@@ -202,6 +213,36 @@ public sealed class ConnectionFactory(ISecretStore secrets)
 
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return client;
+    }
+
+    /// <summary>
+    /// The personal access token on a GitHub connection.
+    /// </summary>
+    /// <remarks>
+    /// A token rather than a client, unlike every other method here, and deliberately. The
+    /// headers GitHub requires belong with the publisher so the user agent it refuses
+    /// requests without is set in one place, and this assembly does not reference the one
+    /// the publisher lives in: the layer that reads an estate has no business knowing what a
+    /// work item is. So the factory does the half only it can do, which is getting the
+    /// secret out of Key Vault.
+    ///
+    /// A personal access token and nothing else. A GitHub App is the alternative and needs
+    /// an installation in each client organisation, which is a conversation with somebody's
+    /// platform team rather than a token a consultant can be handed in a meeting.
+    /// </remarks>
+    /// <param name="connection">The GitHub connection.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task<string> GitHubTokenAsync(Connection connection, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+
+        var token = connection.SecretRef is { Length: > 0 } reference
+            ? await secrets.GetAsync(reference, cancellationToken).ConfigureAwait(false)
+            : null;
+
+        return string.IsNullOrWhiteSpace(token)
+            ? throw new InvalidOperationException("The GitHub connection has no personal access token on it.")
+            : token;
     }
 
     /// <summary>

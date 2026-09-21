@@ -52,12 +52,20 @@ dans laquelle vous lisez le produit.
 
 ## Publier
 
-Une publication écrit des éléments de travail dans le projet Azure DevOps configuré sur la
-mission. Elle ne réanalyse rien : elle publie les éléments choisis et rien d'autre.
+Une publication écrit les éléments choisis dans un projet Azure DevOps, un projet Jira ou un
+dépôt GitHub, choisi au moment de publier et non enregistré sur la connexion. Elle ne réanalyse
+rien : elle publie les éléments choisis et rien d'autre.
 
-Chaque élément de travail porte une étiquette déterministe dérivée de la mission et de la clé
-de l'élément, si bien que publier deux fois met à jour les éléments existants au lieu de créer
-une deuxième copie de tout.
+Chaque élément porte une clé déterministe dérivée de la mission et de la clé de l'élément, si
+bien que publier deux fois met à jour ce qui existe au lieu de créer une deuxième copie de
+tout. C'est une étiquette dans Azure DevOps et un label dans Jira et GitHub : le seul champ que
+les trois possèdent sans que personne ait à le configurer d'abord.
+
+Les trois cibles n'offrent pas les mêmes formes et le produit ne fait pas semblant. On demande
+à Azure DevOps quels types d'éléments de travail le projet possède ; on demande à Jira ses
+types de tickets, et un niveau qu'il n'a pas atterrit à plat plutôt que d'échouer ; GitHub n'a
+aucun type, donc les nôtres deviennent des labels et le lien au parent est une sous-issue là où
+le dépôt la prend en charge. Sur aucune des trois rien n'est jamais fermé ni rouvert.
 
 Vous pouvez d'abord lancer une publication à blanc, qui indique ce qu'elle créerait et
 mettrait à jour sans rien écrire.

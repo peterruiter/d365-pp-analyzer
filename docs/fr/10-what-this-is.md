@@ -18,7 +18,7 @@ il produit quatre choses :
 ne change cela. Vous pouvez lancer une découverte dès le premier entretien sans comité
 consultatif du changement, et c'est tout l'intérêt.
 
-La seule chose qu'il écrit quelque part, ce sont des éléments de travail dans Azure DevOps, et
+La seule chose qu'il écrit quelque part, ce sont des éléments de travail dans Azure DevOps, Jira ou GitHub, et
 uniquement ceux que quelqu'un a choisis sur l'écran du backlog. Il existe une exécution à
 blanc qui montre exactement ce qui atterrirait et n'écrit rien.
 

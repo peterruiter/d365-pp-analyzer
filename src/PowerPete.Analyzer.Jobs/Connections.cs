@@ -381,22 +381,60 @@ public sealed class StageServicesFactory(
                     throw new InvalidOperationException("A publish run reached the publish stage with no target connection.");
                 }
 
-                var devOpsSettings = ConnectionFactory.Read(target);
-                var client = await connections.ForDevOpsAsync(target, token).ConfigureAwait(false);
+                var targetSettings = ConnectionFactory.Read(target);
 
-                var publisher = new WorkItemPublisher(client,
-                    devOpsSettings.Organisation ?? throw new InvalidOperationException("No Azure DevOps organisation is set."),
-                    devOpsSettings.Project ?? throw new InvalidOperationException("No Azure DevOps project is set."));
+                // Which target, rather than assuming the first one written. A GitHub
+                // connection down this path threw "No Azure DevOps organisation is set"
+                // against a connection carrying an owner and a repository, which is the same
+                // shape as every other defect the Settings record's remarks record: a value
+                // that is simply always null, handled politely, naming a field nobody can
+                // find.
+                //
+                // Where and What are what gets recorded against the run. They are an
+                // organisation and a project for Azure DevOps and an owner and a repository
+                // for GitHub, and the column holds whichever it was told.
+                string where;
+                string what;
+                IReadOnlyList<(string Key, int Id, string Url, string Action)> published;
 
-                var published = await publisher.PublishAsync(
-                    items, dryRun: false, confirmedCount: items.Count, token).ConfigureAwait(false);
+                if (string.Equals(target.Mode, "github", StringComparison.Ordinal))
+                {
+                    where = targetSettings.Owner
+                        ?? throw new InvalidOperationException("No GitHub owner is set on the publish target.");
+                    what = targetSettings.Repository
+                        ?? throw new InvalidOperationException("No GitHub repository is set on the publish target.");
+
+                    using var gitHub = new HttpClient();
+                    GitHubPublisher.Authenticate(
+                        gitHub, await connections.GitHubTokenAsync(target, token).ConfigureAwait(false));
+
+                    var result = await new GitHubPublisher(gitHub, where, what, targetSettings.ApiBaseUrl)
+                        .PublishAsync(items, dryRun: false, confirmedCount: items.Count, token)
+                        .ConfigureAwait(false);
+
+                    published = [.. result.Select(entry => (entry.Key, entry.Number, entry.Url, entry.Action))];
+                }
+                else
+                {
+                    where = targetSettings.Organisation
+                        ?? throw new InvalidOperationException("No Azure DevOps organisation is set.");
+                    what = targetSettings.Project
+                        ?? throw new InvalidOperationException("No Azure DevOps project is set.");
+
+                    using var client = await connections.ForDevOpsAsync(target, token).ConfigureAwait(false);
+
+                    var result = await new WorkItemPublisher(client, where, what)
+                        .PublishAsync(items, dryRun: false, confirmedCount: items.Count, token)
+                        .ConfigureAwait(false);
+
+                    published = [.. result.Select(entry => (entry.Key, entry.WorkItemId, entry.Url, entry.Action))];
+                }
 
                 // The run and the key, not Guid.Empty twice. This recorded a publish against
                 // no run and no backlog item, which the foreign key would have refused had
                 // this path ever run: the worker's publish has never been exercised.
                 await analysis.WritePublishedAsync(runId,
-                    [.. published.Select(entry => (entry.Key, devOpsSettings.Organisation!, devOpsSettings.Project!,
-                        entry.WorkItemId, entry.Url, entry.Action))],
+                    [.. published.Select(entry => (entry.Key, where, what, entry.Id, entry.Url, entry.Action))],
                     token).ConfigureAwait(false);
 
                 return published.Count;

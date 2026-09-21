@@ -51,12 +51,20 @@ il prodotto.
 
 ## Pubblicare
 
-Una pubblicazione scrive elementi di lavoro nel progetto Azure DevOps configurato
-sull'incarico. Non rianalizza nulla: pubblica gli elementi scelti e nient'altro.
+Una pubblicazione scrive gli elementi scelti in un progetto Azure DevOps, un progetto Jira o
+un repository GitHub, scelto al momento della pubblicazione e non memorizzato sulla
+connessione. Non rianalizza nulla: pubblica gli elementi scelti e nient'altro.
 
-Ogni elemento di lavoro porta un tag deterministico derivato dall'incarico e dalla chiave
-dell'elemento, così pubblicare due volte aggiorna gli elementi esistenti anziché creare una
-seconda copia di tutto.
+Ogni elemento porta una chiave deterministica derivata dall'incarico e dalla chiave
+dell'elemento, così pubblicare due volte aggiorna ciò che c'è anziché creare una seconda copia
+di tutto. È un tag in Azure DevOps e un'etichetta in Jira e GitHub: l'unico campo che tutti e
+tre hanno senza che nessuno debba configurarlo prima.
+
+Le tre destinazioni non offrono le stesse forme e il prodotto non finge di sì. Ad Azure DevOps
+si chiede quali tipi di elemento di lavoro ha il progetto; a Jira si chiedono i suoi tipi di
+ticket, e un livello che non ha atterra piatto anziché fallire; GitHub non ha tipi affatto,
+quindi i nostri diventano etichette e il collegamento al padre è una sub-issue dove il
+repository la supporta. Su nessuna delle tre viene mai chiuso o riaperto alcunché.
 
 Potete eseguire prima una pubblicazione di prova, che riporta cosa creerebbe e aggiornerebbe
 senza scrivere nulla.

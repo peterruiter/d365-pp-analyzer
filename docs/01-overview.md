@@ -49,7 +49,7 @@ Neither follows.
 | Findings | Excel | The consultant, in a workshop, with a filter on |
 | Backlog | Excel | The delivery team, before anybody publishes anything |
 | Component inventory | Excel | The appendix nobody reads and everybody asks for |
-| Work items | Azure DevOps | The team who will do the work |
+| Work items | Azure DevOps, Jira or GitHub | The team who will do the work |
 
 ## The rule that shapes everything else
 

@@ -7,7 +7,7 @@
 | **Scansione rapida** | Legge il patrimonio e applica ogni regola, usando fasce di stima anziché stime individuali. | Minuti. |
 | **Valutazione** | Una scansione rapida, più una stima per rilievo e un backlog curato. | Di più, e richiama un modello linguistico. |
 | **Confronta** | Una valutazione misurata rispetto a un'esecuzione precedente, per mostrare che cosa è cambiato. | Come una valutazione. |
-| **Pubblica** | Scrive gli elementi di backlog scelti in Azure DevOps. Non legge nulla e non rianalizza nulla. | Minuti. |
+| **Pubblica** | Scrive gli elementi di backlog scelti in Azure DevOps, Jira o GitHub. Non legge nulla e non rianalizza nulla. | Minuti. |
 
 Iniziate con una scansione rapida. È la modalità che si può eseguire senza rischi in un
 colloquio commerciale, e risponde alla maggior parte delle domande di un primo incontro.
@@ -53,7 +53,7 @@ durata ciascuna e su quale si trova ora:
 7. **Stima** — mette un intervallo di ore su ogni rilievo. Saltata da una scansione rapida.
 8. **Punteggio** — calcola il rapporto, il grafico delle personalizzazioni e la roadmap.
 9. **Backlog** — trasforma i rilievi in elementi di lavoro che qualcuno curerebbe davvero.
-10. **Pubblicazione** — scrive in Azure DevOps o Jira. Solo in modalità pubblicazione, e solo gli elementi che qualcuno ha scelto.
+10. **Pubblicazione** — scrive in Azure DevOps, Jira o GitHub. Solo in modalità pubblicazione, e solo gli elementi che qualcuno ha scelto.
 
 La fase in corso dice cosa sta facendo mentre lo fa — quale soluzione sta esportando, quale ha
 il checker, a che punto è nell'ambiente — e la schermata si aggiorna da sola. Una fase che
@@ -83,7 +83,7 @@ che ha prodotto.
 
 Due cose da sapere. Un'esecuzione su cui ne è stata costruita una successiva non può essere
 rimossa, perché quella successiva resterebbe a descrivere una valutazione che non esiste più.
-E gli elementi di lavoro già pubblicati in Azure DevOps o Jira restano esattamente dove sono:
+E gli elementi di lavoro già pubblicati in Azure DevOps, Jira o GitHub restano esattamente dove sono:
 rimuovere l'esecuzione rimuove la traccia che questo prodotto ha di averli scritti, e nulla
 nella board del cliente.
 

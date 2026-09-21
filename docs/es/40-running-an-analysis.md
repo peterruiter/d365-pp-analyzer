@@ -7,7 +7,7 @@
 | **Escaneo rápido** | Lee el patrimonio y aplica cada regla, usando bandas de estimación en lugar de estimaciones individuales. | Minutos. |
 | **Evaluación** | Un escaneo rápido, más una estimación por hallazgo y un backlog refinado. | Más, y llama a un modelo de lenguaje. |
 | **Comparar** | Una evaluación medida contra una ejecución anterior, para poder mostrar qué ha cambiado. | Como una evaluación. |
-| **Publicar** | Escribe los elementos de backlog elegidos en Azure DevOps. No lee nada ni vuelve a analizar nada. | Minutos. |
+| **Publicar** | Escribe los elementos de backlog elegidos en Azure DevOps, Jira o GitHub. No lee nada ni vuelve a analizar nada. | Minutos. |
 
 Empiece con un escaneo rápido. Es el modo que se puede ejecutar sin riesgo en una conversación
 comercial, y responde a la mayoría de las preguntas de una primera reunión.
@@ -53,7 +53,7 @@ cada una y en cuál se encuentra ahora:
 7. **Estimar** — pone un rango de horas en cada hallazgo. Se omite en un escaneo rápido.
 8. **Puntuar** — calcula la proporción, el gráfico de personalización y la hoja de ruta.
 9. **Backlog** — convierte hallazgos en elementos de trabajo que alguien refinaría de verdad.
-10. **Publicar** — escribe en Azure DevOps o Jira. Solo en modo publicación, y solo los elementos que alguien eligió.
+10. **Publicar** — escribe en Azure DevOps, Jira o GitHub. Solo en modo publicación, y solo los elementos que alguien eligió.
 
 La fase en curso dice qué está haciendo mientras lo hace — qué solución está exportando, cuál
 tiene el checker, por dónde va en el entorno — y la pantalla se actualiza sola. Una fase que
@@ -82,7 +82,7 @@ la que tiene en mente. Un Administrador puede eliminar una ejecución y todo lo 
 
 Dos cosas que conviene saber. Una ejecución sobre la que se construyó otra posterior no se
 puede eliminar, porque esa ejecución posterior quedaría describiendo una evaluación que ya no
-existe. Y los elementos de trabajo ya publicados en Azure DevOps o Jira se quedan exactamente
+existe. Y los elementos de trabajo ya publicados en Azure DevOps, Jira o GitHub se quedan exactamente
 donde están: eliminar la ejecución elimina el registro que este producto tiene de haberlos
 escrito, y nada en el tablero del cliente.
 

@@ -50,13 +50,22 @@ Produkt lesen.
 
 ## Veröffentlichen
 
-Eine Veröffentlichung schreibt Arbeitselemente in das Azure-DevOps-Projekt, das im Engagement
-konfiguriert ist. Sie analysiert nichts neu: sie veröffentlicht die gewählten Elemente und
-sonst nichts.
+Eine Veröffentlichung schreibt die gewählten Elemente in ein Azure-DevOps-Projekt, ein
+Jira-Projekt oder ein GitHub-Repository, beim Veröffentlichen gewählt und nicht auf der
+Verbindung gespeichert. Sie analysiert nichts neu: sie veröffentlicht die gewählten Elemente
+und sonst nichts.
 
-Jedes Arbeitselement trägt eine deterministische Kennzeichnung, abgeleitet aus dem Engagement
-und dem Schlüssel des Elements, sodass zweimal veröffentlichen die bestehenden Elemente
-aktualisiert, statt eine zweite Kopie von allem anzulegen.
+Jedes Element trägt einen deterministischen Schlüssel, abgeleitet aus dem Engagement und dem
+Schlüssel des Elements, sodass zweimal veröffentlichen aktualisiert, was da ist, statt eine
+zweite Kopie von allem anzulegen. In Azure DevOps ist das ein Tag, in Jira und GitHub ein
+Label: das einzige Feld, das alle drei haben, ohne dass jemand es erst einrichten muss.
+
+Die drei Ziele bieten nicht dieselben Formen, und das Produkt tut nicht so. Azure DevOps wird
+gefragt, welche Arbeitselementtypen das Projekt hat; Jira wird nach seinen Vorgangstypen
+gefragt, und eine Ebene, die es nicht gibt, landet flach statt zu scheitern; GitHub hat
+überhaupt keine Typen, also werden unsere zu Labels und die Verbindung zum Elternelement ist
+ein Sub-Issue, wo das Repository es unterstützt. Auf keinem der drei wird je etwas geschlossen
+oder wieder geöffnet.
 
 Sie können eine Veröffentlichung zuerst als Probelauf ausführen, der meldet, was angelegt und
 aktualisiert würde, ohne etwas zu schreiben.

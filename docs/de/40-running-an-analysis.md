@@ -7,7 +7,7 @@
 | **Schnellprüfung** | Liest die Landschaft und wendet jede Regel an, mit Schätzbandbreiten statt Einzelschätzungen. | Minuten. |
 | **Bewertung** | Eine Schnellprüfung, plus eine Schätzung je Befund und ein gepflegter Backlog. | Länger, und es wird ein Sprachmodell aufgerufen. |
 | **Vergleichen** | Eine Bewertung gemessen an einem früheren Lauf, damit Sie zeigen können, was sich geändert hat. | Wie eine Bewertung. |
-| **Veröffentlichen** | Schreibt die gewählten Backlog-Elemente nach Azure DevOps. Liest nichts und analysiert nichts neu. | Minuten. |
+| **Veröffentlichen** | Schreibt die gewählten Backlog-Elemente nach Azure DevOps, Jira oder GitHub. Liest nichts und analysiert nichts neu. | Minuten. |
 
 Beginnen Sie mit einer Schnellprüfung. Das ist der Modus, der sich gefahrlos in einem
 Verkaufsgespräch ausführen lässt, und er beantwortet die meisten Fragen eines ersten Termins.
@@ -54,7 +54,7 @@ gedauert hat und in welcher er gerade steckt:
 7. **Schätzen** — legt eine Stundenspanne auf jeden Befund. Bei einer Schnellprüfung übersprungen.
 8. **Bewerten** — berechnet das Verhältnis, das Anpassungsdiagramm und die Roadmap.
 9. **Backlog** — macht aus Befunden Arbeitselemente, die jemand tatsächlich pflegen würde.
-10. **Veröffentlichen** — schreibt nach Azure DevOps oder Jira. Nur im Veröffentlichungsmodus, und nur die Elemente, die jemand gewählt hat.
+10. **Veröffentlichen** — schreibt nach Azure DevOps, Jira oder GitHub. Nur im Veröffentlichungsmodus, und nur die Elemente, die jemand gewählt hat.
 
 Die laufende Phase sagt, woran sie gerade arbeitet — welche Lösung sie exportiert, welche der
 Checker hat, wie weit sie in der Umgebung ist — und der Bildschirm aktualisiert sich von
@@ -84,7 +84,7 @@ entfernen, mit allem, was er erzeugt hat.
 
 Zwei Dinge sind wissenswert. Ein Lauf, auf dem ein späterer Lauf aufgebaut wurde, kann nicht
 entfernt werden, denn jener spätere Lauf bliebe dann zurück und beschriebe eine Bewertung, die
-es nicht mehr gibt. Und Arbeitselemente, die bereits nach Azure DevOps oder Jira veröffentlicht
+es nicht mehr gibt. Und Arbeitselemente, die bereits nach Azure DevOps, Jira oder GitHub veröffentlicht
 wurden, bleiben genau dort: den Lauf zu entfernen entfernt den Nachweis dieses Produkts, sie
 geschrieben zu haben, und nichts im Board des Kunden.
 

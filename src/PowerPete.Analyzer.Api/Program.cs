@@ -52,12 +52,12 @@ static int SeverityRank(string severity) => severity switch
 
 // Every mode a connection can be, which is the three ways in plus the two ways out.
 // Publish targets live in the same table as sources and are told apart by this value.
-string[] ExtractionModesList() => ["servicePrincipal", "delegated", "offlineZip", "azureDevOps", "jira"];
+string[] ExtractionModesList() => ["servicePrincipal", "delegated", "offlineZip", "azureDevOps", "jira", "github"];
 
 // The modes that are somewhere a backlog goes rather than somewhere an estate is read. Held
 // once: this used to be an equality check against azureDevOps in three places, and adding a
 // second target would have meant finding all three.
-string[] PublishTargets() => ["azureDevOps", "jira"];
+string[] PublishTargets() => ["azureDevOps", "jira", "github"];
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -81,6 +81,7 @@ var adminContact = Setting(DeploymentSettings.AdminContact) ?? string.Empty;
 
 builder.Services.AddSingleton<DevOpsProjects>();
 builder.Services.AddSingleton<JiraProjects>();
+builder.Services.AddSingleton<GitHubRepositories>();
 builder.Services.AddSingleton(new WorkspaceStore(connectionString));
 builder.Services.AddSingleton(new AnalysisStore(connectionString));
 builder.Services.AddSingleton(new AccessStore(connectionString));
@@ -1360,6 +1361,31 @@ app.MapPost("/api/engagements/{engagementId:guid}/connections/{connectionId:guid
                 break;
             }
 
+            case "github":
+            {
+                settings.TryGetValue("owner", out var owner);
+                settings.TryGetValue("apiBaseUrl", out var apiBase);
+
+                var repositories = context.RequestServices.GetRequiredService<GitHubRepositories>();
+
+                var found = await repositories.ListAsync(
+                    owner ?? string.Empty, token ?? string.Empty, apiBase, context.RequestAborted);
+
+                succeeded = found.Error is null;
+                identity = owner;
+
+                // The count, and what was left out of it. A token that authenticates against
+                // an owner whose every repository has issues switched off is a target that
+                // will refuse the publish, and a tick beside it would be a lie.
+                message = found.Error
+                    ?? $"Authenticated against {owner}, and {found.Repositories.Count} repository(s) can take "
+                        + "a backlog."
+                        + (found.Hidden > 0
+                            ? $" {found.Hidden} more are archived or have issues turned off."
+                            : string.Empty);
+                break;
+            }
+
             case "azureDevOps":
             {
                 settings.TryGetValue("organisationUrl", out var organisation);
@@ -1430,6 +1456,30 @@ app.MapGet("/api/engagements/{engagementId:guid}/connections/{connectionId:guid}
     // screen gets back is the same shape either way: a name a person recognises and a value
     // the publish call wants, which is a project name in Azure DevOps and a project key in
     // Jira.
+    if (string.Equals(connection.Mode, "github", StringComparison.Ordinal))
+    {
+        settings.TryGetValue("owner", out var owner);
+        settings.TryGetValue("apiBaseUrl", out var apiBase);
+
+        var repositories = context.RequestServices.GetRequiredService<GitHubRepositories>();
+
+        var found = await repositories.ListAsync(
+            owner ?? string.Empty, token ?? string.Empty, apiBase, context.RequestAborted);
+
+        if (found.Error is not null) return Results.BadRequest(new { error = found.Error });
+
+        // owner/name to read and the bare name to send, because the owner is already on the
+        // connection and sending it twice is how a repository ends up addressed as
+        // contoso/contoso/thing.
+        return Results.Ok(found.Repositories.Select(repository => new
+        {
+            repository.Id,
+            name = repository.FullName,
+            value = repository.Name,
+            repository.Description
+        }));
+    }
+
     if (string.Equals(connection.Mode, "jira", StringComparison.Ordinal))
     {
         settings.TryGetValue("siteUrl", out var site);
@@ -1546,13 +1596,29 @@ app.MapPost("/api/engagements/{engagementId:guid}/publish",
         return Results.BadRequest(new { error = "This connection has no credential on it. Edit it and add one." });
     }
 
-    var jira = string.Equals(connection.Mode, "jira", StringComparison.Ordinal);
+    // What each target calls the thing the connection points at, and what to call the
+    // target when it cannot be reached. A bool held this while there were two of them and
+    // was already doing three jobs; a third target is where that stops working.
+    var (addressSetting, targetName) = connection.Mode switch
+    {
+        "jira" => ("siteUrl", "Jira"),
+        "github" => ("owner", "GitHub"),
+        _ => ("organisationUrl", "Azure DevOps")
+    };
 
-    settings.TryGetValue(jira ? "siteUrl" : "organisationUrl", out var host);
+    settings.TryGetValue(addressSetting, out var host);
 
     if (string.IsNullOrWhiteSpace(host))
     {
-        return Results.BadRequest(new { error = "This connection has no address on it." });
+        return Results.BadRequest(new
+        {
+            error = connection.Mode switch
+            {
+                "github" => "This connection has no owner on it. That is the organisation or user the "
+                    + "repositories belong to.",
+                _ => "This connection has no address on it."
+            }
+        });
     }
 
     try
@@ -1562,7 +1628,23 @@ app.MapPost("/api/engagements/{engagementId:guid}/publish",
         // neither reopens anything somebody closed.
         IReadOnlyList<(string Key, string Id, string Url, string Action)> published;
 
-        if (jira)
+        if (string.Equals(connection.Mode, "github", StringComparison.Ordinal))
+        {
+            settings.TryGetValue("apiBaseUrl", out var apiBase);
+
+            using var gitHubClient = factory.CreateClient("github");
+            GitHubPublisher.Authenticate(gitHubClient, token);
+
+            var result = await new GitHubPublisher(gitHubClient, host, request.Project, apiBase).PublishAsync(
+                items, request.DryRun, confirmedCount: items.Count, context.RequestAborted);
+
+            published = [.. result.Select(entry => (
+                entry.Key,
+                entry.Number.ToString(CultureInfo.InvariantCulture),
+                entry.Url,
+                entry.Action))];
+        }
+        else if (string.Equals(connection.Mode, "jira", StringComparison.Ordinal))
         {
             settings.TryGetValue("email", out var email);
 
@@ -1605,9 +1687,9 @@ app.MapPost("/api/engagements/{engagementId:guid}/publish",
                 [.. published.Select(entry => (entry.Key, host, request.Project,
 
                     // The identifier column is an integer, which Azure DevOps work item
-                    // identifiers are and Jira issue keys are not. A Jira key carries its
-                    // project in it and is in the URL beside this, so nothing is lost by
-                    // storing nought where there is no number.
+                    // identifiers and GitHub issue numbers are and Jira issue keys are not.
+                    // A Jira key carries its project in it and is in the URL beside this, so
+                    // nothing is lost by storing nought where there is no number.
                     int.TryParse(entry.Id, CultureInfo.InvariantCulture, out var numeric) ? numeric : 0,
                     entry.Url,
                     entry.Action))],
@@ -1635,7 +1717,7 @@ app.MapPost("/api/engagements/{engagementId:guid}/publish",
     }
     catch (HttpRequestException failure)
     {
-        return Results.BadRequest(new { error = $"{(jira ? "Jira" : "Azure DevOps")} could not be reached: {failure.Message}" });
+        return Results.BadRequest(new { error = $"{targetName} could not be reached: {failure.Message}" });
     }
 }).RequireAuthorization();
 
