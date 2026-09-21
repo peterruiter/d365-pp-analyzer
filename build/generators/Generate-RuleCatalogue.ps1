@@ -140,6 +140,27 @@ $lines.Add('    /// client keeps after the rest of the report is filed.')
 $lines.Add('    /// </remarks>')
 $lines.Add('    public static IReadOnlyDictionary<string, (string Row, string Column, string Band)> Roadmap { get; } =')
 $lines.Add('        All.ToDictionary(rule => rule.Id, rule => (rule.RoadmapRow, rule.RoadmapColumn, rule.RoadmapBand), StringComparer.Ordinal);')
+$lines.Add('')
+$lines.Add('    /// <summary>What each category is called, keyed by its id.</summary>')
+$lines.Add('    /// <remarks>')
+$lines.Add('    /// The contract has carried these since it was written and nothing read them. The')
+$lines.Add('    /// backlog made its epic titles by upper casing the first letter of the id instead,')
+$lines.Add('    /// so a client''s board got an epic called "Ai" and another called "Alm" while the')
+$lines.Add('    /// contract sat there saying "AI components" and "ALM and solution hygiene".')
+$lines.Add('    ///')
+$lines.Add('    /// English. It is the fallback a localiser uses when a language has no translation,')
+$lines.Add('    /// which is better than an identifier in every language including this one.')
+$lines.Add('    /// </remarks>')
+$lines.Add('    public static IReadOnlyDictionary<string, string> CategoryNames { get; } =')
+$lines.Add('        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)')
+$lines.Add('        {')
+
+foreach ($category in $contract.categories)
+{
+    $lines.Add(('            ["{0}"] = "{1}",' -f $category.id, ($category.name -replace '"', '\"')))
+}
+
+$lines.Add('        };')
 $lines.Add('}')
 $lines.Add('')
 

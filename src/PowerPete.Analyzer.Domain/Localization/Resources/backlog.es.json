@@ -50,6 +50,7 @@
   "backlog.featureNotStory": "Creado como característica en lugar de historia.",
   "backlog.featureNotStoryDetail": "Se estimó en 21 puntos, lo que significa que hay que dividirlo antes de que entre en un sprint.",
   "backlog.findings": "hallazgos",
+  "backlog.finding": "hallazgo",
   "backlog.flagged": "Marcado",
   "backlog.given": "Dado",
   "backlog.governance.orphanedByOwner.given": "El {componentType} {componentName}, propiedad de un usuario deshabilitado o ausente",
@@ -176,5 +177,15 @@
   "backlog.whatWasFound": "Qué se encontró",
   "backlog.when": "Cuando",
   "backlog.whereItIs": "Dónde está",
-  "backlog.whyItMatters": "Por qué importa"
+  "backlog.whyItMatters": "Por qué importa",
+  "backlog.category.lifecycle": "Ciclo de vida y obsolescencia",
+  "backlog.category.modernisation": "Modernización",
+  "backlog.category.quality": "Calidad de construcción",
+  "backlog.category.architecture": "Arquitectura",
+  "backlog.category.alm": "ALM e higiene de soluciones",
+  "backlog.category.governance": "Gobernanza",
+  "backlog.category.performance": "Rendimiento",
+  "backlog.category.security": "Seguridad",
+  "backlog.category.operability": "Operabilidad",
+  "backlog.category.ai": "Componentes de IA"
 }

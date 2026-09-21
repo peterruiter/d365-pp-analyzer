@@ -370,6 +370,56 @@ public class DataLayerTests
     }
 
     [Fact]
+    public void Every_category_is_named_in_every_language()
+    {
+        // The eleventh category will be added by somebody editing the rule catalogue, and
+        // nothing about that edit will mention the six bundles that have to carry its name.
+        //
+        // The failure is not loud. The backlog falls back to the contract's English name,
+        // so a Dutch client gets five categories in Dutch and one in English on the same
+        // board, which reads as a translation somebody forgot rather than a category
+        // somebody added. Before the names were read at all it was worse: an epic called
+        // "Ai" and another called "Alm", derived by upper casing an identifier.
+        var categories = Contracts.Read("rule-catalogue").Array("categories").ToList();
+
+        categories.Should().NotBeEmpty("the contract has to be readable for this to mean anything");
+
+        var missing = new List<string>();
+
+        foreach (var language in Contracts.Read("locales").Array("locales").Select(locale => locale.Str("code")))
+        {
+            var path = Path.Combine(Resources(), $"backlog.{language}.json");
+
+            File.Exists(path).Should().BeTrue($"the backlog bundle for {language} has to exist");
+
+            var bundle = JsonDocument.Parse(File.ReadAllText(path)).RootElement;
+
+            missing.AddRange(
+                from category in categories
+                let key = $"backlog.category.{category.Str("id")}"
+                where !bundle.TryGetProperty(key, out _)
+                select $"{language}: {key}");
+        }
+
+        missing.Should().BeEmpty("a category with no name is an epic title in the wrong language");
+
+        // And English has to agree with the contract, because the contract's name is the
+        // fallback. Two spellings of the same category, one of which only appears when a
+        // translation is missing, is a difference nobody would ever think to look for.
+        var english = JsonDocument.Parse(File.ReadAllText(Path.Combine(Resources(), "backlog.en.json"))).RootElement;
+
+        var disagreeing = categories
+            .Where(category => english.TryGetProperty($"backlog.category.{category.Str("id")}", out var name)
+                && name.GetString() != category.Str("name"))
+            .Select(category => category.Str("id"))
+            .ToList();
+
+        disagreeing.Should().BeEmpty(
+            "the contract's name is what the backlog falls back to, so the English bundle saying "
+            + "something else means the name changes depending on whether a translation loaded");
+    }
+
+    [Fact]
     public void Every_optional_setting_is_one_that_exists()
     {
         // auth.optional is the only thing standing between a field and a Save button that

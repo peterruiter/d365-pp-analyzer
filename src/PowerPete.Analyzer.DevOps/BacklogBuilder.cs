@@ -119,8 +119,8 @@ public sealed class BacklogBuilder
             items.Add(new BacklogItem(
                 epicKey,
                 "epic",
-                Truncate($"{Title(category.Key)} ({category.Count()} findings)"),
-                $"<p>Everything found in the {Title(category.Key)} category by the Power Platform Solution Analyzer.</p>" +
+                Truncate($"{Category(category.Key)} ({Findings(category.Count())})"),
+                $"<p>Everything found in the {Category(category.Key)} category by the Power Platform Solution Analyzer.</p>" +
                 $"<p>Estimated at {epicLow:0.#} to {epicHigh:0.#} hours across {category.Count()} findings. " +
                 "The range is the sum of the individual estimates. Each child item carries its own rationale.</p>" +
 
@@ -572,8 +572,33 @@ public sealed class BacklogBuilder
     /// <summary>A rule's name in the language the team reads.</summary>
     private string RuleName(AnalysisRule rule) => rules[$"finding.{rule.Id}.name", rule.Name];
 
-    private static string Title(string value) =>
-        value.Length == 0 ? value : char.ToUpperInvariant(value[0]) + value[1..];
+    /// <summary>
+    /// What a category is called, in the backlog's language.
+    /// </summary>
+    /// <remarks>
+    /// This used to upper case the first letter of the identifier, which produced an epic
+    /// called "Ai" and another called "Alm" on a client's board while the rule catalogue
+    /// sat there holding "AI components" and "ALM and solution hygiene". The contract's
+    /// name is the English fallback and a translation overrides it, which is the same shape
+    /// every other piece of text in here has.
+    /// </remarks>
+    /// <param name="id">The category identifier.</param>
+    private string Category(string id) =>
+        text["backlog.category." + id, RuleCatalogue.CategoryNames.GetValueOrDefault(id, id)];
+
+    /// <summary>
+    /// "12 findings", or "1 finding".
+    /// </summary>
+    /// <remarks>
+    /// Separate keys rather than one with a number in it. Every epic holding exactly one
+    /// finding was titled "(1 findings)", which is the kind of thing a client notices on
+    /// the first screen and quietly revises their opinion of everything under it.
+    /// </remarks>
+    /// <param name="count">How many.</param>
+    private string Findings(int count) =>
+        count == 1
+            ? $"{count} {text["backlog.finding", "finding"]}"
+            : $"{count} {text["backlog.findings", "findings"]}";
 
     private static string Truncate(string title) =>
         title.Length <= 255 ? title : title[..252] + "...";

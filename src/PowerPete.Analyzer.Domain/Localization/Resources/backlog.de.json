@@ -50,6 +50,7 @@
   "backlog.featureNotStory": "Als Feature statt als Story angelegt.",
   "backlog.featureNotStoryDetail": "Es wurde mit 21 Punkten geschätzt, muss also aufgeteilt werden, bevor es in einen Sprint geht.",
   "backlog.findings": "Befunde",
+  "backlog.finding": "Befund",
   "backlog.flagged": "Markiert",
   "backlog.given": "Gegeben",
   "backlog.governance.orphanedByOwner.given": "Die {componentType} {componentName}, im Besitz eines deaktivierten oder abwesenden Benutzers",
@@ -176,5 +177,15 @@
   "backlog.whatWasFound": "Was gefunden wurde",
   "backlog.when": "Wenn",
   "backlog.whereItIs": "Wo es liegt",
-  "backlog.whyItMatters": "Warum das zählt"
+  "backlog.whyItMatters": "Warum das zählt",
+  "backlog.category.lifecycle": "Lebenszyklus und Abkündigung",
+  "backlog.category.modernisation": "Modernisierung",
+  "backlog.category.quality": "Bauqualität",
+  "backlog.category.architecture": "Architektur",
+  "backlog.category.alm": "ALM und Lösungshygiene",
+  "backlog.category.governance": "Governance",
+  "backlog.category.performance": "Leistung",
+  "backlog.category.security": "Sicherheit",
+  "backlog.category.operability": "Betreibbarkeit",
+  "backlog.category.ai": "KI-Komponenten"
 }

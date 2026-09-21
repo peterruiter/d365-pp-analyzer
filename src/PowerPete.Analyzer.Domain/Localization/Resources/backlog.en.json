@@ -50,6 +50,7 @@
   "backlog.featureNotStory": "Created as a feature rather than a story.",
   "backlog.featureNotStoryDetail": "It was sized at 21 points, which means it needs splitting before it goes in a sprint.",
   "backlog.findings": "findings",
+  "backlog.finding": "finding",
   "backlog.flagged": "Flagged",
   "backlog.given": "Given",
   "backlog.governance.orphanedByOwner.given": "The {componentType} {componentName}, owned by a disabled or absent user",
@@ -176,5 +177,15 @@
   "backlog.whatWasFound": "What was found",
   "backlog.when": "When",
   "backlog.whereItIs": "Where it is",
-  "backlog.whyItMatters": "Why it matters"
+  "backlog.whyItMatters": "Why it matters",
+  "backlog.category.lifecycle": "Lifecycle and deprecation",
+  "backlog.category.modernisation": "Modernisation",
+  "backlog.category.quality": "Build quality",
+  "backlog.category.architecture": "Architecture",
+  "backlog.category.alm": "ALM and solution hygiene",
+  "backlog.category.governance": "Governance",
+  "backlog.category.performance": "Performance",
+  "backlog.category.security": "Security",
+  "backlog.category.operability": "Operability",
+  "backlog.category.ai": "AI components"
 }

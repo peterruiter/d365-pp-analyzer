@@ -50,6 +50,7 @@
   "backlog.featureNotStory": "Creato come feature anziché come story.",
   "backlog.featureNotStoryDetail": "È stato stimato in 21 punti, quindi va suddiviso prima di entrare in uno sprint.",
   "backlog.findings": "rilievi",
+  "backlog.finding": "rilievo",
   "backlog.flagged": "Segnalato",
   "backlog.given": "Dato",
   "backlog.governance.orphanedByOwner.given": "Il {componentType} {componentName}, di proprietà di un utente disabilitato o assente",
@@ -176,5 +177,15 @@
   "backlog.whatWasFound": "Che cosa è stato trovato",
   "backlog.when": "Quando",
   "backlog.whereItIs": "Dove si trova",
-  "backlog.whyItMatters": "Perché conta"
+  "backlog.whyItMatters": "Perché conta",
+  "backlog.category.lifecycle": "Ciclo di vita e obsolescenza",
+  "backlog.category.modernisation": "Modernizzazione",
+  "backlog.category.quality": "Qualità costruttiva",
+  "backlog.category.architecture": "Architettura",
+  "backlog.category.alm": "ALM e igiene delle soluzioni",
+  "backlog.category.governance": "Governance",
+  "backlog.category.performance": "Prestazioni",
+  "backlog.category.security": "Sicurezza",
+  "backlog.category.operability": "Gestibilità",
+  "backlog.category.ai": "Componenti IA"
 }

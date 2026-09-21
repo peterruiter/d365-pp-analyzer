@@ -50,6 +50,7 @@
   "backlog.featureNotStory": "Créé comme fonctionnalité plutôt que comme story.",
   "backlog.featureNotStoryDetail": "Il a été estimé à 21 points, ce qui veut dire qu'il doit être découpé avant d'entrer dans un sprint.",
   "backlog.findings": "constats",
+  "backlog.finding": "constat",
   "backlog.flagged": "Signalé",
   "backlog.given": "Étant donné",
   "backlog.governance.orphanedByOwner.given": "Le {componentType} {componentName}, appartenant à un utilisateur désactivé ou absent",
@@ -176,5 +177,15 @@
   "backlog.whatWasFound": "Ce qui a été trouvé",
   "backlog.when": "Quand",
   "backlog.whereItIs": "Où cela se trouve",
-  "backlog.whyItMatters": "Pourquoi cela compte"
+  "backlog.whyItMatters": "Pourquoi cela compte",
+  "backlog.category.lifecycle": "Cycle de vie et dépréciation",
+  "backlog.category.modernisation": "Modernisation",
+  "backlog.category.quality": "Qualité de construction",
+  "backlog.category.architecture": "Architecture",
+  "backlog.category.alm": "ALM et hygiène des solutions",
+  "backlog.category.governance": "Gouvernance",
+  "backlog.category.performance": "Performance",
+  "backlog.category.security": "Sécurité",
+  "backlog.category.operability": "Exploitabilité",
+  "backlog.category.ai": "Composants IA"
 }

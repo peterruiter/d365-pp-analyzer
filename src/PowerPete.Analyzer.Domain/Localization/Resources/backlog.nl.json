@@ -50,6 +50,7 @@
   "backlog.featureNotStory": "Aangemaakt als feature in plaats van story.",
   "backlog.featureNotStoryDetail": "Hij is op 21 punten geschat, wat betekent dat hij opgesplitst moet worden voordat hij in een sprint gaat.",
   "backlog.findings": "bevindingen",
+  "backlog.finding": "bevinding",
   "backlog.flagged": "Gemarkeerd",
   "backlog.given": "Gegeven",
   "backlog.governance.orphanedByOwner.given": "De {componentType} {componentName}, in eigendom van een uitgeschakelde of afwezige gebruiker",
@@ -176,5 +177,15 @@
   "backlog.whatWasFound": "Wat is aangetroffen",
   "backlog.when": "Wanneer",
   "backlog.whereItIs": "Waar het zit",
-  "backlog.whyItMatters": "Waarom dit uitmaakt"
+  "backlog.whyItMatters": "Waarom dit uitmaakt",
+  "backlog.category.lifecycle": "Levenscyclus en afschaffing",
+  "backlog.category.modernisation": "Modernisering",
+  "backlog.category.quality": "Bouwkwaliteit",
+  "backlog.category.architecture": "Architectuur",
+  "backlog.category.alm": "ALM en oplossingshygiëne",
+  "backlog.category.governance": "Governance",
+  "backlog.category.performance": "Prestaties",
+  "backlog.category.security": "Beveiliging",
+  "backlog.category.operability": "Beheersbaarheid",
+  "backlog.category.ai": "AI-componenten"
 }

@@ -185,10 +185,17 @@ function Item({ item, childrenOf, t, depth, selected, onToggle }: {
 
         <span className="backlog-numbers">
           {children.length > 0 && (
-            <span className="hint">{t('backlog.n-items', children.length)}</span>
+            <span className="hint">
+              {children.length === 1 ? t('backlog.one-item') : t('backlog.n-items', children.length)}
+            </span>
           )}
-          {item.storyPoints !== null && <span className="tag muted">{item.storyPoints}</span>}
-          <span className="backlog-hours">{hours}</span>
+          {item.storyPoints !== null && (
+            <span className="tag muted">{t('backlog.n-points', item.storyPoints)}</span>
+          )}
+
+          {/* With its unit. This read "6 to 22" against an epic, and six to twenty-two of
+              anything is a question rather than an estimate. */}
+          <span className="backlog-hours">{t('backlog.n-hours', hours)}</span>
         </span>
       </summary>
 
@@ -327,9 +334,15 @@ export function BacklogPage({ engagementId }: { engagementId: string }) {
       <div className="panel-heading">
         <div>
           <p className="eyebrow">{t('view.backlog')}</p>
-          <h2>{t('backlog.n-items', backlog.items.length)}</h2>
+          <h2>
+            {backlog.items.length === 1 ? t('backlog.one-item') : t('backlog.n-items', backlog.items.length)}
+          </h2>
         </div>
-        <span className="tag muted">{range(totalLow, totalHigh)}</span>
+
+        {/* The total, said as what it is. A pill reading "80 to 305" at the top of a
+            backlog was the first thing anybody's eye landed on and the last thing they
+            could explain. */}
+        <span className="tag muted">{t('backlog.n-hours', range(totalLow, totalHigh))}</span>
       </div>
 
       <div className="backlog-tree">
