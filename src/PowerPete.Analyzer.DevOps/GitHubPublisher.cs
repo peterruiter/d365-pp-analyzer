@@ -61,7 +61,9 @@ public sealed class GitHubPublisher
         this.client = client;
         this.owner = owner.Trim().Trim('/');
         this.repository = repository.Trim().Trim('/');
-        this.api = (api is { Length: > 0 } given ? given : PublicApi).TrimEnd('/');
+        // Blank, not just empty. This is the field the wizard tells somebody to leave
+        // alone, and a box that has been clicked into and back out of holds a space.
+        this.api = (string.IsNullOrWhiteSpace(api) ? PublicApi : api.Trim()).TrimEnd('/');
     }
 
     /// <summary>

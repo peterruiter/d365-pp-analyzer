@@ -74,7 +74,9 @@ public sealed class GitHubRepositories(IHttpClientFactory factory)
         using var client = factory.CreateClient("github");
         GitHubPublisher.Authenticate(client, token);
 
-        var root = (api is { Length: > 0 } given ? given : GitHubPublisher.PublicApi).TrimEnd('/');
+        // As in the publisher: blank means github.com, because the wizard tells somebody
+        // to leave this one empty and empty is not the only way a box ends up meaning it.
+        var root = (string.IsNullOrWhiteSpace(api) ? GitHubPublisher.PublicApi : api.Trim()).TrimEnd('/');
         var trimmed = owner.Trim().Trim('/');
 
         try
