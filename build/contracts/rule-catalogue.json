@@ -61,6 +61,11 @@
       "id": "operability",
       "name": "Operability",
       "description": "Whether anybody would find out when it breaks."
+    },
+    {
+      "id": "ai",
+      "name": "AI components",
+      "description": "Agents, prompts and models. Whether what the estate has built on AI is grounded in something, current, and owned by somebody. Three component types were counted here and nothing was ever said about them."
     }
   ],
   "checkerIntegration": {
@@ -1097,6 +1102,143 @@
         "row": "process",
         "column": "technology",
         "band": "unclutter"
+      }
+    },
+    {
+      "id": "ai.agentGenerativeNoGrounding",
+      "name": "Agent answering generatively with nothing to answer from",
+      "category": "ai",
+      "severity": "high",
+      "appliesTo": [
+        "copilotStudioAgent"
+      ],
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "detection": "An agent with generative answers enabled and no knowledge source configured.",
+      "why": "Generative answers with no knowledge source means the model answers from what it already knows, to a customer, in the organisation’s name. The failure is not an error message: it is a confident and plausible answer nobody can trace to a source, and the first anybody hears of it is a complaint.",
+      "recommendation": "Either attach the knowledge the agent is meant to answer from, or turn generative answers off and let the topics handle it. Both are defensible; the combination of the two settings is not.",
+      "falsePositive": "An agent still being built, and one whose knowledge is reached through a tool or a flow rather than a configured knowledge source. Check the topics before raising it.",
+      "workItemType": "task",
+      "estimateBand": "small",
+      "roadmap": {
+        "row": "business",
+        "column": "technology",
+        "band": "accelerate"
+      }
+    },
+    {
+      "id": "ai.agentNoTopics",
+      "name": "Agent with no deterministic topics",
+      "category": "ai",
+      "severity": "medium",
+      "appliesTo": [
+        "copilotStudioAgent"
+      ],
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "detection": "An agent with no authored topics, where generative answers carry the whole conversation.",
+      "why": "Every answer is then generated, including the ones with a right answer. Escalation, opening hours and the handful of questions that make up most of the traffic are cheaper, faster and checkable as topics, and a topic is the only part of an agent somebody can point at and say what it will do.",
+      "recommendation": "Author topics for the questions that have one correct answer, and let the model handle the long tail.",
+      "workItemType": "task",
+      "estimateBand": "medium",
+      "roadmap": {
+        "row": "business",
+        "column": "architecture",
+        "band": "accelerate"
+      }
+    },
+    {
+      "id": "ai.agentUnpublished",
+      "name": "Agent built and never published",
+      "category": "ai",
+      "severity": "medium",
+      "appliesTo": [
+        "copilotStudioAgent"
+      ],
+      "evidence": [
+        "metadata"
+      ],
+      "detection": "An agent whose published state is unpublished, or which has never been published at all.",
+      "why": "It cost somebody the time to build and it answers nobody. Either it was abandoned, in which case it is clutter carrying a maintenance claim it does not deserve, or it was forgotten before go live, which is worth finding out before the next planning round.",
+      "recommendation": "Publish it or delete it. An agent in neither state is a decision nobody has made.",
+      "workItemType": "task",
+      "estimateBand": "trivial",
+      "roadmap": {
+        "row": "process",
+        "column": "technology",
+        "band": "unclutter"
+      }
+    },
+    {
+      "id": "ai.modelStale",
+      "name": "AI Builder model not retrained in a year",
+      "category": "ai",
+      "severity": "high",
+      "appliesTo": [
+        "aiBuilderModel"
+      ],
+      "evidence": [
+        "metadata"
+      ],
+      "detection": "A custom model whose last training date is more than twelve months old and which is still published.",
+      "why": "A prediction model is a statement about data as it was when the model was trained. The data moves, the model does not, and nothing in the platform says so: it keeps answering with the same confidence it had on the day it was trained, and somebody is still making decisions on it.",
+      "recommendation": "Retrain it against current data and compare the scores. Where nobody can say what the model is used for any more, unpublish it and find out.",
+      "falsePositive": "A model over a domain that genuinely has not changed, and a prebuilt model, which Microsoft trains rather than the client.",
+      "workItemType": "task",
+      "estimateBand": "medium",
+      "roadmap": {
+        "row": "business",
+        "column": "technology",
+        "band": "accelerate"
+      }
+    },
+    {
+      "id": "ai.modelUnpublished",
+      "name": "AI Builder model trained and never published",
+      "category": "ai",
+      "severity": "low",
+      "appliesTo": [
+        "aiBuilderModel"
+      ],
+      "evidence": [
+        "metadata"
+      ],
+      "detection": "A model in a trained state that has never been published.",
+      "why": "Training consumed credits and produced something nothing can call. It is either an experiment nobody cleaned up or a piece of work that stopped one step short of being useful.",
+      "recommendation": "Publish it where something is waiting for it, delete it where nothing is.",
+      "workItemType": "task",
+      "estimateBand": "trivial",
+      "roadmap": {
+        "row": "process",
+        "column": "technology",
+        "band": "unclutter"
+      }
+    },
+    {
+      "id": "ai.realtimeVoiceInUse",
+      "name": "Agent using realtime voice",
+      "category": "ai",
+      "severity": "info",
+      "appliesTo": [
+        "copilotStudioAgent"
+      ],
+      "evidence": [
+        "metadata",
+        "solutionZip"
+      ],
+      "detection": "An agent configured for realtime voice.",
+      "why": "A cost and licensing fact rather than a fault. Voice is metered differently from text and this product cannot see what the tenant is paying, so it counts what is there and says nothing about the bill.",
+      "recommendation": "Read it against the licences in place before drawing any conclusion from it.",
+      "workItemType": "none",
+      "estimateBand": "none",
+      "roadmap": {
+        "row": "business",
+        "column": "technology",
+        "band": "accelerate"
       }
     }
   ],

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useT } from './i18n';
+import { useT, useLanguage } from './i18n';
 import { useCan } from './access';
-import { getJson, sendJson } from './workspace';
+import { getJson, sendJson, when, type Run } from './workspace';
 
 /**
  * One finding, as the API returns it.
@@ -58,17 +58,46 @@ export function FindingsPage({ engagementId }: { engagementId: string }) {
   const t = useT();
   const [data, setData] = useState<FindingsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { culture } = useLanguage();
   const [severity, setSeverity] = useState<string>('all');
   const [category, setCategory] = useState<string>('all');
+  const [solution, setSolution] = useState<string>('all');
   const [open, setOpen] = useState<string | null>(null);
+
+  /**
+   * Which run is being read, and which runs there are to choose from.
+   *
+   * The API has always taken a runId and defaulted to the latest that reached scoring. That
+   * is the right default and it was the only option: an engagement accumulates a run per
+   * attempt, and comparing what a re-run found against what the last one did meant reading
+   * two reports side by side.
+   */
+  const [runId, setRunId] = useState<string | null>(null);
+  const [runs, setRuns] = useState<Run[]>([]);
 
   useEffect(() => {
     let cancelled = false;
+    const query = runId === null ? '' : `?runId=${runId}`;
 
-    void getJson<FindingsResponse>(`/api/engagements/${engagementId}/findings`).then((result) => {
+    void getJson<FindingsResponse>(`/api/engagements/${engagementId}/findings${query}`).then((result) => {
       if (cancelled) return;
       if (result.data) setData(result.data);
       else setError(result.error ?? 'The findings could not be read.');
+    });
+
+    return () => { cancelled = true; };
+  }, [engagementId, runId]);
+
+  // Only the runs that produced something. A run that died in extraction has no findings to
+  // show and offering it is offering an empty page with no explanation.
+  useEffect(() => {
+    let cancelled = false;
+
+    void getJson<Run[]>(`/api/engagements/${engagementId}/runs`).then((result) => {
+      if (cancelled || !result.data) return;
+
+      setRuns(result.data.filter((run) =>
+        run.status === 'succeeded' || run.status === 'partial'));
     });
 
     return () => { cancelled = true; };
@@ -78,11 +107,18 @@ export function FindingsPage({ engagementId }: { engagementId: string }) {
     () => [...new Set((data?.findings ?? []).map(finding => finding.category))].sort(),
     [data]);
 
+  // Every solution the run actually found something in, plus a bucket for the findings that
+  // are about the estate rather than about one solution.
+  const solutions = useMemo(
+    () => [...new Set((data?.findings ?? []).map(finding => finding.solutionName ?? ''))].sort(),
+    [data]);
+
   const visible = useMemo(() => (data?.findings ?? [])
     .filter(finding => severity === 'all' || finding.severity === severity)
     .filter(finding => category === 'all' || finding.category === category)
+    .filter(finding => solution === 'all' || (finding.solutionName ?? '') === solution)
     .sort((a, b) => severityOrder.indexOf(a.severity) - severityOrder.indexOf(b.severity)),
-    [data, severity, category]);
+    [data, severity, category, solution]);
 
   if (error) return <p className="error">{error}</p>;
   if (!data) return <p className="lede">{t('findings.loading')}</p>;
@@ -122,6 +158,36 @@ export function FindingsPage({ engagementId }: { engagementId: string }) {
           </select>
         </label>
 
+        {/* Only where there is a choice to make. One run and one solution is the common
+            case and a select with a single option in it is furniture. */}
+        {solutions.length > 1 && (
+          <label>
+            {t('findings.solution')}
+            <select value={solution} onChange={event => setSolution(event.target.value)}>
+              <option value="all">{t('findings.all')}</option>
+              {solutions.map(name => (
+                <option key={name} value={name}>{name === '' ? t('findings.no-solution') : name}</option>
+              ))}
+            </select>
+          </label>
+        )}
+
+        {runs.length > 1 && (
+          <label>
+            {t('findings.run')}
+            <select
+              value={runId ?? ''}
+              onChange={event => { setRunId(event.target.value === '' ? null : event.target.value); setOpen(null); }}>
+              <option value="">{t('findings.latest-run')}</option>
+              {runs.map(run => (
+                <option key={run.runId} value={run.runId}>
+                  {when(run.completedUtc ?? run.createdUtc, culture, '')} · {t(`runs.mode.${run.mode}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
         <span className="filter-count">
           {t('findings.showing', String(visible.length), String(data.findings.length))}
         </span>
@@ -133,6 +199,10 @@ export function FindingsPage({ engagementId }: { engagementId: string }) {
         under a finding ran off the right of the window mid-sentence. The wrapper scrolls its
         own overflow; the rule that lets it is the min-width on the page's grid children.
       */}
+      {/* On a surface, like every other table in the product. It sat directly on the page
+          background, which made the rows look like loose text rather than a table and left
+          the severity tint with nothing to tint against. */}
+      <section className="panel">
       <div className="table-wrap">
       <table className="findings-table">
         <thead>
@@ -253,6 +323,7 @@ export function FindingsPage({ engagementId }: { engagementId: string }) {
         </tbody>
       </table>
       </div>
+      </section>
 
       {/*
         Its own section rather than a footnote. Everything above is a number and this is the

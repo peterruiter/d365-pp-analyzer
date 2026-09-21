@@ -225,6 +225,8 @@
   "findings.not-assessed-explain": "Geen daarvan wordt als geslaagd gerapporteerd. Een korte lijst met bevindingen is niet hetzelfde als een schoon landschap.",
   "findings.not-assessed-title": "{0} van {1} controles konden niet draaien",
   "findings.recommendation": "Aanbevolen aanpak",
+  "findings.latest-run": "Meest recente",
+  "findings.run": "Run",
   "findings.severity": "Ernst",
   "findings.showing": "{0} van {1} getoond",
   "findings.solution": "Oplossing",

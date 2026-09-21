@@ -1832,6 +1832,55 @@ reads it. Dropping a table that holds a real record of who approved what, on the
 feature is removed, is a decision for somebody who wants that record gone rather than a
 tidy-up.
 
+## Six rules about AI, and three component types nobody had ever looked at
+
+Asked whether any AI checks would make the product stronger. The honest answer was not the
+one the question expected: the biggest gap needed no model at all.
+
+`copilotStudioAgent`, `aiBuilderModel` and `aiPrompt` had been in component-model.json from
+the beginning, with their attributes named — `hasGenerativeAnswers`, `knowledgeSourceCount`,
+`publishedState`, `lastTrainedUtc` — counted toward the low code ratio, covered by no rule,
+and produced by no reader. Somebody planned this and stopped. An estate with six Copilot
+agents in it reported six components of a type nothing examined.
+
+Six rules now, in a new `ai` category:
+
+| Rule | Severity | Keys on |
+|---|---|---|
+| `ai.agentGenerativeNoGrounding` | High | Generative answers on, no knowledge source |
+| `ai.modelStale` | High | A published model last changed over twelve months ago |
+| `ai.agentNoTopics` | Medium | No authored topics at all |
+| `ai.agentUnpublished` | Medium | Built and never published |
+| `ai.modelUnpublished` | Low | Trained, still a draft |
+| `ai.realtimeVoiceInUse` | Information | Voice, counted and never priced |
+
+None of them asks a model anything. That is the point: the evidence is a switch somebody
+set, so a finding survives the conversation with the team that built the agent. A model
+judging whether an agent is any good would not.
+
+### Two honesty problems the readers had to solve
+
+The platform exposes no training date on an AI Builder model. `ai.modelStale` measures the
+last modification instead and the finding says so in its own evidence, under `measuredBy`,
+rather than letting a proxy read as the thing itself.
+
+A bot's topics and knowledge are `botcomponent` rows rather than fields on the bot, so the
+counts come from a second read grouped by parent, and the generative settings are found by
+searching the configuration blob as text rather than parsing it into a shape. Microsoft owns
+that shape and changes it; a reader that throws on an unexpected one loses the whole read
+instead of one attribute.
+
+### The demonstration estate had to grow
+
+Two guards caught the gap immediately and correctly: one requires a finding in every
+category, the other requires every rule either to fire on the demonstration estate or to be
+on a named list of rules that cannot. Both failed the moment the category existed.
+
+So the demonstration estate has an agent answering generatively with nothing behind it, an
+agent nobody published, a prediction model last touched in March 2024 and a document model
+still in draft. All four are shapes somebody has actually built. Both guards pass, which is
+also the only evidence that the six handlers do anything.
+
 ## What was ported rather than invented
 
 | From | What |

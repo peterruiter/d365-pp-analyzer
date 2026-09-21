@@ -225,6 +225,8 @@
   "findings.not-assessed-explain": "Ninguna se informa como superada. Una lista corta de hallazgos no es lo mismo que un entorno limpio.",
   "findings.not-assessed-title": "{0} de {1} comprobaciones no pudieron ejecutarse",
   "findings.recommendation": "Enfoque recomendado",
+  "findings.latest-run": "La más reciente",
+  "findings.run": "Ejecución",
   "findings.severity": "Gravedad",
   "findings.showing": "Mostrando {0} de {1}",
   "findings.solution": "Solución",

@@ -225,6 +225,8 @@
   "findings.not-assessed-explain": "Keine davon wird als bestanden ausgewiesen. Eine kurze Befundliste ist nicht dasselbe wie eine saubere Landschaft.",
   "findings.not-assessed-title": "{0} von {1} Prüfungen konnten nicht laufen",
   "findings.recommendation": "Empfohlenes Vorgehen",
+  "findings.latest-run": "Neuester",
+  "findings.run": "Lauf",
   "findings.severity": "Schweregrad",
   "findings.showing": "{0} von {1} angezeigt",
   "findings.solution": "Lösung",

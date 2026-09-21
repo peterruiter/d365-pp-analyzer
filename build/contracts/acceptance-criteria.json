@@ -260,6 +260,36 @@
       "when": "The manifest declares WebAPI feature usage and the rebuilt control is deployed",
       "then": "Every path through the control that calls the Web API completes instead of throwing",
       "testRequirement": "Exercise the paths that actually make the call, not the form load. The control loads fine today, which is the whole problem."
+    },
+    "ai.agentGenerativeNoGrounding": {
+      "given": "The agent {componentName} in solution {solutionName}, answering generatively with no knowledge source",
+      "when": "It has either been given the knowledge it answers from, or had generative answers turned off",
+      "then": "Every answer it gives can be traced to a topic or to a named source, and the agent says so when it cannot answer",
+      "testRequirement": "Ask it something outside what it was given and confirm it declines rather than improvises. An agent that answers that question confidently is the failure this is about, and it looks identical to a working one until somebody asks."
+    },
+    "ai.agentNoTopics": {
+      "given": "The agent {componentName} in solution {solutionName}, with no authored topics",
+      "when": "Topics exist for the questions that have one correct answer",
+      "then": "Those questions are answered by a topic, and escalation to a person is one of them",
+      "testRequirement": "Ask each authored question and confirm the topic answers rather than the model. Confirm escalation reaches a real queue, not a message saying somebody will be in touch."
+    },
+    "ai.agentUnpublished": {
+      "given": "The agent {componentName} in solution {solutionName}, built and never published",
+      "when": "Somebody has decided whether it is wanted",
+      "then": "It is either published and reachable, or deleted, and the decision is recorded against a person",
+      "testRequirement": "Where it is published, open it as a user and confirm it answers. Where it is deleted, confirm nothing points at it: a flow, a site map entry or a channel configuration referring to an agent that no longer exists fails at the point somebody uses it."
+    },
+    "ai.modelStale": {
+      "given": "The AI Builder model {componentName} in solution {solutionName}, last trained more than a year ago",
+      "when": "It has been retrained on current data",
+      "then": "Its accuracy against a current sample is known and recorded, and the model is republished or withdrawn on that evidence",
+      "testRequirement": "Score the old model and the retrained one against the same current sample and compare. Retraining without that comparison replaces one unmeasured model with another."
+    },
+    "ai.modelUnpublished": {
+      "given": "The AI Builder model {componentName} in solution {solutionName}, trained and never published",
+      "when": "It has been published or deleted",
+      "then": "Nothing in the estate is waiting on a model it cannot call, and no unused model is consuming credits",
+      "testRequirement": "Where it is published, confirm the flow or app that needs it can call it. Where it is deleted, confirm nothing references it."
     }
   }
 }

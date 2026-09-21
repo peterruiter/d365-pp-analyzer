@@ -51,7 +51,7 @@ public static class DemoEstate
     /// demonstration that gains whatever a later release added and one frozen at whatever it
     /// looked like the first time the container started.
     /// </remarks>
-    public const int SeedVersion = 4;
+    public const int SeedVersion = 5;
 
     /// <summary>What it is called.</summary>
     public const string Name = "Demonstration estate";
@@ -1075,6 +1075,30 @@ public static class DemoEstate
             Add("serviceEndpoint", "Outage event grid", "nwu_outagegrid", MainSolution, false,
                 ("contract", "Queue"), ("messageFormat", "Json"), ("authType", "SASKey"),
                 ("url", "sb://northwind-outage.servicebus.example/outages"), ("description", (string?)null));
+
+            // The AI half of the estate, and every one of these is a shape somebody has
+            // actually built. An agent answering generatively with nothing behind it, an
+            // agent nobody ever published, and a prediction model still in production on a
+            // view of the data from two years ago.
+            Add("copilotStudioAgent", "Outage assistant", "nwu_outageassistant", MainSolution, false,
+                ("topicCount", 0), ("knowledgeSourceCount", 0), ("publishedState", "published"),
+                ("publishedOn", "2026-02-11T09:14:00Z"), ("hasGenerativeAnswers", true),
+                ("usesRealtimeVoice", true), ("description", (string?)null));
+
+            Add("copilotStudioAgent", "Crew dispatch helper", "nwu_crewdispatch", FieldSolution, false,
+                ("topicCount", 14), ("knowledgeSourceCount", 2), ("publishedState", "unpublished"),
+                ("publishedOn", (string?)null), ("hasGenerativeAnswers", false),
+                ("usesRealtimeVoice", false), ("description", "Drafted for the field pilot and never turned on."));
+
+            Add("aiBuilderModel", "Meter fault prediction", "nwu_meterfault", MainSolution, false,
+                ("statecode", 1), ("statuscode", 2), ("modelType", "prediction"),
+                ("lastModifiedUtc", "2024-03-02T11:00:00Z"), ("activeRequest", (string?)null),
+                ("description", (string?)null));
+
+            Add("aiBuilderModel", "Invoice line extraction", "nwu_invoiceextract", MainSolution, false,
+                ("statecode", 0), ("statuscode", 1), ("modelType", "documentProcessing"),
+                ("lastModifiedUtc", "2026-06-18T16:22:00Z"), ("activeRequest", (string?)null),
+                ("description", "Trained during the finance pilot."));
 
             var variables = new (string Name, bool Default, bool Secret, string? Value)[]
             {

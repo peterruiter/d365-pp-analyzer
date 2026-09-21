@@ -225,6 +225,8 @@
   "findings.not-assessed-explain": "Nessuno di essi è riportato come superato. Un elenco breve di rilievi non è la stessa cosa di un parco pulito.",
   "findings.not-assessed-title": "{0} controlli su {1} non hanno potuto essere eseguiti",
   "findings.recommendation": "Approccio consigliato",
+  "findings.latest-run": "La più recente",
+  "findings.run": "Esecuzione",
   "findings.severity": "Gravità",
   "findings.showing": "Mostrati {0} di {1}",
   "findings.solution": "Soluzione",

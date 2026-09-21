@@ -247,7 +247,7 @@ public sealed class DataverseReader(HttpClient client)
         // Eleven entity reads, twelve with run history. Named here rather than counted in a
         // constant, because a reader added below and a total left up here is how a progress
         // bar ends up saying twelve of eleven.
-        var total = includeRuntime ? 12 : 11;
+        var total = includeRuntime ? 14 : 13;
         var done = 0;
 
         Task Step(string componentTypeId, Func<Task<int>> read)
@@ -266,6 +266,8 @@ public sealed class DataverseReader(HttpClient client)
         await Step("environmentVariable", () => ReadEnvironmentVariablesAsync(components, cancellationToken)).ConfigureAwait(false);
         await Step("serviceEndpoint", () => ReadServiceEndpointsAsync(components, cancellationToken)).ConfigureAwait(false);
         await Step("report", () => ReadReportsAsync(components, cancellationToken)).ConfigureAwait(false);
+        await Step("copilotStudioAgent", () => ReadAgentsAsync(components, cancellationToken)).ConfigureAwait(false);
+        await Step("aiBuilderModel", () => ReadAiModelsAsync(components, cancellationToken)).ConfigureAwait(false);
 
         if (includeRuntime)
         {
@@ -845,6 +847,125 @@ public sealed class DataverseReader(HttpClient client)
                     ["url"] = Str(endpoint, "url"),
                     ["authType"] = Int(endpoint, "authtype")?.ToString(CultureInfo.InvariantCulture),
                     ["description"] = Str(endpoint, "description")
+                }));
+
+            count++;
+        }
+
+        return count;
+    }
+
+    /// <summary>
+    /// Copilot Studio agents, and the four things worth knowing about one.
+    /// </summary>
+    /// <remarks>
+    /// The component type has been in the model since the beginning, with its attributes
+    /// named, and nothing has ever produced one. An estate with six agents in it reported
+    /// six components of a type no rule looked at, which counted toward the low code ratio
+    /// and said nothing else.
+    ///
+    /// A bot's topics and its knowledge live in botcomponent rows rather than on the bot, so
+    /// the counts come from a second read grouped by bot. componenttype 0 is a topic and 10
+    /// is a knowledge source; the numbers are Microsoft's and are the reason this is one of
+    /// the readers most likely to need revisiting.
+    /// </remarks>
+    /// <param name="components">Where to put them.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    private async Task<int> ReadAgentsAsync(List<DiscoveredComponent> components, CancellationToken cancellationToken)
+    {
+        var topics = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var knowledge = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        await foreach (var part in PageAsync(
+            "botcomponents?$select=botcomponentid,componenttype,_parentbotid_value",
+            cancellationToken).ConfigureAwait(false))
+        {
+            var parent = Str(part, "_parentbotid_value");
+            if (parent is null) continue;
+
+            var kind = Int(part, "componenttype");
+
+            if (kind == 0) topics[parent] = topics.GetValueOrDefault(parent) + 1;
+            else if (kind == 10) knowledge[parent] = knowledge.GetValueOrDefault(parent) + 1;
+        }
+
+        var count = 0;
+
+        await foreach (var bot in PageAsync(
+            "bots?$select=botid,name,schemaname,ismanaged,publishedon,statecode,configuration",
+            cancellationToken).ConfigureAwait(false))
+        {
+            var id = Str(bot, "botid");
+            var name = Str(bot, "name");
+            if (id is null || name is null) continue;
+
+            var published = Str(bot, "publishedon");
+
+            // The configuration blob carries the generative settings. Read as text and
+            // searched rather than parsed into a shape: it is Microsoft's own and it
+            // changes, and a reader that throws on an unexpected shape loses the whole read
+            // rather than one attribute.
+            var configuration = Str(bot, "configuration") ?? string.Empty;
+
+            components.Add(Component("copilotStudioAgent", id, name, Str(bot, "schemaname") ?? name,
+                Bool(bot, "ismanaged"), null, new Dictionary<string, object?>
+                {
+                    ["topicCount"] = topics.GetValueOrDefault(id),
+                    ["knowledgeSourceCount"] = knowledge.GetValueOrDefault(id),
+
+                    // Published at all, rather than published recently. The date is carried
+                    // beside it so a report can say when.
+                    ["publishedState"] = published is { Length: > 0 } ? "published" : "unpublished",
+                    ["publishedOn"] = published,
+                    ["hasGenerativeAnswers"] = configuration.Contains("generativeAnswers", StringComparison.OrdinalIgnoreCase)
+                        || configuration.Contains("\"gpt\"", StringComparison.OrdinalIgnoreCase),
+                    ["usesRealtimeVoice"] = configuration.Contains("realtimeVoice", StringComparison.OrdinalIgnoreCase)
+                        || configuration.Contains("voiceConfiguration", StringComparison.OrdinalIgnoreCase),
+                }));
+
+            count++;
+        }
+
+        return count;
+    }
+
+    /// <summary>
+    /// AI Builder models, with the date that decides whether anybody still believes them.
+    /// </summary>
+    /// <remarks>
+    /// Custom models only. A prebuilt model is Microsoft's to train and saying it is stale
+    /// would be a finding about somebody else's product.
+    /// </remarks>
+    /// <param name="components">Where to put them.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    private async Task<int> ReadAiModelsAsync(List<DiscoveredComponent> components, CancellationToken cancellationToken)
+    {
+        var count = 0;
+
+        await foreach (var model in PageAsync(
+            "msdyn_aimodels?$select=msdyn_aimodelid,msdyn_name,msdyn_templateid,statecode,statuscode,"
+            + "modifiedon,msdyn_ismanaged,msdyn_activerequestname",
+            cancellationToken).ConfigureAwait(false))
+        {
+            var id = Str(model, "msdyn_aimodelid");
+            var name = Str(model, "msdyn_name");
+            if (id is null || name is null) continue;
+
+            // statecode 1 is published for this table, and statuscode carries the finer
+            // grained state. Both are recorded rather than collapsed into a word here,
+            // because the rule that reads them is the place to decide what they mean.
+            components.Add(Component("aiBuilderModel", id, name, name,
+                Bool(model, "msdyn_ismanaged"), null, new Dictionary<string, object?>
+                {
+                    ["statecode"] = Int(model, "statecode"),
+                    ["statuscode"] = Int(model, "statuscode"),
+                    ["modelType"] = Str(model, "msdyn_templateid"),
+
+                    // The platform does not expose a training date on the model itself. The
+                    // last modification is the closest honest proxy and it is named as one,
+                    // so a rule reading it can say what it actually measured.
+                    ["lastModifiedUtc"] = Str(model, "modifiedon"),
+                    ["activeRequest"] = Str(model, "msdyn_activerequestname"),
                 }));
 
             count++;

@@ -225,6 +225,8 @@
   "findings.not-assessed-explain": "Aucune n'est signalée comme réussie. Une liste courte de constats n'est pas la même chose qu'un parc sain.",
   "findings.not-assessed-title": "{0} vérifications sur {1} n'ont pas pu s'exécuter",
   "findings.recommendation": "Approche recommandée",
+  "findings.latest-run": "La plus récente",
+  "findings.run": "Exécution",
   "findings.severity": "Gravité",
   "findings.showing": "{0} sur {1} affichés",
   "findings.solution": "Solution",

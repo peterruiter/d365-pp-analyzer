@@ -225,6 +225,8 @@
   "findings.not-assessed-explain": "None of these is reported as passing. A short findings list is not the same thing as a clean estate.",
   "findings.not-assessed-title": "{0} of {1} checks could not run",
   "findings.recommendation": "Recommended approach",
+  "findings.latest-run": "Latest",
+  "findings.run": "Run",
   "findings.severity": "Severity",
   "findings.showing": "Showing {0} of {1}",
   "findings.solution": "Solution",
