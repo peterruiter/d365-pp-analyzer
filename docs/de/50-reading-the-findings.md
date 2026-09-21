@@ -2,7 +2,7 @@
 
 ## Kategorien
 
-Jede Regel sitzt in einer von neun Kategorien. Der Befundbildschirm gruppiert danach.
+Jede Regel sitzt in einer von zehn Kategorien. Der Befundbildschirm gruppiert danach.
 
 | Kategorie | Handelt von |
 |---|---|
@@ -15,6 +15,7 @@ Jede Regel sitzt in einer von neun Kategorien. Der Befundbildschirm gruppiert da
 | **Leistung** | Dinge, die jetzt langsam sind oder es bei Volumen werden. |
 | **Sicherheit** | Berechtigungen, Geheimnisse und Exposition. |
 | **Betreibbarkeit** | Ob überhaupt jemand merken würde, wenn es kaputtgeht. |
+| **KI-Komponenten** | Agenten, Prompts und Modelle: ob das auf KI Gebaute fundiert, aktuell und jemandem zugeordnet ist. |
 
 Modernisierung ist die Kategorie, die ein Kunde sich am meisten wünscht und die am ehesten
 überverkauft wird, deshalb trägt jede Regel darin auch einen Grund, die Sache in Ruhe zu
@@ -42,11 +43,17 @@ Wiederholung der Regel.
 
 ## Woher ein Befund kommt
 
-Befunde sind als **Katalog** oder **Checker** gekennzeichnet.
+Befunde sind als **Katalog**, **Checker** oder **Modell** gekennzeichnet.
 
 Ein Checker-Befund stammt aus Microsofts Power Apps Checker und trägt Microsofts eigene
 Regelkennung, sodass Sie ihn in deren Dokumentation nachschlagen können. Diese Regeln bleiben
 aktuell, weil Microsoft sie pflegt, nicht weil dieses Produkt es tut.
+
+Genau eine Regel entscheidet ein Sprachmodell: ob eine Beschreibung etwas sagt. Es liest
+eine Beschreibung nach der anderen, hält bei jedem Befund fest, dass ein Modell geurteilt
+hat, und trägt den eigenen Satz des Modells, damit Sie laut widersprechen können. Jede
+andere Regel ist eine Messung. Ist für den Lauf kein Modell eingerichtet, wird diese Regel
+als nicht bewertet gemeldet, nicht als bestanden.
 
 ## Managed Komponenten
 

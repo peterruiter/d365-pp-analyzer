@@ -2,7 +2,7 @@
 
 ## Categorías
 
-Cada regla pertenece a una de nueve categorías. La pantalla de hallazgos agrupa por ellas.
+Cada regla pertenece a una de diez categorías. La pantalla de hallazgos agrupa por ellas.
 
 | Categoría | Trata de |
 |---|---|
@@ -15,6 +15,7 @@ Cada regla pertenece a una de nueve categorías. La pantalla de hallazgos agrupa
 | **Rendimiento** | Cosas que son lentas ahora, o lo serán con volumen. |
 | **Seguridad** | Privilegios, secretos y exposición. |
 | **Operabilidad** | Si alguien se enteraría de que se ha roto. |
+| **Componentes de IA** | Agentes, prompts y modelos: si lo construido sobre IA está fundamentado, al día y tiene dueño. |
 
 Modernización es la categoría que más quiere un cliente y la que más fácilmente se sobrevende,
 así que cada regla que contiene lleva también una razón para dejar la cosa en paz.
@@ -39,11 +40,17 @@ de la regla.
 
 ## De dónde viene un hallazgo
 
-Los hallazgos están marcados como **catálogo** o **checker**.
+Los hallazgos están marcados como **catálogo**, **checker** o **modelo**.
 
 Un hallazgo del checker viene del Power Apps checker de Microsoft y lleva el identificador de
 regla de Microsoft, de modo que puede buscarlo en su documentación. Esas reglas se mantienen
 al día porque Microsoft las mantiene, no porque lo haga este producto.
+
+Exactamente una regla la decide un modelo de lenguaje: si una descripción dice algo. Lee una
+descripción cada vez, indica en cada hallazgo que lo ha juzgado un modelo, y lleva la frase
+del propio modelo para que usted pueda rebatirla en voz alta. Todas las demás reglas son
+mediciones. Sin un modelo configurado para la ejecución, esa regla se informa como no
+evaluada, nunca como correcta.
 
 ## Componentes administrados
 

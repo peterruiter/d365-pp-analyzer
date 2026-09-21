@@ -2,7 +2,7 @@
 
 ## Categories
 
-Every rule sits in one of nine categories. The findings screen groups by them.
+Every rule sits in one of ten categories. The findings screen groups by them.
 
 | Category | Is about |
 |---|---|
@@ -15,6 +15,7 @@ Every rule sits in one of nine categories. The findings screen groups by them.
 | **Performance** | Things that are slow now, or will be at volume. |
 | **Security** | Privilege, secrets and exposure. |
 | **Operability** | Whether anybody would find out when it breaks. |
+| **AI components** | Agents, prompts and models: whether what the estate built on AI is grounded, current and owned. |
 
 Modernisation is the category a client most wants and the one most likely to be oversold, so
 every rule in it carries a reason to leave the thing alone as well.
@@ -38,11 +39,17 @@ URL that was found, the number of libraries on the form. Not a restatement of th
 
 ## Where a finding came from
 
-Findings are marked **catalogue** or **checker**.
+Findings are marked **catalogue**, **checker** or **model**.
 
 A checker finding came from Microsoft's Power Apps checker and carries Microsoft's own rule
 identifier, so you can look it up in their documentation. Those rules stay current because
 Microsoft maintains them, not because this product does.
+
+Exactly one rule is decided by a language model: whether a description says anything. It
+reads one description at a time, it says on every finding that a model judged it, and it
+carries the model's own sentence so you can disagree with it out loud. Every other rule is a
+measurement. With no model configured for the run, that rule is reported as not assessed
+rather than as passing.
 
 ## Managed components
 

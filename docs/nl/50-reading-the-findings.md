@@ -2,7 +2,7 @@
 
 ## Categorieën
 
-Elke regel valt in een van negen categorieën. Het bevindingenscherm groepeert erop.
+Elke regel valt in een van tien categorieën. Het bevindingenscherm groepeert erop.
 
 | Categorie | Gaat over |
 |---|---|
@@ -15,6 +15,7 @@ Elke regel valt in een van negen categorieën. Het bevindingenscherm groepeert e
 | **Prestaties** | Dingen die nu traag zijn, of dat bij volume worden. |
 | **Beveiliging** | Rechten, geheimen en blootstelling. |
 | **Beheersbaarheid** | Of iemand erachter zou komen wanneer het stukgaat. |
+| **AI-componenten** | Agents, prompts en modellen: of wat er op AI is gebouwd gefundeerd, actueel en van iemand is. |
 
 Modernisering is de categorie die een klant het liefst wil en die het vaakst wordt overdreven,
 dus elke regel erin draagt ook een reden om het ding met rust te laten.
@@ -39,11 +40,17 @@ gevonden URL, het aantal bibliotheken op het formulier. Geen herhaling van de re
 
 ## Waar een bevinding vandaan komt
 
-Bevindingen zijn gemarkeerd als **catalogus** of **checker**.
+Bevindingen zijn gemarkeerd als **catalogus**, **checker** of **model**.
 
 Een checkerbevinding komt van de Power Apps checker van Microsoft en draagt Microsofts eigen
 regelidentificatie, zodat u hem in hun documentatie kunt opzoeken. Die regels blijven actueel
 omdat Microsoft ze onderhoudt, niet omdat dit product dat doet.
+
+Precies één regel wordt door een taalmodel beoordeeld: of een beschrijving iets zegt. Het
+leest één beschrijving tegelijk, vermeldt bij elke bevinding dat een model het heeft
+beoordeeld, en draagt de eigen zin van het model zodat u er hardop op tegen kunt zijn. Elke
+andere regel is een meting. Is er geen model ingesteld voor de run, dan wordt die regel
+gerapporteerd als niet beoordeeld en niet als geslaagd.
 
 ## Managed componenten
 

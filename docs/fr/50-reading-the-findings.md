@@ -2,7 +2,7 @@
 
 ## Catégories
 
-Chaque règle appartient à l'une des neuf catégories. L'écran des constats regroupe par
+Chaque règle appartient à l'une des dix catégories. L'écran des constats regroupe par
 catégorie.
 
 | Catégorie | Porte sur |
@@ -16,6 +16,7 @@ catégorie.
 | **Performance** | Ce qui est lent maintenant, ou le deviendra à volume. |
 | **Sécurité** | Privilèges, secrets et exposition. |
 | **Exploitabilité** | Si quelqu'un s'apercevrait que cela a cassé. |
+| **Composants IA** | Agents, prompts et modèles : si ce qui est bâti sur l'IA est fondé, à jour et rattaché à quelqu'un. |
 
 La modernisation est la catégorie qu'un client veut le plus et celle que l'on survend le plus
 facilement, donc chaque règle qu'elle contient porte aussi une raison de laisser la chose
@@ -42,11 +43,17 @@ de la règle.
 
 ## D'où vient un constat
 
-Les constats sont marqués **catalogue** ou **checker**.
+Les constats sont marqués **catalogue**, **checker** ou **modèle**.
 
 Un constat du checker vient du Power Apps checker de Microsoft et porte l'identifiant de règle
 de Microsoft, vous pouvez donc le rechercher dans leur documentation. Ces règles restent à
 jour parce que Microsoft les maintient, pas parce que ce produit le fait.
+
+Exactement une règle est décidée par un modèle de langage : si une description dit quelque
+chose. Il lit une description à la fois, indique sur chaque constat qu'un modèle a jugé, et
+porte la phrase du modèle pour que vous puissiez la contester à voix haute. Toutes les
+autres règles sont des mesures. Sans modèle configuré pour l'exécution, cette règle est
+signalée comme non évaluée, jamais comme conforme.
 
 ## Composants gérés
 

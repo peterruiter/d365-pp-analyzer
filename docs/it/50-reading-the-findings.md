@@ -2,7 +2,7 @@
 
 ## Categorie
 
-Ogni regola sta in una di nove categorie. La schermata dei rilievi raggruppa per categoria.
+Ogni regola sta in una di dieci categorie. La schermata dei rilievi raggruppa per categoria.
 
 | Categoria | Riguarda |
 |---|---|
@@ -15,6 +15,7 @@ Ogni regola sta in una di nove categorie. La schermata dei rilievi raggruppa per
 | **Prestazioni** | Cose lente adesso, o che lo diventeranno con il volume. |
 | **Sicurezza** | Privilegi, segreti ed esposizione. |
 | **Operabilità** | Se qualcuno si accorgerebbe che si è rotto. |
+| **Componenti IA** | Agenti, prompt e modelli: se ciò che è costruito sull'IA è fondato, aggiornato e di qualcuno. |
 
 Modernizzazione è la categoria che un cliente desidera di più e quella che più facilmente
 viene sopravvenduta, perciò ogni regola al suo interno porta anche una ragione per lasciare
@@ -40,11 +41,17 @@ regola.
 
 ## Da dove viene un rilievo
 
-I rilievi sono contrassegnati come **catalogo** o **checker**.
+I rilievi sono contrassegnati come **catalogo**, **checker** o **modello**.
 
 Un rilievo del checker viene dal Power Apps checker di Microsoft e porta l'identificatore di
 regola di Microsoft, così potete cercarlo nella loro documentazione. Quelle regole restano
 aggiornate perché le mantiene Microsoft, non perché lo faccia questo prodotto.
+
+Esattamente una regola è decisa da un modello linguistico: se una descrizione dice qualcosa.
+Legge una descrizione alla volta, indica su ogni rilievo che a giudicare è stato un modello,
+e porta la frase del modello stesso perché possiate contestarla ad alta voce. Ogni altra
+regola è una misura. Senza un modello configurato per l'esecuzione, quella regola è
+riportata come non valutata, mai come superata.
 
 ## Componenti managed
 
