@@ -1,5 +1,5 @@
 // ===========================================================================
-// Two checks the TypeScript compiler cannot make.
+// Three checks the TypeScript compiler cannot make.
 //
 // A className is a string. A translation key is a string. Both compile
 // perfectly when they are wrong, and both fail in the only place that matters:
@@ -25,6 +25,40 @@ const defined = new Set([...css.matchAll(/\.([A-Za-z][A-Za-z0-9_-]*)/g)].map((ma
 const english = JSON.parse(readFileSync(join(bundles, 'ui.en.json'), 'utf8'));
 
 const problems = [];
+
+// ---------------------------------------------------------- prose in a cell --
+// white-space is inherited. The global `th, td` rule sets nowrap, which is right
+// for a table of short values scrolling instead of squashing, and wrong the moment
+// a cell holds a sentence: the sentence stays on one line, widens the table, and
+// the table scrolls sideways past its own first column. A max-width on the
+// paragraph does nothing about it, which is what made this hard to see.
+//
+// So a table whose cells hold prose has to say so. These are the ones that do.
+const prose = ['.findings-table td', '.detail-row td'];
+
+// Every rule in the stylesheet, as selector plus the declarations inside it. Split
+// rather than matched, because a selector list puts several names on one block.
+// Comments go first: this file explains itself at length, and prose sitting where a
+// selector is expected would be read as part of the selector.
+const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '\n');
+
+const rules = [...withoutComments.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+  .map(([, selector, body]) => ({ selectors: selector.split(',').map((one) => one.trim()), body }));
+
+for (const selector of prose) {
+  const owning = rules.filter((rule) => rule.selectors.includes(selector));
+
+  if (owning.length === 0) {
+    problems.push(`stylesheet: no rule for ${selector}, which has to set white-space`);
+    continue;
+  }
+
+  if (!owning.some((rule) => /white-space:\s*normal/.test(rule.body))) {
+    problems.push(
+      `stylesheet: ${selector} holds sentences and does not set white-space: normal, ` +
+      'so it inherits nowrap from the global th, td rule and runs out of its box');
+  }
+}
 
 for (const page of pages) {
   const text = readFileSync(join(source, page), 'utf8');
@@ -161,4 +195,5 @@ if (problems.length > 0) {
 
 console.log(
   `vocabulary: ${pages.length} pages, ${defined.size} classes, ` +
-  `${namespaces.length} namespaces, ${locales.locales.length} languages, no problems`);
+  `${namespaces.length} namespaces, ${locales.locales.length} languages, ` +
+  `${prose.length} prose cells, no problems`);

@@ -478,10 +478,48 @@ public sealed class DataverseReader(HttpClient client)
                 "Every rule depending on it is reported as not assessed rather than as passing.");
         }
 
-        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
-        return JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false));
+        if (!response.IsSuccessStatusCode)
+        {
+            // EnsureSuccessStatusCode says "400 (Bad Request)" and nothing else, which is
+            // what a consultant read when a whole component type came back empty. Dataverse
+            // puts the reason in the body and names the column it objected to, so the body
+            // is what gets recorded. Truncated, because an error page is not a reason.
+            throw new HttpRequestException(
+                $"{path.Split('?')[0]} was refused with {(int)response.StatusCode}: {Reason(body)}");
+        }
+
+        return JsonDocument.Parse(body);
     }
+
+    /// <summary>The message Dataverse put in an error body, or the body itself if it is not one.</summary>
+    /// <param name="body">What came back.</param>
+    private static string Reason(string body)
+    {
+        if (string.IsNullOrWhiteSpace(body)) return "the response carried no explanation.";
+
+        try
+        {
+            using var document = JsonDocument.Parse(body);
+
+            if (document.RootElement.TryGetProperty("error", out var error)
+                && error.TryGetProperty("message", out var message)
+                && message.GetString() is { Length: > 0 } text)
+            {
+                return Shorten(text);
+            }
+        }
+        catch (JsonException)
+        {
+            // Not JSON. The body is still better than the status code on its own.
+        }
+
+        return Shorten(body);
+    }
+
+    private static string Shorten(string text) =>
+        text.Length <= 400 ? text : string.Concat(text.AsSpan(0, 400), "…");
 
     /// <summary>
     /// Pages a collection.
@@ -950,8 +988,14 @@ public sealed class DataverseReader(HttpClient client)
         var count = 0;
 
         await foreach (var model in PageAsync(
-            "msdyn_aimodels?$select=msdyn_aimodelid,msdyn_name,msdyn_templateid,statecode,statuscode,"
-            + "modifiedon,msdyn_ismanaged,msdyn_activerequestname",
+            // Every column here is one msdyn_aimodel actually has. It previously asked for
+            // msdyn_ismanaged and msdyn_activerequestname, neither of which exists on this
+            // table, and for msdyn_templateid by its logical name when the Web API only
+            // accepts a lookup as _name_value. Dataverse rejects the whole request for any
+            // one of those, which is why every AI Builder model in the estate read as a
+            // single 400 and every rule about them reported not assessed.
+            "msdyn_aimodels?$select=msdyn_aimodelid,msdyn_name,_msdyn_templateid_value,"
+            + "statecode,statuscode,modifiedon,ismanaged",
             cancellationToken).ConfigureAwait(false))
         {
             var id = Str(model, "msdyn_aimodelid");
@@ -962,17 +1006,21 @@ public sealed class DataverseReader(HttpClient client)
             // grained state. Both are recorded rather than collapsed into a word here,
             // because the rule that reads them is the place to decide what they mean.
             components.Add(Component("aiBuilderModel", id, name, name,
-                Bool(model, "msdyn_ismanaged"), null, new Dictionary<string, object?>
+                Bool(model, "ismanaged"), null, new Dictionary<string, object?>
                 {
                     ["statecode"] = Int(model, "statecode"),
                     ["statuscode"] = Int(model, "statuscode"),
-                    ["modelType"] = Str(model, "msdyn_templateid"),
+
+                    // The template says what kind of model this is, and its formatted value
+                    // is the name a person would recognise rather than the identifier. The
+                    // connection asks for annotations, so it arrives on every row.
+                    ["modelType"] = Str(model, "_msdyn_templateid_value@OData.Community.Display.V1.FormattedValue")
+                        ?? Str(model, "_msdyn_templateid_value"),
 
                     // The platform does not expose a training date on the model itself. The
                     // last modification is the closest honest proxy and it is named as one,
                     // so a rule reading it can say what it actually measured.
                     ["lastModifiedUtc"] = Str(model, "modifiedon"),
-                    ["activeRequest"] = Str(model, "msdyn_activerequestname"),
                 }));
 
             count++;

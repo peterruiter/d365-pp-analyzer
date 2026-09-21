@@ -1040,7 +1040,18 @@
 
 .findings-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .findings-table th { padding: 10px 23px; border-bottom: 1px solid var(--cp-border); color: var(--cp-text-muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-align: left; text-transform: uppercase; }
-.findings-table td { padding: 12px 23px; border-bottom: 1px solid var(--cp-border); vertical-align: top; }
+/* Prose wraps. The global th, td rule sets white-space: nowrap so that a table of short
+   values scrolls rather than squashes, but white-space is inherited, so it reached down
+   into the sentences in here and held them on one line. The row's why, and every
+   paragraph of the opened detail, then ran straight out of the panel and dragged the
+   table's width along with them, which is what made the whole thing scroll sideways and
+   clip its own first column. max-width: 78ch on those paragraphs could never have worked
+   while this was in force. */
+.findings-table td { padding: 12px 23px; border-bottom: 1px solid var(--cp-border); vertical-align: top; white-space: normal; }
+
+/* A tag is one word and stays one word. The severity pill and the hours already say so
+   for themselves, a few lines down. */
+.findings-table .tag { white-space: nowrap; }
 .findings-table tbody tr:hover td { background: var(--cp-surface-soft); }
 .findings-table .numeric { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
 
@@ -1111,8 +1122,11 @@
 .not-assessed li span { display: block; margin-top: 2px; }
 .not-assessed code { display: block; margin-top: 3px; color: var(--cp-text-soft); font-size: 11px; }
 
-.detail-row td { background: var(--cp-surface-soft); }
-.finding-detail { display: grid; gap: 4px; min-width: 0; padding: 6px 0 10px; }
+/* The opened detail is prose in a cell that spans every column, so it inherits the width
+   of the table rather than setting it. Nothing in here may be wider than the panel. */
+.detail-row td { background: var(--cp-surface-soft); white-space: normal; }
+.detail-row td > * { max-width: 100%; }
+.finding-detail { display: grid; min-width: 0; gap: 4px; padding: 6px 0 10px; }
 .finding-detail h3 { margin: 12px 0 2px; color: var(--cp-accent); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
 .finding-detail h3:first-child { margin-top: 0; }
 .finding-detail p { margin: 0; max-width: 78ch; font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
