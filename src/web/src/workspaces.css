@@ -1133,6 +1133,14 @@
    of the table rather than setting it. Nothing in here may be wider than the panel. */
 .detail-row td { background: var(--cp-surface-soft); white-space: normal; }
 .detail-row td > * { max-width: 100%; }
+/* The field's name and, where there is one, the word saying it may be left empty. Baseline
+   aligned rather than centred, so the small word sits on the same line as the big one
+   instead of floating in the middle of it. */
+.field-name { display: flex; align-items: baseline; gap: 7px; }
+
+/* Quiet, because it is a relief rather than a warning. */
+.field-optional { color: var(--cp-text-soft); font-size: 11px; font-weight: 400; text-transform: none; }
+
 .finding-detail { display: grid; min-width: 0; gap: 4px; padding: 6px 0 10px; }
 .finding-detail h3 { margin: 12px 0 2px; color: var(--cp-accent); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
 .finding-detail h3:first-child { margin-top: 0; }

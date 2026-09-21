@@ -48,6 +48,15 @@ export type ExtractionMode = {
   status: string;
   summary: string;
   settings: string[];
+
+  /**
+   * The settings somebody may leave empty, from the contract.
+   *
+   * Absent means none, which was true of every mode until GitHub's API address, so the
+   * wizard required every field and the first optional setting arrived with a hint saying
+   * "leave this empty for github.com" above a Save button that refused to let you.
+   */
+  optional?: string[];
   needsSecret: boolean;
 
   /** clientCredentials, authorizationCode or none. Decides whether the wizard ends in a sign-in. */

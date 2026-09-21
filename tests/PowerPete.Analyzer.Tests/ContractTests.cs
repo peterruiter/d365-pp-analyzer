@@ -370,6 +370,43 @@ public class DataLayerTests
     }
 
     [Fact]
+    public void Every_optional_setting_is_one_that_exists()
+    {
+        // auth.optional is the only thing standing between a field and a Save button that
+        // will not let go of it. The wizard requires every setting the contract declares
+        // unless this list excuses it, and it matches by name.
+        //
+        // So a typo here does not fail, warn, or look wrong. The field silently goes back
+        // to being required while its own hint says to leave it empty, which is precisely
+        // the state GitHub's API address shipped in: a form contradicting itself, with the
+        // person in front of it hunting for an address that does not exist.
+        var declared = Contracts.Read("extraction-sources");
+        var wrong = new List<string>();
+
+        foreach (var group in new[] { "modes", "targets" })
+        {
+            foreach (var entry in declared.GetProperty(group).EnumerateArray())
+            {
+                var auth = entry.GetProperty("auth");
+
+                if (!auth.TryGetProperty("optional", out var optional)) continue;
+
+                var settings = auth.GetProperty("settings")
+                    .EnumerateArray().Select(setting => setting.GetString()).ToList();
+
+                wrong.AddRange(optional.EnumerateArray()
+                    .Select(setting => setting.GetString())
+                    .Where(setting => !settings.Contains(setting, StringComparer.Ordinal))
+                    .Select(setting => $"{entry.GetProperty("id").GetString()}: {setting}"));
+            }
+        }
+
+        wrong.Should().BeEmpty(
+            "a name in auth.optional that is not one of that mode's settings excuses nothing, "
+            + "so the field stays required and its hint keeps telling somebody to leave it empty");
+    }
+
+    [Fact]
     public void Every_connection_setting_has_a_label_in_every_language()
     {
         // The sibling of the rule test above, for the other place this product renders a

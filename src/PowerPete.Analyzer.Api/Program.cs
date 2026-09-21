@@ -1246,6 +1246,13 @@ app.MapGet("/api/extraction-modes", () =>
         summary = mode.GetProperty("summary").GetString(),
         settings = mode.GetProperty("auth").GetProperty("settings")
             .EnumerateArray().Select(setting => setting.GetString()).ToList(),
+
+        // The ones somebody may leave empty. Absent from a mode that has none, which is
+        // most of them, so the wizard reads an empty list and requires everything as it
+        // always did.
+        optional = mode.GetProperty("auth").TryGetProperty("optional", out var spare)
+            ? spare.EnumerateArray().Select(setting => setting.GetString()).ToList()
+            : [],
         // Whether the person has to type one, which is not the same as whether the mode
         // has a secret. Interactive sign-in ends with a refresh token in the vault and
         // nobody ever types it; asking for one on that screen is asking for the wrong
@@ -1282,6 +1289,12 @@ app.MapGet("/api/publish-targets", () =>
         summary = target.GetProperty("summary").GetString(),
         settings = target.GetProperty("auth").GetProperty("settings")
             .EnumerateArray().Select(setting => setting.GetString()).ToList(),
+
+        // As above. GitHub's API address is the only one so far: it is empty for github.com
+        // and is the only way a GitHub Enterprise Server installation is reachable at all.
+        optional = target.GetProperty("auth").TryGetProperty("optional", out var spare)
+            ? spare.EnumerateArray().Select(setting => setting.GetString()).ToList()
+            : [],
         needsSecret = true,
         authType = target.GetProperty("auth").GetProperty("type").GetString(),
         reaches = new Dictionary<string, string>(StringComparer.Ordinal)

@@ -147,6 +147,9 @@
           "repository",
           "apiBaseUrl"
         ],
+        "optional": [
+          "apiBaseUrl"
+        ],
         "secretRef": "A GitHub personal access token in Key Vault, scoped to issues on the repositories the backlog lands in. Nothing about it reaches the database.",
         "leastPrivilege": "Issues: read and write, on the repositories that will hold a backlog and no others. A fine grained token names its repositories, which is the smallest thing that works here; a classic token carries the whole repo scope and is worth avoiding for that reason alone. The token does not need code, actions, packages or administration."
       },

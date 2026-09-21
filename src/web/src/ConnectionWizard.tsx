@@ -95,7 +95,15 @@ export function ConnectionWizard({
   const [error, setError] = useState<string | null>(null);
 
   const chosen = modes.find((candidate) => candidate.id === modeId) ?? null;
-  const missing = chosen ? chosen.settings.filter((setting) => !values[setting]?.trim()) : [];
+  // Only the ones that have to be filled in. The contract says which may be left empty,
+  // rather than a list here: a second copy of that list is how a setting named
+  // "organisation" in one place and "organisationUrl" in the other went unnoticed for
+  // months.
+  const optional = new Set(chosen?.optional ?? []);
+
+  const missing = chosen
+    ? chosen.settings.filter((setting) => !optional.has(setting) && !values[setting]?.trim())
+    : [];
 
   function choose(id: string) {
     setModeId(id);
@@ -252,7 +260,19 @@ export function ConnectionWizard({
 
             {chosen.settings.map((setting) => (
               <label className="field-label" key={setting}>
-                {t('field.' + setting)}
+                {/*
+                  The name and the marker are one line, so they are one element. The label
+                  is a grid and a bare sibling becomes a row of its own, which put
+                  "optional" under the name where it read as a value rather than beside it.
+
+                  Said on the field at all, rather than only in the hint underneath, because
+                  a hint is where somebody looks once they are already stuck and the whole
+                  point of this one is that they should not get stuck.
+                */}
+                <span className="field-name">
+                  {t('field.' + setting)}
+                  {optional.has(setting) && <span className="field-optional">{t('connections.optional')}</span>}
+                </span>
 
                 {setting === 'uploadedFile' ? (
                   <>
