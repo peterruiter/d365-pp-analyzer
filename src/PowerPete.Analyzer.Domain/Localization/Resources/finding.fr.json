@@ -148,5 +148,11 @@
   "finding.ai.modelUnpublished.recommendation": "Publiez-le là où quelque chose l'attend, supprimez-le là où rien ne l'attend.",
   "finding.ai.realtimeVoiceInUse.name": "Agent utilisant la voix en temps réel",
   "finding.ai.realtimeVoiceInUse.why": "Un fait de coût et de licence, pas un défaut. La voix est facturée autrement que le texte et ce produit ne voit pas ce que le locataire paie.",
-  "finding.ai.realtimeVoiceInUse.recommendation": "À lire au regard des licences en place avant d'en tirer une conclusion."
+  "finding.ai.realtimeVoiceInUse.recommendation": "À lire au regard des licences en place avant d'en tirer une conclusion.",
+  "finding.ai.agentOpenToAnyone.name": "Agent publié auquel n'importe qui peut parler",
+  "finding.ai.agentOpenToAnyone.why": "Quiconque trouve l'adresse peut lui parler, et il répond au nom de l'organisation. C'est légitime pour un agent d'aide public et grave pour tout le reste, et le réglage est le même dans les deux cas.",
+  "finding.ai.agentOpenToAnyone.recommendation": "Si l'agent est censé être public, notez-le et vérifiez ce sur quoi il s'appuie, car tout ce qu'il dit est public aussi. Sinon, passez l'authentification en intégrée ou restreignez la politique d'accès à un groupe.",
+  "finding.quality.descriptionUninformative.name": "Description qui ne dit rien",
+  "finding.quality.descriptionUninformative.why": "Une description disant « test », « à faire » ou répétant le nom coûte autant à maintenir qu'une bonne et n'apporte rien. Les descriptions vides sont déjà signalées, donc le moyen le moins cher d'effacer ce constat est de taper un caractère ; c'est ce que ceci attrape.",
+  "finding.quality.descriptionUninformative.recommendation": "Dites à quoi sert le composant et ce qui casserait sans lui. Une phrase suffit, et elle vaut mieux que le nom répété."
 }

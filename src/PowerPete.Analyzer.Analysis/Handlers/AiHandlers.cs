@@ -180,6 +180,64 @@ public sealed class AiModelUnpublishedHandler : IRuleHandler
 }
 
 /// <summary>
+/// An agent the internet can talk to.
+/// </summary>
+/// <remarks>
+/// Both halves come from columns on the agent rather than from anything inferred:
+/// authentication mode 1 is None and access control policy 0 is Any. Either on its own is a
+/// choice; together, on a published agent, they are a bot answering strangers in the
+/// organisation's name.
+///
+/// It is not automatically wrong, which is why the rule says so in its own text rather than
+/// leaving a consultant to discover it in the room. A public help agent is configured
+/// exactly like this on purpose.
+/// </remarks>
+public sealed class AgentOpenToAnyoneHandler : IRuleHandler
+{
+    /// <inheritdoc />
+    public string RuleId => "ai.agentOpenToAnyone";
+
+    /// <summary>authenticationmode 1 is None, per the bot table reference.</summary>
+    private const int NoAuthentication = 1;
+
+    /// <summary>accesscontrolpolicy 0 is Any, and 3 is Any across tenants.</summary>
+    private static readonly int[] OpenToAnyone = [0, 3];
+
+    /// <inheritdoc />
+    public IEnumerable<Finding> Run(AnalysisContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        foreach (var agent in context.OfType("copilotStudioAgent"))
+        {
+            // Published only. An agent nobody can reach is already covered by the rule
+            // about agents nobody published, and saying both about one agent is noise.
+            if (!string.Equals(agent.Attribute<string>("publishedState"), "published", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var authentication = agent.Attribute<int?>("authenticationMode");
+            var policy = agent.Attribute<int?>("accessControlPolicy");
+
+            // Both have to be known. An agent whose settings could not be read is not an
+            // open agent, and reporting it as one would be a finding about this product.
+            if (authentication != NoAuthentication) continue;
+            if (policy is null || !OpenToAnyone.Contains(policy.Value)) continue;
+
+            yield return Fire.At(RuleId, agent,
+                ("authenticationMode", "none"),
+                ("accessControlPolicy", policy == 3 ? "anyone, across tenants" : "anyone"),
+                ("hasGenerativeAnswers", agent.Attribute<bool?>("hasGenerativeAnswers")),
+                ("knowledgeSourceCount", agent.Attribute<int?>("knowledgeSourceCount")),
+                ("whatThisMeans", "Anybody who has the address can talk to it without signing in."),
+                ("beforeEstimating", "Ask whether it is meant to be public. If it is, this is a finding to "
+                    + "read once and then override on the engagement, not work to do."));
+        }
+    }
+}
+
+/// <summary>
 /// Voice, counted rather than judged.
 /// </summary>
 /// <remarks>

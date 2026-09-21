@@ -892,7 +892,8 @@ public sealed class DataverseReader(HttpClient client)
         var count = 0;
 
         await foreach (var bot in PageAsync(
-            "bots?$select=botid,name,schemaname,ismanaged,publishedon,statecode,configuration",
+            "bots?$select=botid,name,schemaname,ismanaged,publishedon,statecode,configuration,"
+            + "authenticationmode,accesscontrolpolicy",
             cancellationToken).ConfigureAwait(false))
         {
             var id = Str(bot, "botid");
@@ -921,6 +922,12 @@ public sealed class DataverseReader(HttpClient client)
                         || configuration.Contains("\"gpt\"", StringComparison.OrdinalIgnoreCase),
                     ["usesRealtimeVoice"] = configuration.Contains("realtimeVoice", StringComparison.OrdinalIgnoreCase)
                         || configuration.Contains("voiceConfiguration", StringComparison.OrdinalIgnoreCase),
+
+                    // Who may talk to it. Two columns on the agent rather than anything
+                    // inferred: authenticationmode 1 is None, and accesscontrolpolicy 0 is
+                    // Any. Together they are a published agent open to the internet.
+                    ["authenticationMode"] = Int(bot, "authenticationmode"),
+                    ["accessControlPolicy"] = Int(bot, "accesscontrolpolicy"),
                 }));
 
             count++;

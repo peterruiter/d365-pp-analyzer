@@ -1881,6 +1881,60 @@ agent nobody published, a prediction model last touched in March 2024 and a docu
 still in draft. All four are shapes somebody has actually built. Both guards pass, which is
 also the only evidence that the six handlers do anything.
 
+## One rule a model decides, and one it turned out not to need
+
+Two things were outstanding: a model powered review of prompts and agent instructions, and an
+upgrade to the empty-description rule. Reading Microsoft's own schema before writing either
+changed what both became.
+
+### The prompt review is not built, on purpose
+
+AI prompts are rows in `msdyn_aimodel` — the same table the AI Builder reader already reads —
+and Microsoft's reference documents no column carrying the prompt's text. Writing a reader
+against an assumed column is the exact mistake that cost three rounds on the checker the day
+before: the upload was wrong in three ways at once because it had been written from memory
+rather than from the contract.
+
+So it is not built, and the reason is recorded here rather than left as an empty promise.
+What would settle it is one look at a real environment's `msdyn_aimodel` row.
+
+### What the schema gave instead
+
+Reading the `bot` table reference properly produced something better than the speculative
+rule: `authenticationmode` and `accesscontrolpolicy` are columns on every agent. Mode 1 is
+None and policy 0 is Any, and a published agent with both is one anybody who finds the
+address can talk to, answering in the organisation's name.
+
+`ai.agentOpenToAnyone`, High. Deterministic, defensible, and it says in its own text that a
+public help agent is configured exactly this way on purpose.
+
+It also confirmed that the agent reader shipped an hour earlier selects columns that exist.
+
+### The description review
+
+`quality.descriptionUninformative`, Low, and the only rule in the product decided by a model.
+
+The deterministic rule beside it reports an empty description, and the cheapest way to clear
+that finding is to type a character. An estate that has been tidied once is full of
+descriptions reading "test", "tbd", or the display name again, and the empty count looks
+healthy. No pattern separates those from a real description.
+
+Four things keep it honest:
+
+- **It is evidence, not an exception.** `model` is a fifth evidence source in the component
+  model, every extraction mode declares what it reaches, and the rule declares it needs one.
+  A run with no model reports it as not assessed through the same machinery as every other
+  unreachable source, rather than silently finding nothing. That is why it needed a contract
+  change rather than an `if`.
+- **It runs after the engine, not inside it.** `IRuleHandler.Run` stays synchronous, so the
+  other 51 rules remain testable without a network.
+- **One description per call, and nothing else about the estate.** A narrower payload than
+  the estimator already sends.
+- **Every finding says a model judged it** and carries the model's own sentence. An answer
+  that is not JSON, has no reason, or is not a boolean produces nothing at all: a low
+  severity finding nobody can explain is worse than a missing one, and there are five tests
+  for exactly that.
+
 ## What was ported rather than invented
 
 | From | What |

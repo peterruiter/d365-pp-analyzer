@@ -148,5 +148,11 @@
   "finding.ai.modelUnpublished.recommendation": "Publíquelo donde algo lo esté esperando, elimínelo donde no.",
   "finding.ai.realtimeVoiceInUse.name": "Agente que usa voz en tiempo real",
   "finding.ai.realtimeVoiceInUse.why": "Un hecho de coste y licencias, no un fallo. La voz se tarifica de forma distinta al texto y este producto no ve lo que paga el inquilino.",
-  "finding.ai.realtimeVoiceInUse.recommendation": "Léalo junto con las licencias existentes antes de sacar ninguna conclusión."
+  "finding.ai.realtimeVoiceInUse.recommendation": "Léalo junto con las licencias existentes antes de sacar ninguna conclusión.",
+  "finding.ai.agentOpenToAnyone.name": "Agente publicado con el que cualquiera puede hablar",
+  "finding.ai.agentOpenToAnyone.why": "Cualquiera que encuentre la dirección puede hablar con él, y responde en nombre de la organización. Es legítimo para un agente de ayuda público y grave para cualquier otra cosa, y el ajuste es el mismo en ambos casos.",
+  "finding.ai.agentOpenToAnyone.recommendation": "Si el agente debe ser público, déjelo registrado y revise en qué se basa, porque todo lo que dice también es público. Si no, ponga la autenticación en integrada o restrinja la política de acceso a un grupo.",
+  "finding.quality.descriptionUninformative.name": "Descripción que no dice nada",
+  "finding.quality.descriptionUninformative.why": "Una descripción que dice «prueba», «pendiente» o repite el nombre cuesta lo mismo de mantener que una buena y no aporta nada. Las descripciones vacías ya se informan, así que la forma más barata de quitar ese hallazgo es escribir un carácter; esto es lo que lo detecta.",
+  "finding.quality.descriptionUninformative.recommendation": "Diga para qué sirve el componente y qué se rompería sin él. Una frase basta, y vale más que el nombre repetido."
 }

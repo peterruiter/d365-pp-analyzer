@@ -28,7 +28,8 @@
         "metadata": "full",
         "solutionZip": "full",
         "checker": "full",
-        "runtime": "partial"
+        "runtime": "partial",
+        "model": "full"
       },
       "runtimeNote": "Flow run history and plugin trace logs need more than a plain reader. Where the privilege is absent the product says which rules went unassessed rather than reporting them clean.",
       "consultantNote": "Ask for this on day one and expect it in week three. Start the engagement on the zip mode while you wait."
@@ -51,7 +52,8 @@
         "metadata": "full",
         "solutionZip": "full",
         "checker": "full",
-        "runtime": "full"
+        "runtime": "full",
+        "model": "full"
       },
       "consultantNote": "Every report from this mode carries the identity it ran as. A finding set produced under an administrator account is not evidence that a least privileged integration would work."
     },
@@ -75,7 +77,8 @@
         "metadata": "partial",
         "solutionZip": "full",
         "checker": "full",
-        "runtime": "none"
+        "runtime": "none",
+        "model": "full"
       },
       "metadataNote": "A solution file carries the components in the solution and not the environment around them. No row counts, no user assignments on roles, no components outside the solution, and no sight of the default solution, which is where one of the more serious findings lives.",
       "staleness": "The export date is recorded and shown on every report page. A four week old export analysed as though it were current is a report that describes an environment that has moved.",

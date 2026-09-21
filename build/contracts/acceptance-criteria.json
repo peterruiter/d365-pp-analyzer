@@ -290,6 +290,18 @@
       "when": "It has been published or deleted",
       "then": "Nothing in the estate is waiting on a model it cannot call, and no unused model is consuming credits",
       "testRequirement": "Where it is published, confirm the flow or app that needs it can call it. Where it is deleted, confirm nothing references it."
+    },
+    "ai.agentOpenToAnyone": {
+      "given": "The agent {componentName} in solution {solutionName}, published and reachable without signing in",
+      "when": "Somebody has decided whether it is meant to be public",
+      "then": "It either requires authentication or is recorded as deliberately public, with what it is grounded in reviewed on that basis",
+      "testRequirement": "Open it in a private browser window with no account. Reaching it is the finding; being asked to sign in is the fix. Where it stays public, ask it something it should not answer to a stranger and confirm it declines."
+    },
+    "quality.descriptionUninformative": {
+      "given": "The component {componentName} in solution {solutionName}, described in words that repeat its name",
+      "when": "Its description says what it is for and what would break without it",
+      "then": "Somebody who has never seen the component can say why it exists from the description alone",
+      "testRequirement": "Show the description to somebody who did not build it and ask what the component does. Getting the name back is the failure this is about."
     }
   }
 }

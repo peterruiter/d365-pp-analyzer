@@ -148,5 +148,11 @@
   "finding.ai.modelUnpublished.recommendation": "Publiceer het waar iets erop wacht, verwijder het waar niets erop wacht.",
   "finding.ai.realtimeVoiceInUse.name": "Agent gebruikt realtime spraak",
   "finding.ai.realtimeVoiceInUse.why": "Een kosten- en licentiefeit, geen fout. Spraak wordt anders afgerekend dan tekst en dit product kan niet zien wat de tenant betaalt.",
-  "finding.ai.realtimeVoiceInUse.recommendation": "Lees het naast de aanwezige licenties voordat u er een conclusie aan verbindt."
+  "finding.ai.realtimeVoiceInUse.recommendation": "Lees het naast de aanwezige licenties voordat u er een conclusie aan verbindt.",
+  "finding.ai.agentOpenToAnyone.name": "Gepubliceerde agent waar iedereen mee kan praten",
+  "finding.ai.agentOpenToAnyone.why": "Iedereen die het adres vindt kan ermee praten, en het antwoordt namens de organisatie. Dat is legitiem voor een publieke hulpagent en ernstig voor al het andere, en de instelling is in beide gevallen dezelfde.",
+  "finding.ai.agentOpenToAnyone.recommendation": "Is de agent bedoeld als publiek, leg dat dan vast en controleer waarop hij gebaseerd is, want alles wat hij zegt is ook publiek. Zo niet, zet authenticatie op geïntegreerd of beperk het toegangsbeleid tot een groep.",
+  "finding.quality.descriptionUninformative.name": "Beschrijving die niets zegt",
+  "finding.quality.descriptionUninformative.why": "Een beschrijving met “test”, “nog te doen” of nogmaals de naam kost net zoveel onderhoud als een goede en levert niets op. Lege beschrijvingen worden al gemeld, dus de goedkoopste manier om die bevinding weg te werken is één teken typen; dit vangt dat af.",
+  "finding.quality.descriptionUninformative.recommendation": "Zeg waar het component voor dient en wat er zonder zou breken. Eén zin is genoeg, en die is meer waard dan de naam herhaald."
 }

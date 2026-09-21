@@ -366,6 +366,11 @@ public sealed class StageServicesFactory(
                 return new CheckerOutcome(run.Succeeded, run.Issues, run.FailureReason);
             },
 
+            // The description review, or nothing. Built on the same deployment the
+            // estimator uses, because two would be two consents to keep and two answers to
+            // the question of where a client's text goes.
+            ReviewDescriptions: BuildReview(),
+
             Estimator: estimator,
             BacklogBuilder: new BacklogBuilder(engagementId, engagementName, criteria, backlogLanguage),
 
@@ -405,6 +410,27 @@ public sealed class StageServicesFactory(
                 entry => entry.Key,
                 entry => new RoadmapPosition(entry.Value.Row, entry.Value.Column, entry.Value.Band),
                 StringComparer.Ordinal));
+    }
+
+    /// <summary>
+    /// The description review, when there is a model to do it with.
+    /// </summary>
+    /// <remarks>
+    /// Null rather than a handler that does nothing. The stage reads null as "the model
+    /// evidence source was not reached", which is what puts the rule on the not assessed
+    /// list instead of letting it read as a rule that looked and found nothing.
+    /// </remarks>
+    private Func<IReadOnlyList<DiscoveredComponent>, CancellationToken, Task<IReadOnlyList<Finding>>>? BuildReview()
+    {
+        if (string.IsNullOrWhiteSpace(settings.OpenAiEndpoint) || string.IsNullOrWhiteSpace(settings.OpenAiDeployment))
+        {
+            return null;
+        }
+
+        var review = new DescriptionReview(
+            new AzureOpenAiReviewer(new Uri(settings.OpenAiEndpoint), settings.OpenAiDeployment));
+
+        return (components, token) => review.RunAsync(components, token);
     }
 
     /// <summary>

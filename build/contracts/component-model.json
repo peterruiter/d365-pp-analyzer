@@ -27,7 +27,8 @@
     "metadata": "The Dataverse Web API. RetrieveAllEntities, the solution and solutioncomponent tables, workflow, plugintype, sdkmessageprocessingstep and the rest. Needs a live connection.",
     "solutionZip": "An exported unmanaged solution, unpacked. customizations.xml, the Workflows folder, the WebResources folder, CanvasApps and the flow definitions. Needs no connection.",
     "checker": "The Power Apps checker service. Static analysis of the same solution file, returning rules this tool deliberately does not reimplement.",
-    "runtime": "Operational data that only exists in a live environment. Flow run history, plugin trace logs, last used dates, failure rates. Needs a live connection and, for some of it, more privilege than a reader."
+    "runtime": "Operational data that only exists in a live environment. Flow run history, plugin trace logs, last used dates, failure rates. Needs a live connection and, for some of it, more privilege than a reader.",
+    "model": "A language model reading text this product already holds. Not a source of components: nothing here is discovered by asking a model. It is how a rule reads something no pattern can, such as whether a description says anything. A run with no model configured reaches this source not at all, and every rule needing it is reported as not assessed rather than as passing."
   },
   "ratioRules": {
     "description": "How the low code to high code ratio is computed. Published here rather than in code because the first question anybody asks about the number is how it was calculated, and the second is whether it was calculated the same way last quarter.",

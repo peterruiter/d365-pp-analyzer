@@ -20,6 +20,7 @@ using PowerPete.Analyzer.Extraction;
 /// <param name="RecordSolutions">Records what the environment holds, so somebody can choose from it.</param>
 /// <param name="ReadSelection">What somebody chose, or null when nobody has been asked yet.</param>
 /// <param name="RunChecker">Calls the Power Apps checker.</param>
+/// <param name="ReviewDescriptions">Reads the descriptions with a model, or null where no model is configured.</param>
 /// <param name="Estimator">The three layer estimator.</param>
 /// <param name="BacklogBuilder">Turns findings into work items.</param>
 /// <param name="Publish">Writes to Azure DevOps or Jira, for one run. The only thing here that writes anywhere.</param>
@@ -36,6 +37,7 @@ public sealed record StageServices(
     Func<Guid, IReadOnlyList<SolutionSummary>, CancellationToken, Task> RecordSolutions,
     Func<Guid, CancellationToken, Task<ChosenScope?>> ReadSelection,
     Func<Stream, CancellationToken, Task<CheckerOutcome>> RunChecker,
+    Func<IReadOnlyList<DiscoveredComponent>, CancellationToken, Task<IReadOnlyList<Finding>>>? ReviewDescriptions,
     Estimator Estimator,
     BacklogBuilder BacklogBuilder,
     Func<Guid, IReadOnlyList<BacklogItem>, CancellationToken, Task<int>> Publish,
@@ -652,6 +654,26 @@ public sealed class AnalyseStage(StageServices services, RuleEngine engine) : St
 
         var outcome = engine.Run(context);
 
+        // The one pass that asks a model. After the engine rather than inside it, because a
+        // handler is synchronous by design: a rule that can be tested without a network is a
+        // rule somebody will test, and forty eight of the forty nine are.
+        //
+        // Gated on the same switch as model estimates. That switch is what a person ticks to
+        // say a model may be called on this run, and the estimator already sends it more of
+        // the estate than this does.
+        var reviewed = new List<Finding>();
+
+        if (state.Checks.ModelEstimates && Services.ReviewDescriptions is { } review)
+        {
+            state.Progress.Report(new StageNote("reviewing"));
+
+            reviewed.AddRange(await review(state.Components, cancellationToken).ConfigureAwait(false));
+
+            // Reached, so the rules needing a model are judged on what came back rather than
+            // reported as unreachable. A review that ran and found nothing is a result.
+            state.Reached.Add(EvidenceSource.Model);
+        }
+
         // Two different reasons wear the same words otherwise.
         //
         // "This connection could not reach runtime" is true whether the mode has no runtime
@@ -673,7 +695,7 @@ public sealed class AnalyseStage(StageServices services, RuleEngine engine) : St
 
         // Findings are carried without estimates until the estimate stage fills them in. A
         // band default stands in so a quick scan, which skips estimation, still has numbers.
-        foreach (var finding in outcome.Findings)
+        foreach (var finding in outcome.Findings.Concat(reviewed))
         {
             var band = Services.Bands.TryGetValue(finding.Rule?.EstimateBand ?? "none", out var found)
                 ? found

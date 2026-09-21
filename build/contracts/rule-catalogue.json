@@ -1240,6 +1240,50 @@
         "column": "technology",
         "band": "accelerate"
       }
+    },
+    {
+      "id": "ai.agentOpenToAnyone",
+      "name": "Published agent anyone can talk to",
+      "category": "ai",
+      "severity": "high",
+      "appliesTo": [
+        "copilotStudioAgent"
+      ],
+      "evidence": [
+        "metadata"
+      ],
+      "detection": "A published agent whose authentication mode is none and whose access control policy admits anyone. Both are columns on the agent, so this is what the environment says rather than an inference.",
+      "why": "Anybody who finds the address can talk to it, and it answers in the organisation’s name. That is a legitimate configuration for a public help agent and a serious one for anything else, and the two are indistinguishable from the outside: the setting is the same either way, so somebody has to say which this is.",
+      "recommendation": "Where the agent is meant to be public, record that it is and check what it is grounded in, because everything it says is public too. Where it is not, set authentication to integrated or restrict the access policy to a group.",
+      "falsePositive": "A deliberately public agent. The finding is still worth reading once, and then worth overriding on the engagement so it stops appearing.",
+      "workItemType": "task",
+      "estimateBand": "small",
+      "roadmap": {
+        "row": "business",
+        "column": "technology",
+        "band": "accelerate"
+      }
+    },
+    {
+      "id": "quality.descriptionUninformative",
+      "name": "Description that says nothing",
+      "category": "quality",
+      "severity": "low",
+      "appliesTo": [],
+      "evidence": [
+        "model"
+      ],
+      "detection": "A model reads the description of each custom component and judges whether it tells a reader anything the name does not. Only a description that exists is read; an empty one is a different rule.",
+      "why": "A description reading \"test\", \"asdf\", or the display name again costs the same to maintain as a good one and buys nothing. The empty ones are already reported, which means the cheapest way to clear that finding is to type a character, and this is what catches that.",
+      "recommendation": "Say what the component is for and what would break without it. One sentence is enough, and it is worth more than the name repeated.",
+      "falsePositive": "A judgement by a model, and it says so on every finding. A description in a language the reviewer did not expect, or one meaningful only to the team that wrote it, will read as uninformative when it is not.",
+      "workItemType": "task",
+      "estimateBand": "trivial",
+      "roadmap": {
+        "row": "process",
+        "column": "architecture",
+        "band": "unclutter"
+      }
     }
   ],
   "roadmap": {

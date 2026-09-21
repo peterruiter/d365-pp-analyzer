@@ -1083,12 +1083,14 @@ public static class DemoEstate
             Add("copilotStudioAgent", "Outage assistant", "nwu_outageassistant", MainSolution, false,
                 ("topicCount", 0), ("knowledgeSourceCount", 0), ("publishedState", "published"),
                 ("publishedOn", "2026-02-11T09:14:00Z"), ("hasGenerativeAnswers", true),
-                ("usesRealtimeVoice", true), ("description", (string?)null));
+                ("usesRealtimeVoice", true), ("authenticationMode", 1), ("accessControlPolicy", 0),
+                ("description", (string?)null));
 
             Add("copilotStudioAgent", "Crew dispatch helper", "nwu_crewdispatch", FieldSolution, false,
                 ("topicCount", 14), ("knowledgeSourceCount", 2), ("publishedState", "unpublished"),
                 ("publishedOn", (string?)null), ("hasGenerativeAnswers", false),
-                ("usesRealtimeVoice", false), ("description", "Drafted for the field pilot and never turned on."));
+                ("usesRealtimeVoice", false), ("authenticationMode", 2), ("accessControlPolicy", 1),
+                ("description", "Drafted for the field pilot and never turned on."));
 
             Add("aiBuilderModel", "Meter fault prediction", "nwu_meterfault", MainSolution, false,
                 ("statecode", 1), ("statuscode", 2), ("modelType", "prediction"),

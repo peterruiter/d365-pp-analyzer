@@ -148,5 +148,11 @@
   "finding.ai.modelUnpublished.recommendation": "Publish it where something is waiting for it, delete it where nothing is.",
   "finding.ai.realtimeVoiceInUse.name": "Agent using realtime voice",
   "finding.ai.realtimeVoiceInUse.why": "A cost and licensing fact rather than a fault. Voice is metered differently from text and this product cannot see what the tenant is paying.",
-  "finding.ai.realtimeVoiceInUse.recommendation": "Read it against the licences in place before drawing any conclusion from it."
+  "finding.ai.realtimeVoiceInUse.recommendation": "Read it against the licences in place before drawing any conclusion from it.",
+  "finding.ai.agentOpenToAnyone.name": "Published agent anyone can talk to",
+  "finding.ai.agentOpenToAnyone.why": "Anybody who finds the address can talk to it, and it answers in the organisation's name. That is legitimate for a public help agent and serious for anything else, and the setting is the same either way.",
+  "finding.ai.agentOpenToAnyone.recommendation": "Where the agent is meant to be public, record that it is and check what it is grounded in, because everything it says is public too. Where it is not, set authentication to integrated or restrict the access policy to a group.",
+  "finding.quality.descriptionUninformative.name": "Description that says nothing",
+  "finding.quality.descriptionUninformative.why": "A description reading “test”, “tbd” or the name again costs the same to maintain as a good one and buys nothing. Empty descriptions are already reported, so the cheapest way to clear that finding is to type a character; this is what catches that.",
+  "finding.quality.descriptionUninformative.recommendation": "Say what the component is for and what would break without it. One sentence is enough, and it is worth more than the name repeated."
 }

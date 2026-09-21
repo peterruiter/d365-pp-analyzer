@@ -148,5 +148,11 @@
   "finding.ai.modelUnpublished.recommendation": "Veröffentlichen, wo etwas darauf wartet; löschen, wo nichts darauf wartet.",
   "finding.ai.realtimeVoiceInUse.name": "Agent nutzt Echtzeit-Sprache",
   "finding.ai.realtimeVoiceInUse.why": "Eine Kosten- und Lizenztatsache, kein Fehler. Sprache wird anders abgerechnet als Text, und dieses Produkt sieht nicht, was der Tenant zahlt.",
-  "finding.ai.realtimeVoiceInUse.recommendation": "Vor jeder Schlussfolgerung gegen die vorhandenen Lizenzen lesen."
+  "finding.ai.realtimeVoiceInUse.recommendation": "Vor jeder Schlussfolgerung gegen die vorhandenen Lizenzen lesen.",
+  "finding.ai.agentOpenToAnyone.name": "Veröffentlichter Agent, mit dem jeder sprechen kann",
+  "finding.ai.agentOpenToAnyone.why": "Wer die Adresse findet, kann mit ihm sprechen, und er antwortet im Namen der Organisation. Für einen öffentlichen Hilfeagenten ist das legitim, für alles andere ernst, und die Einstellung ist in beiden Fällen dieselbe.",
+  "finding.ai.agentOpenToAnyone.recommendation": "Soll der Agent öffentlich sein, halten Sie das fest und prüfen Sie, worauf er sich stützt, denn alles, was er sagt, ist ebenfalls öffentlich. Andernfalls Authentifizierung auf integriert stellen oder die Zugriffsrichtlinie auf eine Gruppe beschränken.",
+  "finding.quality.descriptionUninformative.name": "Beschreibung, die nichts sagt",
+  "finding.quality.descriptionUninformative.why": "Eine Beschreibung mit „Test“, „noch offen“ oder erneut dem Namen kostet so viel Pflege wie eine gute und bringt nichts. Leere Beschreibungen werden bereits gemeldet, also ist ein einzelnes Zeichen der billigste Weg, diesen Befund loszuwerden; das hier fängt das ab.",
+  "finding.quality.descriptionUninformative.recommendation": "Sagen Sie, wofür die Komponente da ist und was ohne sie kaputtginge. Ein Satz reicht und ist mehr wert als der wiederholte Name."
 }

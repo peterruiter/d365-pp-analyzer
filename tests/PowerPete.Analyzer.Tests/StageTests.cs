@@ -43,6 +43,7 @@ public class StageTests
             RecordSolutions: (_, _, _) => Task.CompletedTask,
             ReadSelection: (_, _) => Task.FromResult(selection),
             RunChecker: (_, _) => Task.FromResult(new CheckerOutcome(false, [], null)),
+            ReviewDescriptions: null,
             Estimator: null!,
             BacklogBuilder: null!,
             Publish: (_, _, _) => Task.FromResult(0),

@@ -397,6 +397,7 @@
   "runs.progress.checking": "Attente du checker pour {0} ({1} sur {2})",
   "runs.progress.exporting": "Export de {0} ({1} sur {2})",
   "runs.progress.reading": "Lecture de l’environnement : {0} ({1} sur {2})",
+  "runs.progress.reviewing": "Lecture des descriptions avec le modèle",
   "runs.progress.scoping": "Détermination du contenu de {0} ({1} sur {2})",
   "runs.progress.unpacking": "Lecture de {0} ({1} sur {2})",
   "runs.running-stage": "{0} en cours.",
