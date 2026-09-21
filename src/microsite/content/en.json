@@ -82,7 +82,7 @@
   "output.card3.title": "A groomed backlog",
   "output.card3.body": "An epic per category, a feature per rule that needs one, a story per finding worth naming, and the trivia batched. With acceptance criteria, and optionally written straight into Azure DevOps.",
   "rules.eyebrow": "What it checks",
-  "rules.heading": "Nine categories, counted from the catalogue rather than typed here.",
+  "rules.heading": "{0} categories, counted from the catalogue rather than typed here.",
   "rules.lede": "Adding a check updates this page. That is on purpose: a marketing page that claims more than the product does is one somebody eventually reads out loud in a meeting.",
   "rules.note": "Some of these come from Microsoft's own Power Apps checker, folded in under Microsoft's rule identifiers so a consultant can look them up. The rest are the ones the checker does not have: lifecycle position, debt spread across components, sprawl and solution hygiene.",
   "rules.count": "{0} checks",

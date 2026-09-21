@@ -82,7 +82,7 @@
   "output.card3.title": "Un backlog rifinito",
   "output.card3.body": "Un epic per categoria, una feature per ogni regola che ne richieda una, una storia per ogni rilievo che merita un nome, e le minuzie raggruppate. Con criteri di accettazione e, volendo, scritto direttamente in Azure DevOps.",
   "rules.eyebrow": "Cosa verifica",
-  "rules.heading": "Nove categorie, contate dal catalogo anziché scritte qui.",
+  "rules.heading": "{0} categorie, contate dal catalogo anziché scritte qui.",
   "rules.lede": "Aggiungere una verifica aggiorna questa pagina. È voluto: una pagina di marketing che promette più di quanto il prodotto faccia è una pagina che qualcuno prima o poi legge ad alta voce in riunione.",
   "rules.note": "Alcune vengono dal Power Apps checker di Microsoft, integrate sotto gli identificatori di regola di Microsoft così che un consulente possa cercarle. Le altre sono quelle che il checker non ha: posizione nel ciclo di vita, debito distribuito tra componenti, proliferazione e igiene delle soluzioni.",
   "rules.count": "{0} verifiche",

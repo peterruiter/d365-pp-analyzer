@@ -82,7 +82,7 @@
   "output.card3.title": "Een verfijnde backlog",
   "output.card3.body": "Een epic per categorie, een feature per regel die er een nodig heeft, een story per bevinding die het waard is te benoemen, en het triviale gebundeld. Met acceptatiecriteria, en desgewenst rechtstreeks in Azure DevOps geschreven.",
   "rules.eyebrow": "Wat het controleert",
-  "rules.heading": "Negen categorieën, geteld uit de catalogus in plaats van hier ingetypt.",
+  "rules.heading": "{0} categorieën, geteld uit de catalogus in plaats van hier ingetypt.",
   "rules.lede": "Een controle toevoegen werkt deze pagina bij. Dat is opzet: een marketingpagina die meer belooft dan het product doet, is er een die iemand ooit hardop voorleest in een vergadering.",
   "rules.note": "Sommige komen uit Microsofts eigen Power Apps checker, opgenomen onder Microsofts regelidentificaties zodat een consultant ze kan opzoeken. De rest zijn die de checker niet heeft: levenscycluspositie, schuld verspreid over componenten, wildgroei en oplossingshygiëne.",
   "rules.count": "{0} controles",

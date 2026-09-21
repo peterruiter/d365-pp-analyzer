@@ -82,7 +82,7 @@
   "output.card3.title": "Ein gepflegtes Backlog",
   "output.card3.body": "Ein Epic je Kategorie, ein Feature je Regel, die eines braucht, eine Story je Befund, der benannt gehört, und die Kleinigkeiten gebündelt. Mit Akzeptanzkriterien und auf Wunsch direkt nach Azure DevOps geschrieben.",
   "rules.eyebrow": "Was es prüft",
-  "rules.heading": "Neun Kategorien, aus dem Katalog gezählt statt hier getippt.",
+  "rules.heading": "{0} Kategorien, aus dem Katalog gezählt statt hier getippt.",
   "rules.lede": "Eine neue Prüfung aktualisiert diese Seite. Das ist Absicht: eine Marketingseite, die mehr verspricht als das Produkt tut, wird irgendwann in einer Besprechung laut vorgelesen.",
   "rules.note": "Einige stammen aus Microsofts eigenem Power Apps Checker und werden unter Microsofts Regelkennungen eingefügt, damit man sie nachschlagen kann. Die übrigen sind die, die der Checker nicht hat: Position im Lebenszyklus, über Komponenten verteilte Schuld, Wildwuchs und Lösungshygiene.",
   "rules.count": "{0} Prüfungen",

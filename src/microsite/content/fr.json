@@ -82,7 +82,7 @@
   "output.card3.title": "Un backlog affiné",
   "output.card3.body": "Un epic par catégorie, une feature par règle qui en réclame une, une story par constat qui mérite d’être nommé, et le trivial regroupé. Avec des critères d’acceptation, et au besoin écrit directement dans Azure DevOps.",
   "rules.eyebrow": "Ce qu’il vérifie",
-  "rules.heading": "Neuf catégories, comptées depuis le catalogue plutôt que saisies ici.",
+  "rules.heading": "{0} catégories, comptées depuis le catalogue plutôt que saisies ici.",
   "rules.lede": "Ajouter une vérification met cette page à jour. C’est volontaire : une page marketing qui promet plus que le produit est une page que quelqu’un finit par lire à voix haute en réunion.",
   "rules.note": "Certaines viennent du Power Apps checker de Microsoft, intégrées sous les identifiants de règle de Microsoft pour qu’un consultant puisse les retrouver. Les autres sont celles que le checker n’a pas : position dans le cycle de vie, dette répartie entre composants, prolifération et hygiène des solutions.",
   "rules.count": "{0} vérifications",

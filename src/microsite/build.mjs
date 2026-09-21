@@ -111,6 +111,10 @@ const sources = readContract('extraction-sources.json');
 const counts = {
   rules: rules.rules.length,
   componentTypes: components.componentTypes.length,
+
+  // Counted off the rules rather than off the category list, because a category nothing
+  // is filed under has no tile on the page and should not be in the heading above them.
+  categories: new Set(rules.rules.map((rule) => rule.category)).size,
   domains: new Set(components.componentTypes.map((type) => type.domain)).size,
   languages: languages.length
 };
@@ -152,8 +156,8 @@ ${sources.modes.map(tile).join('\n')}
 /**
  * What it checks for, by category, counted from the catalogue.
  *
- * Categories rather than the thirty-seven rules themselves. A visitor wants to know whether
- * this looks at the thing they are worried about; the rule list belongs in the product.
+ * Categories rather than every rule. A visitor wants to know whether this looks at the thing
+ * they are worried about; the rule list belongs in the product.
  */
 function categoriesMarkup(text) {
   const byCategory = new Map();
@@ -247,6 +251,12 @@ for (const language of languages) {
       'asset.js': jsUrl,
       modes: modesMarkup(text),
       categories: categoriesMarkup(text),
+
+      // Counted, as the heading says it is. It read "Nine categories, counted from the
+      // catalogue rather than typed here" while the catalogue held ten, which is the
+      // sentence describing its own failure. Writing "ten" would have left the same trap
+      // set for the eleventh.
+      'rules.heading': (text['rules.heading'] ?? '{0} categories').replace('{0}', String(counts.categories)),
       'stat.rules': String(counts.rules),
       'stat.componentTypes': String(counts.componentTypes),
       'stat.domains': String(counts.domains),
