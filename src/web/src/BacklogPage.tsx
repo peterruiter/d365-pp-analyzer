@@ -399,6 +399,7 @@ function PublishPanel({ engagementId, selected, total, onClear, t }: {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
   const [landed, setLanded] = useState<string | null>(null);
+  const [warnings, setWarnings] = useState<string[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -443,9 +444,11 @@ function PublishPanel({ engagementId, selected, total, onClear, t }: {
     setError(null);
     setResult(null);
     setLanded(null);
+    setWarnings([]);
 
     const answer = await sendJson<{
       published: number; requested: number; parentsIncluded: number; dryRun: boolean;
+      warnings: string[];
       items: { key: string; id: string; url: string; action: string }[];
     }>(`/api/engagements/${engagementId}/publish`, 'POST', {
       connectionId,
@@ -463,7 +466,7 @@ function PublishPanel({ engagementId, selected, total, onClear, t }: {
     // appearing to work is the whole reason this function is being read.
     if (!answer.data) { setError(t('backlog.publish.no-answer')); return; }
 
-    const { published, parentsIncluded, items } = answer.data;
+    const { published, parentsIncluded, items, warnings } = answer.data;
 
     // Created and updated separately. "23 work items created or updated" hides the thing
     // worth knowing, which is that a second publish updated twenty-one and made two: that
@@ -479,6 +482,11 @@ function PublishPanel({ engagementId, selected, total, onClear, t }: {
     // Where they went. A count with no way to go and look at them is a receipt for a
     // delivery to an address nobody printed.
     setLanded(items?.find((one) => one.url?.length > 0)?.url ?? null);
+
+    // What worked less than completely. Beside the success rather than instead of it: the
+    // items are in the target either way, and the thing somebody has to know is which part
+    // of what they asked for did not survive the trip.
+    setWarnings(warnings ?? []);
 
     // Said because it is surprising: ticking a task pulls in the epic above it, and a
     // count larger than the boxes ticked needs a reason before somebody thinks it
@@ -574,6 +582,10 @@ function PublishPanel({ engagementId, selected, total, onClear, t }: {
       {busy && <p className="curation-message">{t('backlog.publish.working', count)}</p>}
 
       {error && <p className="error">{error}</p>}
+
+      {warnings.map((warning) => (
+        <p className="curation-message danger" key={warning}>{warning}</p>
+      ))}
 
       {result && (
         <p className="curation-message">

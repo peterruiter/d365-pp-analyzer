@@ -96,6 +96,17 @@ public sealed class GitHubPublisher
     /// <param name="Action">created, updated or skipped.</param>
     public sealed record Published(string Key, int Number, string Url, string Action);
 
+    /// <summary>Everything a publish produced.</summary>
+    /// <remarks>
+    /// The warnings are the reason this is a record rather than a list. Putting an item in
+    /// a repository can succeed while nesting it under its parent does not, and the second
+    /// half has no way of announcing itself: an epic with nothing under it looks exactly
+    /// like an epic that never had children. A publish that half worked has to say so.
+    /// </remarks>
+    /// <param name="Items">One entry per backlog item, in the order they were written.</param>
+    /// <param name="Warnings">What did not work, where it did not stop the publish.</param>
+    public sealed record Result(IReadOnlyList<Published> Items, IReadOnlyList<string> Warnings);
+
     /// <summary>An issue that already exists, by the two identifiers GitHub uses for it.</summary>
     /// <remarks>
     /// Both, because they are not interchangeable and the sub-issue endpoint is the reason.
@@ -115,7 +126,7 @@ public sealed class GitHubPublisher
     /// <param name="dryRun">When true, returns what would be created and calls nothing.</param>
     /// <param name="confirmedCount">The count the person confirmed, when there are more than two hundred items.</param>
     /// <param name="cancellationToken">Cancellation.</param>
-    public async Task<IReadOnlyList<Published>> PublishAsync(
+    public async Task<Result> PublishAsync(
         IReadOnlyList<BacklogItem> items,
         bool dryRun,
         int? confirmedCount,
@@ -131,11 +142,15 @@ public sealed class GitHubPublisher
 
         if (dryRun)
         {
-            return [.. items.Select(item => new Published(item.Key, 0, string.Empty, "skipped"))];
+            return new Result([.. items.Select(item => new Published(item.Key, 0, string.Empty, "skipped"))], []);
         }
 
         var published = new List<Published>();
         var created = new Dictionary<string, Issue>(StringComparer.Ordinal);
+
+        var wanted = 0;
+        var refused = 0;
+        string? why = null;
 
         // Parents first, so a child can be adopted as soon as it exists.
         foreach (var item in items.OrderBy(item => item.ParentKey is null ? 0 : item.Type == "feature" ? 1 : 2))
@@ -151,11 +166,25 @@ public sealed class GitHubPublisher
 
             if (item.ParentKey is not null && created.TryGetValue(item.ParentKey, out var parent))
             {
-                await AdoptAsync(parent.Number, issue.Id, cancellationToken).ConfigureAwait(false);
+                wanted++;
+
+                if (await AdoptAsync(parent.Number, issue.Id, cancellationToken).ConfigureAwait(false) is { } reason)
+                {
+                    refused++;
+                    why ??= reason;
+                }
             }
         }
 
-        return published;
+        // Counted rather than one warning per item. A repository without sub-issues refuses
+        // every one of them, and seventeen copies of the same sentence is a wall somebody
+        // scrolls past.
+        var warnings = refused == 0
+            ? Array.Empty<string>()
+            : [$"{refused} of {wanted} item(s) were published but could not be nested under their parent "
+                + $"in {owner}/{repository}, so the backlog is there and its shape is flat. {why}"];
+
+        return new Result(published, warnings);
     }
 
     /// <summary>The issue carrying this key, or null where nothing does.</summary>
@@ -276,7 +305,8 @@ public sealed class GitHubPublisher
     /// item where it is rather than stopping a publish half way through, which is the same
     /// call Jira's publisher makes about a hierarchy level a project does not have.
     /// </remarks>
-    private async Task AdoptAsync(int parentNumber, long childId, CancellationToken cancellationToken)
+    /// <returns>Null where it worked, or why it did not.</returns>
+    private async Task<string?> AdoptAsync(int parentNumber, long childId, CancellationToken cancellationToken)
     {
         var url = $"{api}/repos/{Uri.EscapeDataString(owner)}/{Uri.EscapeDataString(repository)}"
             + $"/issues/{parentNumber.ToString(CultureInfo.InvariantCulture)}/sub_issues";
@@ -286,13 +316,29 @@ public sealed class GitHubPublisher
             using var response = await client.PostAsJsonAsync(
                 new Uri(url), new { sub_issue_id = childId }, cancellationToken).ConfigureAwait(false);
 
-            // Read and dropped. There is nothing to do about a refusal here that is better
-            // than leaving the issue flat, and the issue itself is already published.
-            _ = response.StatusCode;
+            if (response.IsSuccessStatusCode) return null;
+
+            // Already somebody's child, which a re-publish does every time. Not a problem
+            // and not worth telling anybody about.
+            if (response.StatusCode == HttpStatusCode.UnprocessableEntity) return null;
+
+            return response.StatusCode switch
+            {
+                HttpStatusCode.NotFound or HttpStatusCode.Gone =>
+                    "Sub-issues are not available on this repository, so there is no way to express "
+                    + "the parent link. The labels still say which item is an epic and which is a task.",
+                HttpStatusCode.Forbidden =>
+                    "The token was refused on sub-issues. " + Wanted(response)
+                    + "Issues: Read and write covers this too, so a token that can create an issue and "
+                    + "not nest one is unusual enough to be worth checking.",
+                _ => $"GitHub answered {(int)response.StatusCode} to the sub-issue call."
+            };
         }
         catch (Exception failure) when (failure is HttpRequestException or TaskCanceledException)
         {
-            // As above. The backlog is in the repository either way.
+            // Never fatal. The item is already in the repository and a publish that stopped
+            // half way through is considerably worse than a flat backlog.
+            return $"The sub-issue call could not be made: {failure.Message}";
         }
     }
 

@@ -412,7 +412,13 @@ public sealed class StageServicesFactory(
                         .PublishAsync(items, dryRun: false, confirmedCount: items.Count, token)
                         .ConfigureAwait(false);
 
-                    published = [.. result.Select(entry => (entry.Key, entry.Number, entry.Url, entry.Action))];
+                    // Items, and the warnings dropped. This delegate returns a count and
+                    // the stage above it has nowhere to put a sentence, so carrying one here
+                    // would mean widening StageServices for a path the comment below records
+                    // as never having run. Said rather than silently discarded: a publish
+                    // from the worker can leave the backlog flat and not mention it, and the
+                    // place to fix that is when this path is first exercised.
+                    published = [.. result.Items.Select(entry => (entry.Key, entry.Number, entry.Url, entry.Action))];
                 }
                 else
                 {

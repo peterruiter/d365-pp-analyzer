@@ -101,6 +101,44 @@ public class GitHubPublisherTests
         }
     }
 
+    /// <summary>Takes the issues and refuses the nesting, as a repository without sub-issues does.</summary>
+    private sealed class NoSubIssues : HttpMessageHandler
+    {
+        private int next = 100;
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var url = request.RequestUri!.ToString();
+
+            if (url.EndsWith("/sub_issues", StringComparison.Ordinal))
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound)
+                {
+                    Content = new StringContent("""{"message":"Not Found"}""", Encoding.UTF8, "application/json")
+                });
+            }
+
+            if (request.Method == HttpMethod.Get)
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("[]", Encoding.UTF8, "application/json")
+                });
+            }
+
+            var number = next++;
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    $$"""{"number":{{number}},"id":{{number * 10}},"html_url":"https://github.com/c/r/issues/{{number}}"}""",
+                    Encoding.UTF8,
+                    "application/json")
+            });
+        }
+    }
+
     private static BacklogItem Item(
         string key, string type, string? parent = null, string? html = null) =>
         new(key, type, $"Title for {key}", html ?? "<h3>Why it matters</h3><p>Because &amp; so on.</p>",
@@ -244,7 +282,8 @@ public class GitHubPublisherTests
             [Item("ppa-one", "task"), Item("ppa-two", "epic")], true, 2, CancellationToken.None);
 
         recorder.Sent.Should().BeEmpty("a dry run is the thing somebody presses to find out what would happen");
-        result.Should().OnlyContain(entry => entry.Action == "skipped");
+        result.Items.Should().OnlyContain(entry => entry.Action == "skipped");
+        result.Warnings.Should().BeEmpty("nothing was attempted, so nothing half worked");
     }
 
     [Fact]
@@ -264,6 +303,81 @@ public class GitHubPublisherTests
         refusal.Message.Should().Contain("201");
         refusal.Message.Should().Contain("contoso/platform");
         recorder.Sent.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Publishes_everything_and_says_so_when_the_shape_cannot_be_kept()
+    {
+        var publisher = new GitHubPublisher(new HttpClient(new NoSubIssues()), "contoso", "platform");
+
+        var result = await publisher.PublishAsync(
+            [Item("ppa-parent", "epic"), Item("ppa-child", "task", parent: "ppa-parent")],
+            false, 2, CancellationToken.None);
+
+        // Never fatal. A publish that stopped half way through is considerably worse than a
+        // flat backlog, and the item is already in the repository by the time this is known.
+        result.Items.Should().HaveCount(2);
+        result.Items.Should().OnlyContain(entry => entry.Action == "created");
+
+        // And never silent, which is what it used to be. An epic with nothing under it looks
+        // exactly like an epic that was never meant to have children, so a backlog that
+        // arrived flat has to say it arrived flat. This is the product's own rule about a
+        // partial read, applied to a partial write.
+        result.Warnings.Should().ContainSingle();
+        result.Warnings[0].Should().Contain("1 of 1");
+        result.Warnings[0].Should().Contain("contoso/platform");
+        result.Warnings[0].Should().Contain("Sub-issues are not available");
+    }
+
+    [Fact]
+    public async Task Does_not_complain_when_a_child_is_already_where_it_belongs()
+    {
+        // 422 is what a re-publish gets for every child that was nested the first time, so
+        // treating it as a problem would put a warning on every successful second publish.
+        var handler = new Refuses422();
+        var publisher = new GitHubPublisher(new HttpClient(handler), "contoso", "platform");
+
+        var result = await publisher.PublishAsync(
+            [Item("ppa-parent", "epic"), Item("ppa-child", "task", parent: "ppa-parent")],
+            false, 2, CancellationToken.None);
+
+        result.Items.Should().HaveCount(2);
+        result.Warnings.Should().BeEmpty();
+    }
+
+    /// <summary>Answers the nesting with 422, which is what "already a sub-issue" looks like.</summary>
+    private sealed class Refuses422 : HttpMessageHandler
+    {
+        private int next = 100;
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var url = request.RequestUri!.ToString();
+
+            if (url.EndsWith("/sub_issues", StringComparison.Ordinal))
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.UnprocessableEntity));
+            }
+
+            if (request.Method == HttpMethod.Get)
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("[]", Encoding.UTF8, "application/json")
+                });
+            }
+
+            var number = next++;
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    $$"""{"number":{{number}},"id":{{number * 10}},"html_url":"https://github.com/c/r/issues/{{number}}"}""",
+                    Encoding.UTF8,
+                    "application/json")
+            });
+        }
     }
 
     [Fact]

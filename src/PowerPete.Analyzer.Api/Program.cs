@@ -1640,10 +1640,16 @@ app.MapPost("/api/engagements/{engagementId:guid}/publish",
 
     try
     {
-        // The two publishers answer the same shape and nothing below this line cares which
-        // one ran. Both refuse more than two hundred items without a confirmed count, and
-        // neither reopens anything somebody closed.
+        // The three publishers answer the same shape and nothing below this line cares
+        // which one ran. All three refuse more than two hundred items without a confirmed
+        // count, and none reopens anything somebody closed.
         IReadOnlyList<(string Key, string Id, string Url, string Action)> published;
+
+        // What worked less than completely. Empty for the two targets that have nothing to
+        // half-do; GitHub can put an item in a repository and fail to nest it under its
+        // parent, and an epic with nothing under it looks exactly like one that never had
+        // children.
+        IReadOnlyList<string> warnings = [];
 
         if (string.Equals(connection.Mode, "github", StringComparison.Ordinal))
         {
@@ -1655,11 +1661,13 @@ app.MapPost("/api/engagements/{engagementId:guid}/publish",
             var result = await new GitHubPublisher(gitHubClient, host, request.Project, apiBase).PublishAsync(
                 items, request.DryRun, confirmedCount: items.Count, context.RequestAborted);
 
-            published = [.. result.Select(entry => (
+            published = [.. result.Items.Select(entry => (
                 entry.Key,
                 entry.Number.ToString(CultureInfo.InvariantCulture),
                 entry.Url,
                 entry.Action))];
+
+            warnings = result.Warnings;
         }
         else if (string.Equals(connection.Mode, "jira", StringComparison.Ordinal))
         {
@@ -1724,6 +1732,11 @@ app.MapPost("/api/engagements/{engagementId:guid}/publish",
             // a count that came back larger than the number of boxes ticked needs to say
             // why before somebody thinks it published the wrong thing.
             parentsIncluded = items.Count - chosen.Count,
+
+            // Said out loud rather than left for somebody to notice. A publish that wrote
+            // every item and nested none of them is a success by count and a disappointment
+            // to open, and the difference between those two is the argument of this product.
+            warnings,
             items = published.Select(entry => new { entry.Key, id = entry.Id, entry.Url, entry.Action })
         });
     }
