@@ -363,7 +363,22 @@ async Task<UserAccess> AccessFor(HttpContext context)
 {
     var store = context.RequestServices.GetRequiredService<AccessStore>();
     await store.EnsureInitialGlobalAdminAsync(initialAdmin, context.RequestAborted);
-    return await store.GetAccessAsync(UserId(context.User), context.RequestAborted);
+
+    var userId = UserId(context.User);
+    var access = await store.GetAccessAsync(userId, context.RequestAborted);
+
+    // Somebody who has proved who they are and has no row yet. With the switch on they get
+    // one, carrying no administrator flag and no engagement, so what they can reach does not
+    // change: an empty product until a person with the authority gives them something. The
+    // difference is that they are now on the administrator's list to be given it, rather
+    // than having to send their sign-in address to somebody by hand.
+    if (!access.IsKnown && await store.SelfRegistrationAllowedAsync(context.RequestAborted))
+    {
+        await store.SelfRegisterAsync(userId, DisplayName(context.User), context.RequestAborted);
+        access = await store.GetAccessAsync(userId, context.RequestAborted);
+    }
+
+    return access;
 }
 
 // Every engagement endpoint goes through this. A screen that forgets to check is a screen that
@@ -2555,6 +2570,41 @@ app.MapPut("/api/me/engagement", async (HttpContext context, SetEngagement reque
 // ---------------------------------------------------------------------- users --
 // Admitting somebody to the product and giving them an engagement are separate decisions,
 // made by different people at different times, so they are separate endpoints.
+// Whether signing in creates a user row for somebody who has none.
+//
+// A global administrator's switch, read by the administration screen and by nothing else:
+// the decision it drives is made inside AccessFor, which is the one funnel every request
+// goes through.
+app.MapGet("/api/settings/self-registration", async (HttpContext context) =>
+{
+    var access = await AccessFor(context);
+    if (!access.IsGlobalAdmin) return Results.Forbid();
+
+    var store = context.RequestServices.GetRequiredService<AccessStore>();
+
+    return Results.Ok(new { allowed = await store.SelfRegistrationAllowedAsync(context.RequestAborted) });
+}).RequireAuthorization();
+
+app.MapPut("/api/settings/self-registration", async (HttpContext context, SelfRegistration request) =>
+{
+    ArgumentNullException.ThrowIfNull(request);
+
+    var access = await AccessFor(context);
+    if (!access.IsGlobalAdmin) return Results.Forbid();
+
+    var store = context.RequestServices.GetRequiredService<AccessStore>();
+
+    // Recorded against whoever moved it. A switch that decides who may enter the product is
+    // one somebody has to be answerable for having moved.
+    await store.SetSettingAsync(
+        AccessStore.SelfRegistrationSetting,
+        request.Allowed ? "on" : "off",
+        UserId(context.User),
+        context.RequestAborted);
+
+    return Results.Ok(new { request.Allowed });
+}).RequireAuthorization();
+
 app.MapGet("/api/users", async (HttpContext context) =>
 {
     var access = await AccessFor(context);
@@ -2830,6 +2880,10 @@ app.MapPut("/api/system/settings/syncfusion", async (HttpContext context, SetSyn
 app.MapFallbackToFile("app/index.html");
 
 app.Run();
+
+/// <summary>Turning self-registration on or off.</summary>
+/// <param name="Allowed">Whether signing in may create a user row.</param>
+internal sealed record SelfRegistration(bool Allowed);
 
 /// <summary>One capability axis, as somebody scored it.</summary>
 /// <param name="Score">Nought to five, or null to take the score away.</param>

@@ -31,11 +31,18 @@ export function UserAdministration({ currentUserId }: { currentUserId: string })
   const [upn, setUpn] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [isGlobalAdmin, setIsGlobalAdmin] = useState(false);
+
+  // Null while it is being read, so the control does not flick from off to on in front of
+  // somebody and look as though they changed it.
+  const [selfRegistration, setSelfRegistration] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
 
   async function refresh() {
+    void getJson<{ allowed: boolean }>('/api/settings/self-registration')
+      .then((answer) => setSelfRegistration(answer.data?.allowed ?? null));
+
     const result = await getJson<AdmittedUser[]>('/api/users');
     if (result.data) setUsers(result.data);
     else setMessage(result.error);
@@ -101,6 +108,32 @@ export function UserAdministration({ currentUserId }: { currentUserId: string })
           <h1>{t('admin.people')}</h1>
           <p className="lede">{t('people.lede')}</p>
         </div>
+      </div>
+
+      {/*
+        Above the list of people rather than below it, because it decides how people get
+        onto that list. What it grants is said in full: a self-registered person has no
+        engagement and sees an empty product until somebody here gives them one, and an
+        administrator deciding whether to leave this on deserves to know that rather than
+        having to infer it from the word "register".
+      */}
+      <div className="form-panel" style={{ marginBottom: '14px' }}>
+        <label className="field-label">
+          <span className="field-name">{t('people.self-registration')}</span>
+          <select
+            value={selfRegistration === null ? '' : selfRegistration ? 'on' : 'off'}
+            disabled={selfRegistration === null}
+            onChange={(event) => {
+              const next = event.target.value === 'on';
+              setSelfRegistration(next);
+              void sendJson('/api/settings/self-registration', 'PUT', { allowed: next });
+            }}
+          >
+            <option value="on">{t('people.self-registration.on')}</option>
+            <option value="off">{t('people.self-registration.off')}</option>
+          </select>
+          <span className="hint">{t('people.self-registration.hint')}</span>
+        </label>
       </div>
 
       <div className="form-panel">

@@ -1283,19 +1283,29 @@ public class DataLayerTests
         // authentication proves who somebody is and grants them nothing: a person with no
         // row in ops.SystemUser has no engagements, not even the demonstration one.
         //
-        // So exactly two places may create that row, and both are somebody with the
-        // authority to do it deciding to: an administrator admitting a person, and the
-        // configured first administrator being written on startup. If a third ever appears
-        // — most plausibly a well meant "record who just signed in" — the product would
-        // admit the internet to itself, one visitor at a time, and every screen would still
-        // look correct.
+        // So exactly three places may create that row. Two are somebody with the authority
+        // to do it deciding to: an administrator admitting a person, and the configured
+        // first administrator being written on startup. If a fourth ever appears — most
+        // plausibly a well meant "record who just signed in" — the product would admit the
+        // internet to itself, one visitor at a time, and every screen would still look
+        // correct.
+        //
+        // The third is self-registration, which is on by default and is the one that has to
+        // earn its place here. It does so by being powerless: the row it writes carries no
+        // administrator flag and no engagement, and every engagement query filters on
+        // membership, so a self-registered person signs in and sees an empty product. Not
+        // the demonstration estate, not a client's findings, not the fact that any
+        // engagement exists.
+        //
+        // That is asserted below rather than trusted, because it is the entire reason the
+        // default is safe.
         var source = File.ReadAllText(Path.Combine(
             Directory.GetParent(Solution())!.FullName,
             "src", "PowerPete.Analyzer.Data", "Access.cs"));
 
         // Each INSERT with the method that contains it, found by walking back to the
         // nearest signature above it.
-        var admitting = new[] { "AdmitAsync", "EnsureInitialGlobalAdminAsync" };
+        var admitting = new[] { "AdmitAsync", "EnsureInitialGlobalAdminAsync", "SelfRegisterAsync" };
 
         var offending = new List<string>();
 
@@ -1317,6 +1327,37 @@ public class DataLayerTests
         offending.Should().BeEmpty(
             "only admitting somebody may create a user row. Anything else that creates one turns signing in "
             + "into being admitted, and sign-in is open to every Entra tenant there is");
+
+        // And what the self-registering one is allowed to write.
+        var selfRegister = Regex.Match(
+            source,
+            @"public async Task SelfRegisterAsync\(.*?\n    \}",
+            RegexOptions.Singleline,
+            TimeSpan.FromSeconds(5));
+
+        selfRegister.Success.Should().BeTrue(
+            "the guard has to be able to see the method it is guarding, or it passes by finding nothing");
+
+        var body = selfRegister.Value;
+
+        body.Should().Contain("IsGlobalAdmin, CreatedBy",
+            "it writes the flag explicitly rather than leaving it to a column default that somebody could change");
+
+        // The literal zero, with no parameter anywhere near it. A @isGlobalAdmin here would
+        // mean the caller decides, and the caller is somebody who has just signed in.
+        Regex.IsMatch(body, @"VALUES \(@userId, @displayName, @userId, 0,", RegexOptions.None, TimeSpan.FromSeconds(5))
+            .Should().BeTrue("self-registration may only ever create a row that is not a global administrator");
+
+        body.Should().NotContain("@isGlobalAdmin",
+            "the administrator flag on a self-registered row cannot be something a caller passes in");
+
+        body.Should().NotContain("WHEN MATCHED",
+            "an existing row is somebody an administrator has already decided about, and signing in "
+            + "must not be able to change it in either direction");
+
+        body.Should().NotContain("EngagementMember",
+            "a self-registered person gets no engagement. That is what makes the row harmless, and it "
+            + "is the sentence to re-read before widening what one can reach");
 
         // And the guard has to be able to see the inserts it is guarding, or it passes by
         // finding nothing at all.

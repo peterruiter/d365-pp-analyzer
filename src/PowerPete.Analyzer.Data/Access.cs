@@ -287,6 +287,91 @@ public sealed class AccessStore(string connectionString)
             cancellationToken: cancellationToken));
     }
 
+    /// <summary>Whether signing in may create a user row for somebody who has none.</summary>
+    /// <remarks>
+    /// Absent means on, which is the default. The switch is stored rather than configured so
+    /// a global administrator can move it without a deployment.
+    /// </remarks>
+    public const string SelfRegistrationSetting = "access.selfRegistration";
+
+    /// <summary>Reads one setting, or null where nobody has set it.</summary>
+    /// <param name="name">The setting.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task<string?> GetSettingAsync(string name, CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        return await connection.ExecuteScalarAsync<string?>(new CommandDefinition(
+            "SELECT Value FROM ops.SystemSetting WHERE Name = @name;",
+            new { name },
+            cancellationToken: cancellationToken));
+    }
+
+    /// <summary>Writes one setting.</summary>
+    /// <param name="name">The setting.</param>
+    /// <param name="value">Its value.</param>
+    /// <param name="updatedBy">Who moved it.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task SetSettingAsync(string name, string value, string updatedBy, CancellationToken cancellationToken)
+    {
+        await using var connection = Connect();
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            MERGE ops.SystemSetting AS target
+            USING (SELECT @name AS Name) AS source ON target.Name = source.Name
+            WHEN MATCHED THEN UPDATE SET
+                Value = @value, UpdatedUtc = SYSUTCDATETIME(), UpdatedBy = @updatedBy
+            WHEN NOT MATCHED THEN
+                INSERT (Name, Value, UpdatedBy) VALUES (@name, @value, @updatedBy);
+            """,
+            new { name, value, updatedBy },
+            cancellationToken: cancellationToken));
+    }
+
+    /// <summary>Whether self-registration is on. Absent means on.</summary>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task<bool> SelfRegistrationAllowedAsync(CancellationToken cancellationToken) =>
+        !string.Equals(
+            await GetSettingAsync(SelfRegistrationSetting, cancellationToken).ConfigureAwait(false),
+            "off",
+            StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Creates a user row for somebody who has just signed in and has none.
+    /// </summary>
+    /// <remarks>
+    /// The third and last thing allowed to create one, and the only one that is not a person
+    /// with authority deciding to. What makes that acceptable is written into the statement
+    /// rather than left to the caller: IsGlobalAdmin is the literal 0, there is no parameter
+    /// for it, and nothing here touches engagement membership. A row this writes reaches an
+    /// empty product.
+    ///
+    /// WHEN NOT MATCHED only. An existing row is left exactly as it is, so somebody an
+    /// administrator has already made an administrator does not get demoted by signing in.
+    /// </remarks>
+    /// <param name="upn">Their sign-in name.</param>
+    /// <param name="displayName">What the identity provider says they are called.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task SelfRegisterAsync(string upn, string displayName, CancellationToken cancellationToken)
+    {
+        var userId = Normalise(upn);
+
+        if (string.IsNullOrWhiteSpace(userId)) return;
+
+        await using var connection = Connect();
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            MERGE ops.SystemUser AS target
+            USING (SELECT @userId AS UserId) AS source ON target.UserId = source.UserId
+            WHEN NOT MATCHED THEN
+                INSERT (UserId, DisplayName, Email, IsGlobalAdmin, CreatedBy)
+                VALUES (@userId, @displayName, @userId, 0, 'self-registration');
+            """,
+            new { userId, displayName },
+            cancellationToken: cancellationToken));
+    }
+
     /// <summary>Records what somebody is actually called, once they have signed in.</summary>
     /// <remarks>
     /// Separate from admitting them, and deliberately incapable of creating a row. Somebody
