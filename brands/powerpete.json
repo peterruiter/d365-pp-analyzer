@@ -1,0 +1,87 @@
+{
+  "$comment": [
+    "Power Pete, as powerpete.com and the Dynamics 365 Contact Center licensing calculator",
+    "use it. Same product, same design system, different paint.",
+    "",
+    "The ramp is generated from the Power Pete palette rather than picked by eye: the",
+    "primary family is their purple, tinted toward white above 600 and toward their own",
+    "deep purple below it. Every pairing the product actually renders was checked against",
+    "WCAG AA and the weakest is 9.86 to 1, because a palette that looks right in a swatch",
+    "and fails at three to one is a product somebody cannot read.",
+    "",
+    "What is NOT in here: anything true regardless of the colours. The product still runs",
+    "in Capgemini's subscription and still signs people in with their Capgemini account,",
+    "and those sentences stay as they are. A brand file that could change them would be a",
+    "brand file that could make the privacy page lie."
+  ],
+  "id": "powerpete",
+  "name": "Power Pete",
+  "product": "Power Platform Solution Analyzer",
+  "site": "https://powerpete.com",
+  "tagline": "Tips & best practices for Dynamics 365 and the Power Platform",
+  "$rampComment": [
+    "The family names are roles, not hues. Power Pete's primary is purple, so it fills the",
+    "blue slots; the secondary is their sky, which happens to be the same value Capgemini",
+    "uses; the tertiary is their mint."
+  ],
+  "ramp": {
+    "blue-25": "#f8f8fc",
+    "blue-50": "#edecf6",
+    "blue-100": "#d8d4ec",
+    "blue-200": "#c4bcf5",
+    "blue-300": "#a699ef",
+    "blue-400": "#7c69e8",
+    "blue-500": "#5846bf",
+    "blue-600": "#3b2a9e",
+    "blue-700": "#2c1f7c",
+    "blue-800": "#251a6e",
+    "blue-900": "#181148",
+    "lightblue-25": "#f4fbfe",
+    "lightblue-50": "#e6f7fe",
+    "lightblue-100": "#c4edfc",
+    "lightblue-300": "#73d3f7",
+    "lightblue-600": "#1db8f2",
+    "lightblue-700": "#1790bd",
+    "turquoise-400": "#5cddc7",
+    "turquoise-600": "#2ed3b7",
+    "ink-700": "#3e3b56",
+    "ink-900": "#1e1b3a",
+    "hover-fill": "#d6d3ea",
+    "hover-ink": "#16142b"
+  },
+  "$pdfComment": [
+    "Taken from the calculator's own pdf block so a client who receives both recognises",
+    "them as one family: band is the deep purple, accent the lilac, and the series runs",
+    "lilac, blue, mint, amber. Coral is the marker, never a series."
+  ],
+  "pdf": {
+    "blue": "#3B2A9E",
+    "darkBlue": "#251A6E",
+    "lightBlue": "#7C69E8",
+    "turquoise": "#2ED3B7",
+    "yellow": "#F5A623",
+    "teal": "#1F8F7A",
+    "terracotta": "#E4572E",
+    "deepRed": "#B5325A",
+    "ink": "#1E1B3A",
+    "muted": "#63607F",
+    "line": "#DCD9EE",
+    "background": "#F3F2FA",
+    "blueSoft": "#E8ECF9"
+  },
+  "assets": {
+    "wordmarkWhite": "powerpete-wordmark-white.png",
+    "wordmarkDark": "powerpete-wordmark-blue.png",
+    "wordmarkAspect": 0.1372,
+    "siteWordmark": "powerpete-white.svg",
+    "siteMark": "powerpete-icon.png",
+    "favicon": "powerpete-icon.png"
+  },
+  "copy": {
+    "titleSuffix": "Power Pete",
+    "eyebrow": "Power Pete · Power Platform",
+    "footerNote": "Power Pete · powerpete.com",
+    "preparedBy": "Prepared with the Power Platform Solution Analyzer from powerpete.com. Estimates are ranges from a rule catalogue, not a quotation.",
+    "coverAlt": "Report cover with the Power Pete wordmark and the headline figures"
+  }
+}

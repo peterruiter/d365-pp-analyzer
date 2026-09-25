@@ -19,15 +19,22 @@
 
   <ItemGroup>
     <!--
-      The Capgemini wordmark and the Ubuntu typeface ship inside the assembly. The report is
-      rendered in a container with no font cache and no asset share, so anything the PDF needs
-      has to travel with the code.
+      The wordmarks and the Ubuntu typeface ship inside the assembly. The report is rendered
+      in a container with no font cache and no asset share, so anything the PDF needs has to
+      travel with the code.
 
-      Ubuntu is used under the Ubuntu Font Licence 1.0. The wordmark is a Capgemini asset and
-      is used only in Capgemini deliverables.
+      Ubuntu is used under the Ubuntu Font Licence 1.0, and both brands set in it. The
+      Capgemini wordmark is a Capgemini asset and is used only in Capgemini deliverables.
     -->
     <EmbeddedResource Include="Brand/*.png" />
     <EmbeddedResource Include="Brand/*.ttf" />
+
+    <!--
+      The brand files themselves, for the same reason. Both deliverables and the web app's
+      palette are generated from these, so a build that shipped the code without them would
+      render a report with no colours in it.
+    -->
+    <EmbeddedResource Include="..\..\brands\*.json" LogicalName="PowerPete.Analyzer.Export.Brands.%(Filename).json" />
   </ItemGroup>
 
   <ItemGroup>

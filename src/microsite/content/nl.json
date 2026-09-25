@@ -1,5 +1,5 @@
 {
-  "meta.title": "Power Platform Solution Analyzer — Capgemini",
+  "meta.title": "Power Platform Solution Analyzer",
   "meta.description": "Leest een Power Platform-landschap, zegt wat technische schuld is en schat wat herstellen kost. Alleen-lezen. Benoemt wat het niet kon controleren.",
   "meta.ogDescription": "Een beoordeling van een Power Platform-landschap die er nooit naar schrijft, en altijd zegt wat ze niet kon lezen.",
   "nav.what": "Wat het doet",
@@ -19,7 +19,7 @@
   "theme.lightOn": "Licht thema aan",
   "theme.darkOn": "Donker thema aan",
   "theme.toggle": "Wissel tussen licht en donker",
-  "hero.eyebrow": "Capgemini · Power Platform",
+  "hero.eyebrow": "Power Platform",
   "hero.headline": "Ontdek wat er werkelijk in zit.",
   "hero.lede": "Het leest een Power Platform-landschap, vertelt wat technische schuld is en wat herstellen kost, en benoemt elke controle die het niet kon uitvoeren. Het schrijft nooit naar de omgeving.",
   "hero.primary": "Aanmelden",
@@ -120,7 +120,7 @@
   "limits.card3.body": "Er is geen herstelmodus en er komt er ook geen. Alles wat het oplevert is een aanbeveling, een rapport of een work item voor iemand die het werk zelf doet.",
   "closing.heading": "Ontdek wat er werkelijk in zit.",
   "closing.body": "Meld je aan met je Capgemini-account. Er staat een demonstratielandschap klaar, met bevindingen die het product zelf heeft geproduceerd, zodat er iets te bekijken is voordat een klant je iets heeft gegeven.",
-  "footer.note": "Capgemini · Power Platform Solution Analyzer",
+  "footer.note": "Power Platform Solution Analyzer",
   "privacyBlock.eyebrow": "Privacy",
   "privacyPage.title": "Privacy — Power Platform Solution Analyzer",
   "privacyPage.description": "Wat dit product leest, wat het verwijdert, wat het weigert te doen, en waar alles wordt bewaard.",
@@ -173,7 +173,7 @@
   "report.page6": "De roadmap. Elke bevinding geplaatst naar het soort probleem.",
   "report.page7": "Functionele volwassenheid, gescoord in een workshop. Twee assen blijven ongescoord.",
   "report.page8": "Scenario's, in de woorden van de klant zelf.",
-  "alt.pageCover": "Omslag met het Capgemini-woordmerk en de kerncijfers",
+  "alt.pageCover": "Rapportomslag met het woordmerk en de belangrijkste cijfers",
   "alt.pageSummary": "De pagina met de managementsamenvatting",
   "alt.pageEstate": "Een staafdiagram van componenten per domein",
   "alt.pageComplexity": "Een ringdiagram van de low-codeverhouding en een complexiteitsoverzicht",
@@ -189,5 +189,6 @@
   "product.screen3": "De backlog: een epic per categorie, met acceptatiecriteria vóór publicatie.",
   "alt.screenOverview": "Het overzichtsscherm van het product",
   "alt.screenFindings": "De tabel met bevindingen",
-  "alt.screenBacklog": "De backlogboom"
+  "alt.screenBacklog": "De backlogboom",
+  "brand.name": "Power Platform Solution Analyzer"
 }

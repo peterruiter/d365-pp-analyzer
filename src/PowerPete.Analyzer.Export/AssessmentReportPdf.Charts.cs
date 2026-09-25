@@ -32,14 +32,14 @@ public sealed partial class AssessmentReportPdf
     /// </remarks>
     private static readonly string[] Series =
     [
-        CapgeminiBrand.Blue,
-        CapgeminiBrand.LightBlue,
-        CapgeminiBrand.Turquoise,
-        CapgeminiBrand.Yellow,
-        CapgeminiBrand.Teal,
-        CapgeminiBrand.Terracotta,
-        CapgeminiBrand.DeepRed,
-        CapgeminiBrand.Muted
+        Brand.Blue,
+        Brand.LightBlue,
+        Brand.Turquoise,
+        Brand.Yellow,
+        Brand.Teal,
+        Brand.Terracotta,
+        Brand.DeepRed,
+        Brand.Muted
     ];
 
     private const float BarHeight = 13f;
@@ -85,19 +85,19 @@ public sealed partial class AssessmentReportPdf
                 var textStyle = new PdfStringFormat(PdfTextAlignment.Left, PdfVerticalAlignment.Middle);
                 var font = flow.Theme.Font(new TextStyle { Size = 8f });
 
-                graphics.DrawString(label, font, PdfTheme.Brush(CapgeminiBrand.Ink),
+                graphics.DrawString(label, font, PdfTheme.Brush(Brand.Ink),
                     new RectangleF(box.Left, box.Top, LabelWidth - 6f, BarHeight), textStyle);
 
                 var trackLeft = box.Left + LabelWidth;
                 var trackWidth = Math.Max(box.Width - LabelWidth - 54f, 10f);
 
-                graphics.DrawRectangle(PdfTheme.Brush(CapgeminiBrand.Background),
+                graphics.DrawRectangle(PdfTheme.Brush(Brand.Background),
                     new RectangleF(trackLeft, box.Top + 2f, trackWidth, BarHeight - 4f));
 
                 graphics.DrawRectangle(PdfTheme.Brush(fill),
                     new RectangleF(trackLeft, box.Top + 2f, Math.Max(trackWidth * share, 1f), BarHeight - 4f));
 
-                graphics.DrawString(format(value), font, PdfTheme.Brush(CapgeminiBrand.Muted),
+                graphics.DrawString(format(value), font, PdfTheme.Brush(Brand.Muted),
                     new RectangleF(trackLeft + trackWidth + 6f, box.Top, 48f, BarHeight),
                     new PdfStringFormat(PdfTextAlignment.Right, PdfVerticalAlignment.Middle));
             }, paddingTop: BarGap);
@@ -134,7 +134,7 @@ public sealed partial class AssessmentReportPdf
             {
                 var font = flow.Theme.Font(new TextStyle { Size = 8f });
 
-                graphics.DrawString(label, font, PdfTheme.Brush(CapgeminiBrand.Ink),
+                graphics.DrawString(label, font, PdfTheme.Brush(Brand.Ink),
                     new RectangleF(box.Left, box.Top, LabelWidth - 6f, BarHeight),
                     new PdfStringFormat(PdfTextAlignment.Left, PdfVerticalAlignment.Middle));
 
@@ -154,7 +154,7 @@ public sealed partial class AssessmentReportPdf
                 }
 
                 graphics.DrawString(total.ToString(CultureInfo.InvariantCulture), font,
-                    PdfTheme.Brush(CapgeminiBrand.Muted),
+                    PdfTheme.Brush(Brand.Muted),
                     new RectangleF(trackLeft + trackWidth + 6f, box.Top, 48f, BarHeight),
                     new PdfStringFormat(PdfTextAlignment.Right, PdfVerticalAlignment.Middle));
             }, paddingTop: BarGap);
@@ -196,14 +196,14 @@ public sealed partial class AssessmentReportPdf
             {
                 var font = flow.Theme.Font(new TextStyle { Size = 8f });
 
-                graphics.DrawString(label, font, PdfTheme.Brush(CapgeminiBrand.Ink),
+                graphics.DrawString(label, font, PdfTheme.Brush(Brand.Ink),
                     new RectangleF(box.Left, box.Top, LabelWidth - 6f, BarHeight),
                     new PdfStringFormat(PdfTextAlignment.Left, PdfVerticalAlignment.Middle));
 
                 var trackLeft = box.Left + LabelWidth;
                 var trackWidth = Math.Max(box.Width - LabelWidth - 74f, 10f);
 
-                graphics.DrawRectangle(PdfTheme.Brush(CapgeminiBrand.Background),
+                graphics.DrawRectangle(PdfTheme.Brush(Brand.Background),
                     new RectangleF(trackLeft, box.Top + 2f, trackWidth, BarHeight - 4f));
 
                 graphics.DrawRectangle(PdfTheme.Brush(fill),
@@ -215,7 +215,7 @@ public sealed partial class AssessmentReportPdf
 
                 graphics.DrawString(
                     string.Create(CultureInfo.InvariantCulture, $"{low:0}–{high:0}"),
-                    font, PdfTheme.Brush(CapgeminiBrand.Muted),
+                    font, PdfTheme.Brush(Brand.Muted),
                     new RectangleF(trackLeft + trackWidth + 6f, box.Top, 68f, BarHeight),
                     new PdfStringFormat(PdfTextAlignment.Right, PdfVerticalAlignment.Middle));
             }, paddingTop: BarGap);
@@ -271,14 +271,14 @@ public sealed partial class AssessmentReportPdf
             // donut primitive and a path with two figures is more code than a circle.
             const float ring = 26f;
 
-            graphics.DrawEllipse(PdfTheme.Brush(CapgeminiBrand.White), new RectangleF(
+            graphics.DrawEllipse(PdfTheme.Brush(Brand.White), new RectangleF(
                 square.Left + ring, square.Top + ring, DonutSize - (ring * 2), DonutSize - (ring * 2)));
 
-            graphics.DrawString(centre, flow.Theme.Font(new TextStyle { Size = 15f, Bold = true }), PdfTheme.Brush(CapgeminiBrand.Ink),
+            graphics.DrawString(centre, flow.Theme.Font(new TextStyle { Size = 15f, Bold = true }), PdfTheme.Brush(Brand.Ink),
                 new RectangleF(square.Left, square.Top + (DonutSize / 2) - 21f, DonutSize, 24f),
                 new PdfStringFormat(PdfTextAlignment.Center, PdfVerticalAlignment.Middle));
 
-            graphics.DrawString(caption, flow.Theme.Font(new TextStyle { Size = 7f }), PdfTheme.Brush(CapgeminiBrand.Muted),
+            graphics.DrawString(caption, flow.Theme.Font(new TextStyle { Size = 7f }), PdfTheme.Brush(Brand.Muted),
                 new RectangleF(square.Left, square.Top + (DonutSize / 2) + 4f, DonutSize, 11f),
                 new PdfStringFormat(PdfTextAlignment.Center, PdfVerticalAlignment.Middle));
 
@@ -296,7 +296,7 @@ public sealed partial class AssessmentReportPdf
 
                 graphics.DrawString(
                     string.Create(CultureInfo.InvariantCulture, $"{label}  {value}  ({share:P0})"),
-                    flow.Theme.Font(new TextStyle { Size = 8f }), PdfTheme.Brush(CapgeminiBrand.Ink),
+                    flow.Theme.Font(new TextStyle { Size = 8f }), PdfTheme.Brush(Brand.Ink),
                     new RectangleF(box.Left + DonutSize + 31f, keyTop, box.Width - DonutSize - 31f, 11f),
                     new PdfStringFormat(PdfTextAlignment.Left, PdfVerticalAlignment.Middle));
 
@@ -324,7 +324,7 @@ public sealed partial class AssessmentReportPdf
 
                 var width = (name.Length * 4.6f) + 8f;
 
-                graphics.DrawString(name, flow.Theme.Font(new TextStyle { Size = 7.5f }), PdfTheme.Brush(CapgeminiBrand.Muted),
+                graphics.DrawString(name, flow.Theme.Font(new TextStyle { Size = 7.5f }), PdfTheme.Brush(Brand.Muted),
                     new RectangleF(x + 10f, box.Top, width, 12f),
                     new PdfStringFormat(PdfTextAlignment.Left, PdfVerticalAlignment.Middle));
 
@@ -373,7 +373,7 @@ public sealed partial class AssessmentReportPdf
             for (var column = 0; column < columns.Length; column++)
             {
                 graphics.DrawString(columns[column], flow.Theme.Font(new TextStyle { Size = 7.5f, Bold = true }),
-                    PdfTheme.Brush(CapgeminiBrand.Muted),
+                    PdfTheme.Brush(Brand.Muted),
                     new RectangleF(box.Left + labelWidth + (column * cellWidth) + 4f, box.Top, cellWidth - 8f, rowHeight),
                     new PdfStringFormat(PdfTextAlignment.Center, PdfVerticalAlignment.Middle));
             }
@@ -382,7 +382,7 @@ public sealed partial class AssessmentReportPdf
             {
                 var top = box.Top + ((row + 1) * rowHeight);
 
-                graphics.DrawString(rows[row], flow.Theme.Font(new TextStyle { Size = 8f }), PdfTheme.Brush(CapgeminiBrand.Ink),
+                graphics.DrawString(rows[row], flow.Theme.Font(new TextStyle { Size = 8f }), PdfTheme.Brush(Brand.Ink),
                     new RectangleF(box.Left, top, labelWidth - 6f, rowHeight),
                     new PdfStringFormat(PdfTextAlignment.Left, PdfVerticalAlignment.Middle));
 
@@ -396,19 +396,19 @@ public sealed partial class AssessmentReportPdf
                     // it blank makes the grid look like it failed to render.
                     if (count == 0)
                     {
-                        graphics.DrawRectangle(PdfTheme.Pen(CapgeminiBrand.Line, 0.5f), area);
+                        graphics.DrawRectangle(PdfTheme.Pen(Brand.Line, 0.5f), area);
                         continue;
                     }
 
                     graphics.DrawRectangle(
                         PdfTheme.Brush(heaviest > 0 && hours >= heaviest * 0.5m
-                            ? CapgeminiBrand.Blue
-                            : CapgeminiBrand.BlueSoft),
+                            ? Brand.Blue
+                            : Brand.BlueSoft),
                         area);
 
                     var ink = heaviest > 0 && hours >= heaviest * 0.5m
-                        ? CapgeminiBrand.White
-                        : CapgeminiBrand.Ink;
+                        ? Brand.White
+                        : Brand.Ink;
 
                     graphics.DrawString(
                         string.Create(CultureInfo.InvariantCulture, $"{count}\n{hours:0} h"),
@@ -484,13 +484,13 @@ public sealed partial class AssessmentReportPdf
                     .Select(index => At(index, ring))
                     .ToArray();
 
-                graphics.DrawPolygon(PdfTheme.Pen(CapgeminiBrand.Line, ring == rings ? 0.8f : 0.4f), corners);
+                graphics.DrawPolygon(PdfTheme.Pen(Brand.Line, ring == rings ? 0.8f : 0.4f), corners);
             }
 
             for (var index = 0; index < scores.Count; index++)
             {
                 var spoke = At(index, max);
-                graphics.DrawLine(PdfTheme.Pen(CapgeminiBrand.Line, 0.4f), centreX, centreY, spoke.X, spoke.Y);
+                graphics.DrawLine(PdfTheme.Pen(Brand.Line, 0.4f), centreX, centreY, spoke.X, spoke.Y);
             }
 
             // The shape. Only the scored axes, and only when enough of them are scored for a
@@ -504,13 +504,13 @@ public sealed partial class AssessmentReportPdf
             if (scored.Length >= 3)
             {
                 graphics.DrawPolygon(
-                    PdfTheme.Pen(CapgeminiBrand.Blue, 1.6f),
-                    PdfTheme.Brush(CapgeminiBrand.BlueSoft),
+                    PdfTheme.Pen(Brand.Blue, 1.6f),
+                    PdfTheme.Brush(Brand.BlueSoft),
                     scored);
 
                 foreach (var point in scored)
                 {
-                    graphics.DrawEllipse(PdfTheme.Brush(CapgeminiBrand.Blue),
+                    graphics.DrawEllipse(PdfTheme.Brush(Brand.Blue),
                         new RectangleF(point.X - 2.2f, point.Y - 2.2f, 4.4f, 4.4f));
                 }
             }
@@ -548,7 +548,7 @@ public sealed partial class AssessmentReportPdf
                         ? $"{label}  —"
                         : string.Create(CultureInfo.InvariantCulture, $"{label}  {score:0.#}"),
                     font,
-                    PdfTheme.Brush(score is null ? CapgeminiBrand.Muted : CapgeminiBrand.Ink),
+                    PdfTheme.Brush(score is null ? Brand.Muted : Brand.Ink),
                     area,
                     new PdfStringFormat(align, PdfVerticalAlignment.Middle)
                     {
@@ -557,7 +557,7 @@ public sealed partial class AssessmentReportPdf
             }
         }, paddingTop: 10f);
 
-        flow.Text(scale, new TextStyle { Size = 8.5f, Colour = CapgeminiBrand.Muted }, paddingTop: 6f);
+        flow.Text(scale, new TextStyle { Size = 8.5f, Colour = Brand.Muted }, paddingTop: 6f);
         flow.Gap(12f);
     }
 }

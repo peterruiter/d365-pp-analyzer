@@ -66,7 +66,7 @@
   "report.perEngagementCosts": "Costi per incarico",
   "report.platform": "Power Platform",
   "report.position": "Posizione",
-  "report.preparedBy": "Redatto da Capgemini. Le stime sono intervalli da un catalogo di regole, non un preventivo.",
+  "report.preparedBy": "Preparato da {0}. Le stime sono intervalli da un catalogo di regole, non un preventivo.",
   "report.proCode": "Pro code",
   "report.produced": "Prodotto il",
   "report.readVia": "Letto tramite",

@@ -1,5 +1,5 @@
 {
-  "meta.title": "Power Platform Solution Analyzer — Capgemini",
+  "meta.title": "Power Platform Solution Analyzer",
   "meta.description": "Liest eine Power-Platform-Landschaft, benennt technische Schulden und schätzt, was deren Behebung kostet. Nur lesend. Nennt, was es nicht prüfen konnte.",
   "meta.ogDescription": "Eine Bewertung einer Power-Platform-Landschaft, die niemals in sie schreibt und immer sagt, was sie nicht lesen konnte.",
   "nav.what": "Was es tut",
@@ -19,7 +19,7 @@
   "theme.lightOn": "Helles Design aktiv",
   "theme.darkOn": "Dunkles Design aktiv",
   "theme.toggle": "Zwischen hell und dunkel wechseln",
-  "hero.eyebrow": "Capgemini · Power Platform",
+  "hero.eyebrow": "Power Platform",
   "hero.headline": "Herausfinden, was wirklich drin ist.",
   "hero.lede": "Es liest eine Power-Platform-Landschaft, sagt Ihnen, was technische Schuld ist und was deren Behebung kostet, und nennt jede Prüfung, die es nicht ausführen konnte. Es schreibt niemals in die Umgebung.",
   "hero.primary": "Anmelden",
@@ -120,7 +120,7 @@
   "limits.card3.body": "Es gibt keinen Behebungsmodus und es ist keiner geplant. Alles, was es hervorbringt, ist eine Empfehlung, ein Bericht oder ein Arbeitselement für jemanden, der die Arbeit selbst tut.",
   "closing.heading": "Herausfinden, was wirklich drin ist.",
   "closing.body": "Melden Sie sich mit Ihrem Capgemini-Konto an. Eine Demonstrationslandschaft wartet, mit Befunden, die das Produkt selbst erzeugt hat, damit es etwas anzusehen gibt, bevor ein Kunde Ihnen irgendetwas gegeben hat.",
-  "footer.note": "Capgemini · Power Platform Solution Analyzer",
+  "footer.note": "Power Platform Solution Analyzer",
   "privacyBlock.eyebrow": "Datenschutz",
   "privacyPage.title": "Datenschutz — Power Platform Solution Analyzer",
   "privacyPage.description": "Was dieses Produkt liest, was es entfernt, was es verweigert und wo alles aufbewahrt wird.",
@@ -173,7 +173,7 @@
   "report.page6": "Die Roadmap. Jeder Befund nach Art des Problems eingeordnet.",
   "report.page7": "Funktionale Reife, im Workshop bewertet. Zwei Achsen bleiben unbewertet.",
   "report.page8": "Szenarien, in den Worten des Kunden.",
-  "alt.pageCover": "Deckblatt mit der Capgemini-Wortmarke und den Kennzahlen",
+  "alt.pageCover": "Berichtsdeckblatt mit der Wortmarke und den Kernzahlen",
   "alt.pageSummary": "Die Seite mit der Zusammenfassung",
   "alt.pageEstate": "Ein Balkendiagramm der Komponenten nach Domäne",
   "alt.pageComplexity": "Ein Ringdiagramm des Low-Code-Verhältnisses und eine Komplexitätsübersicht",
@@ -189,5 +189,6 @@
   "product.screen3": "Das Backlog: ein Epic je Kategorie, mit Abnahmekriterien vor der Veröffentlichung.",
   "alt.screenOverview": "Der Übersichtsbildschirm des Produkts",
   "alt.screenFindings": "Die Befundtabelle",
-  "alt.screenBacklog": "Der Backlog-Baum"
+  "alt.screenBacklog": "Der Backlog-Baum",
+  "brand.name": "Power Platform Solution Analyzer"
 }

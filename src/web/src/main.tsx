@@ -108,8 +108,8 @@ function AuthShell({ children }: { children: React.ReactNode }) {
     <div className="auth-shell">
       <header className="topbar">
         <span className="wordmark">
-          <img className="wordmark-logo" src={`${import.meta.env.BASE_URL}capgemini-white.svg`} alt={t('shell.capgemini')} />
-          <img className="wordmark-spade" src={`${import.meta.env.BASE_URL}capgemini-spade-white.svg`} alt={t('shell.capgemini')} />
+          <img className="wordmark-logo" src="/brand/wordmark" alt={t('shell.brand')} />
+          <img className="wordmark-spade" src="/brand/mark" alt={t('shell.brand')} />
           <span className="product-name">{t('app.name')}</span>
         </span>
         <div className="topbar-actions">
@@ -281,10 +281,10 @@ function App() {
     <div className="app-shell">
       <header className="topbar">
         <a className="wordmark" href="/" aria-label={t('shell.home')}>
-          <img className="wordmark-logo" src={`${import.meta.env.BASE_URL}capgemini-white.svg`} alt={t('shell.capgemini')} />
+          <img className="wordmark-logo" src="/brand/wordmark" alt={t('shell.brand')} />
           {/* The same mark without the wordmark, for narrow screens. Only one of the two is
               ever visible, so the alt text lives on whichever that is. */}
-          <img className="wordmark-spade" src={`${import.meta.env.BASE_URL}capgemini-spade-white.svg`} alt={t('shell.capgemini')} />
+          <img className="wordmark-spade" src="/brand/mark" alt={t('shell.brand')} />
           <span className="product-name">{t('app.name')}</span>
         </a>
         <div className="topbar-actions">

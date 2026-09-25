@@ -370,6 +370,85 @@ public class DataLayerTests
     }
 
     [Fact]
+    public void Every_brand_carries_everything_a_brand_has_to()
+    {
+        // Two brands and a third one day, and the failure has no compiler behind it. The
+        // ramp is read by key into a stylesheet, so a slot one brand declares and another
+        // does not is a custom property that resolves to nothing: the page keeps whatever
+        // the previous brand left in that slot, or renders the fallback, and which of those
+        // happens depends on the browser. A missing pdf colour is worse, because the report
+        // throws on a key that is not there and it throws while somebody is waiting for it.
+        //
+        // So every brand is held against every other. Not against a list written here,
+        // which would be a third place to add a colour to.
+        var brands = PowerPete.Analyzer.Export.Brand.Available;
+
+        brands.Should().HaveCountGreaterThan(1,
+            "this only means anything while there is more than one brand to disagree");
+
+        brands.Should().Contain(PowerPete.Analyzer.Export.Brand.Default,
+            "the default has to be one of the brands this build carries, or nothing starts");
+
+        var loaded = new Dictionary<string, (IReadOnlyDictionary<string, string> Ramp,
+            IReadOnlyDictionary<string, string> Copy)>(StringComparer.Ordinal);
+
+        foreach (var brand in brands)
+        {
+            PowerPete.Analyzer.Export.Brand.Use(brand);
+
+            PowerPete.Analyzer.Export.Brand.Id.Should().Be(brand,
+                "a brand file whose id is not its file name is one nobody can select");
+
+            // Every palette accessor, touched. They read by key and throw when the key is
+            // absent, so reading them all is the test.
+            _ = PowerPete.Analyzer.Export.Brand.Series.ToList();
+            _ = PowerPete.Analyzer.Export.Brand.Ink;
+            _ = PowerPete.Analyzer.Export.Brand.Muted;
+            _ = PowerPete.Analyzer.Export.Brand.Line;
+            _ = PowerPete.Analyzer.Export.Brand.Background;
+            _ = PowerPete.Analyzer.Export.Brand.BlueSoft;
+            _ = PowerPete.Analyzer.Export.Brand.DarkBlue;
+            _ = PowerPete.Analyzer.Export.Brand.DeepRed;
+
+            // And the assets, which are file names the server resolves. A brand naming a
+            // file that is not there is a page with a broken image where the logo goes.
+            foreach (var slot in new[] { "siteWordmark", "siteMark", "favicon" })
+            {
+                PowerPete.Analyzer.Export.Brand.AssetName(slot)
+                    .Should().NotBeNullOrWhiteSpace($"{brand} has to name its {slot}");
+            }
+
+            PowerPete.Analyzer.Export.Brand.WordmarkAspect.Should().BeGreaterThan(0f);
+            PowerPete.Analyzer.Export.Brand.WordmarkWhite.Should().NotBeEmpty();
+            PowerPete.Analyzer.Export.Brand.WordmarkBlue.Should().NotBeEmpty();
+
+            loaded[brand] = (PowerPete.Analyzer.Export.Brand.Ramp, PowerPete.Analyzer.Export.Brand.Copy);
+        }
+
+        PowerPete.Analyzer.Export.Brand.Use(PowerPete.Analyzer.Export.Brand.Default);
+
+        var slots = loaded.Values.SelectMany(entry => entry.Ramp.Keys).Distinct(StringComparer.Ordinal).ToList();
+        var sentences = loaded.Values.SelectMany(entry => entry.Copy.Keys).Distinct(StringComparer.Ordinal).ToList();
+
+        var missing = (
+            from brand in loaded
+            from slot in slots
+            where !brand.Value.Ramp.ContainsKey(slot)
+            select $"{brand.Key}: ramp {slot}")
+            .Concat(
+                from brand in loaded
+                from sentence in sentences
+                where !brand.Value.Copy.ContainsKey(sentence)
+                select $"{brand.Key}: copy {sentence}")
+            .ToList();
+
+        missing.Should().BeEmpty(
+            "a ramp slot one brand fills and another does not is a custom property that "
+            + "resolves to nothing, which is a page that keeps the colour of whichever brand "
+            + "it was looking at before");
+    }
+
+    [Fact]
     public void Every_category_is_named_in_every_language()
     {
         // The eleventh category will be added by somebody editing the rule catalogue, and

@@ -116,6 +116,22 @@ public static class DeploymentSettings
         ["Access:GlobalAdminContactEmail", "AdminContactEmail"],
         "The address shown to somebody the product will not let in.");
 
+    /// <summary>Whose livery the product wears.</summary>
+    /// <remarks>
+    /// One image, both brands. The palette, the wordmarks and the handful of sentences that
+    /// name a vendor come from brands/&lt;id&gt;.json, so switching is this setting and a
+    /// restart rather than a rebuild.
+    ///
+    /// Not deployed, because there is a default in the source and a deployment that says
+    /// nothing gets it. A required setting here would mean every existing container app
+    /// failing its health check the moment this shipped.
+    /// </remarks>
+    public static readonly DeploymentSetting Brand = new(
+        "Brand",
+        ["ANALYZER_BRAND"],
+        "Which brand to wear: powerpete or capgemini. Defaults to powerpete.",
+        Deployed: false);
+
     /// <summary>The name shown when there is no Entra application.</summary>
     public static readonly DeploymentSetting LocalSignInDisplayName = new(
         "LocalSignIn:DisplayName",

@@ -53,7 +53,7 @@ export function SupportPage({ deployed, isGlobalAdmin }: { deployed: boolean; is
             </div>
 
             <footer className="support-footer">
-              <strong>{t('support.capgemini-make-it-real')}</strong>
+              <strong>{t('support.product-name')}</strong>
               <span>{t('support.created-by')}</span>
               <div>
                 <a href="mailto:peter.ruiter@capgemini.com?subject=Solution%20Analyzer%20support">

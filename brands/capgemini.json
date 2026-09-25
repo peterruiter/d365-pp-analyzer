@@ -1,0 +1,93 @@
+{
+  "$comment": [
+    "One brand, everywhere. The palette the web app and the public site draw with, the",
+    "palette the PDF and the workbook draw with, the wordmarks, and the handful of",
+    "sentences that name a vendor rather than state a fact.",
+    "",
+    "Selected at run time by the Brand setting, so one image serves both and switching is",
+    "a restart rather than a rebuild. The same shape as brands/<id>.json in the Dynamics",
+    "365 Contact Center estimator, which is where this idea came from.",
+    "",
+    "What is NOT in here: anything true regardless of the colours. Where the product runs,",
+    "whose subscription holds the database and whose account signs you in are facts about",
+    "the deployment, and a brand file that could change them would be a brand file that",
+    "could make the privacy page lie."
+  ],
+  "id": "capgemini",
+  "name": "Capgemini",
+  "product": "Power Platform Solution Analyzer",
+  "site": "https://www.capgemini.com",
+  "tagline": "Make it real.",
+  "$rampComment": [
+    "The ramp every other token is derived from. The stylesheets define this same set as",
+    "their built-in default, so a missing or failed /brand.css leaves the product looking",
+    "like this rather than looking like nothing.",
+    "",
+    "The family names are roles, not hues: blue is the primary, lightblue the secondary,",
+    "turquoise the tertiary. A brand whose primary is purple still fills blue-600."
+  ],
+  "ramp": {
+    "blue-25": "#f0f7ff",
+    "blue-50": "#deeeff",
+    "blue-100": "#b6d8ff",
+    "blue-200": "#87beff",
+    "blue-300": "#52a0f5",
+    "blue-400": "#2080e0",
+    "blue-500": "#006ec8",
+    "blue-600": "#0058ab",
+    "blue-700": "#00438a",
+    "blue-800": "#003069",
+    "blue-900": "#001e47",
+    "lightblue-25": "#f0fbff",
+    "lightblue-50": "#def6fe",
+    "lightblue-100": "#b4eafd",
+    "lightblue-300": "#4ccbf7",
+    "lightblue-600": "#1db8f2",
+    "lightblue-700": "#0e9ccf",
+    "turquoise-400": "#33ddd9",
+    "turquoise-600": "#00d5d0",
+    "ink-700": "#1f2a4d",
+    "ink-900": "#121a38",
+    "hover-fill": "#c7ccd3",
+    "hover-ink": "#171a22"
+  },
+  "$pdfComment": [
+    "The report and the workbook. Separate from the ramp because print is not screen: the",
+    "cover band and the chart series are chosen for paper and for a projector, and the",
+    "series has to stay distinguishable in greyscale."
+  ],
+  "pdf": {
+    "blue": "#0058AB",
+    "darkBlue": "#121A38",
+    "lightBlue": "#1DB8F2",
+    "turquoise": "#00D5D0",
+    "yellow": "#FEB100",
+    "teal": "#00828E",
+    "terracotta": "#BE4D00",
+    "deepRed": "#8F3237",
+    "ink": "#121A38",
+    "muted": "#5F6B85",
+    "line": "#D9DFEA",
+    "background": "#F1F4F9",
+    "blueSoft": "#E6EEF7"
+  },
+  "assets": {
+    "wordmarkWhite": "capgemini-wordmark-white.png",
+    "wordmarkDark": "capgemini-wordmark-blue.png",
+    "wordmarkAspect": 0.32667,
+    "siteWordmark": "capgemini-white.svg",
+    "siteMark": "capgemini-spade-white.svg",
+    "favicon": "favicon.svg"
+  },
+  "$copyComment": [
+    "The sentences that name a vendor. Everything else in the product's text is the same",
+    "whoever ships it, and lives in the localisation bundles where it belongs."
+  ],
+  "copy": {
+    "titleSuffix": "Capgemini",
+    "eyebrow": "Capgemini · Power Platform",
+    "footerNote": "Capgemini · Power Platform Solution Analyzer",
+    "preparedBy": "Prepared by Capgemini. Estimates are ranges from a rule catalogue, not a quotation.",
+    "coverAlt": "Report cover with the Capgemini wordmark and the headline figures"
+  }
+}

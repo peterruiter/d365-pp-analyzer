@@ -881,9 +881,9 @@
 }
 
 .documentation-row:hover .documentation-get {
-  background: var(--cap-hover-fill);
-  border-color: var(--cap-hover-fill);
-  color: var(--cap-hover-ink);
+  background: var(--ramp-hover-fill);
+  border-color: var(--ramp-hover-fill);
+  color: var(--ramp-hover-ink);
 }
 
 /* The filter pills sat directly under the heading rule with nothing between

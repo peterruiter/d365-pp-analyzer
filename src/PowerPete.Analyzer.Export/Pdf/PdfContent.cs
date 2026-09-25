@@ -50,7 +50,7 @@ internal sealed class TableBuilder
     {
         for (var index = 0; index < titles.Length; index++)
         {
-            Add(new TableCell(titles[index].ToUpperInvariant(), rightAligned[index], Bold: true, Size: 7f, Colour: CapgeminiBrand.Muted));
+            Add(new TableCell(titles[index].ToUpperInvariant(), rightAligned[index], Bold: true, Size: 7f, Colour: Brand.Muted));
         }
 
         headerDrawn = true;
@@ -282,11 +282,11 @@ internal static class FlowContent
         // the whole visual grammar of these tables.
         if (cells.Any(cell => cell.Top))
         {
-            graphics.DrawLine(PdfTheme.Pen(CapgeminiBrand.DarkBlue, 0.8f), flow.Left, top, right, top);
+            graphics.DrawLine(PdfTheme.Pen(Brand.DarkBlue, 0.8f), flow.Left, top, right, top);
         }
 
         graphics.DrawLine(
-            isHeader ? PdfTheme.Pen(CapgeminiBrand.DarkBlue, 0.8f) : PdfTheme.Pen(CapgeminiBrand.Line, 0.4f),
+            isHeader ? PdfTheme.Pen(Brand.DarkBlue, 0.8f) : PdfTheme.Pen(Brand.Line, 0.4f),
             flow.Left,
             bottom,
             right,
@@ -299,7 +299,7 @@ internal static class FlowContent
     {
         Size = cell.Size,
         Bold = cell.Bold,
-        Colour = cell.Colour ?? CapgeminiBrand.Ink,
+        Colour = cell.Colour ?? Brand.Ink,
         LineHeight = 1.25f,
         Align = cell.Right ? PdfTextAlignment.Right : PdfTextAlignment.Left
     };

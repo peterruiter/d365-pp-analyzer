@@ -138,10 +138,10 @@ public sealed partial class AssessmentReportPdf
     private static void Header(PdfGraphics graphics, SizeF size, PdfTheme theme, Model model)
     {
         graphics.DrawString(model.EngagementName,
-            theme.Font(new TextStyle { Size = 8, Colour = CapgeminiBrand.Muted }),
-            PdfTheme.Brush(CapgeminiBrand.Muted), new PointF(48f, 24f));
+            theme.Font(new TextStyle { Size = 8, Colour = Brand.Muted }),
+            PdfTheme.Brush(Brand.Muted), new PointF(48f, 24f));
 
-        graphics.DrawLine(PdfTheme.Pen(CapgeminiBrand.Line, 0.5f),
+        graphics.DrawLine(PdfTheme.Pen(Brand.Line, 0.5f),
             new PointF(48f, 42f), new PointF(size.Width - 48f, 42f));
     }
 
@@ -159,10 +159,10 @@ public sealed partial class AssessmentReportPdf
     /// <param name="model">What to write.</param>
     private static void Footer(PdfGraphics graphics, SizeF size, PdfTheme theme, Model model)
     {
-        var style = new TextStyle { Size = 7.5f, Colour = CapgeminiBrand.Muted };
+        var style = new TextStyle { Size = 7.5f, Colour = Brand.Muted };
         var right = size.Width - 48f;
 
-        graphics.DrawLine(PdfTheme.Pen(CapgeminiBrand.Line, 0.5f),
+        graphics.DrawLine(PdfTheme.Pen(Brand.Line, 0.5f),
             new PointF(48f, size.Height - 30f), new PointF(right, size.Height - 30f));
 
         var origin = model.IsDemonstration
@@ -171,11 +171,11 @@ public sealed partial class AssessmentReportPdf
 
         graphics.DrawString(
             $"{model.EngagementName}  ·  {model.ProducedUtc:yyyy-MM-dd}  ·  {origin}",
-            theme.Font(style), PdfTheme.Brush(CapgeminiBrand.Muted),
+            theme.Font(style), PdfTheme.Brush(Brand.Muted),
             new RectangleF(48f, size.Height - 22f, size.Width - 96f - 150f, 12f));
 
-        var markHeight = FooterWordmarkWidth * CapgeminiBrand.WordmarkAspect;
-        using var mark = new MemoryStream(CapgeminiBrand.WordmarkBlue, writable: false);
+        var markHeight = FooterWordmarkWidth * Brand.WordmarkAspect;
+        using var mark = new MemoryStream(Brand.WordmarkBlue, writable: false);
         graphics.DrawImage(
             new PdfBitmap(mark), right - FooterWordmarkWidth, size.Height - 24f, FooterWordmarkWidth, markHeight);
 
@@ -230,15 +230,15 @@ public sealed partial class AssessmentReportPdf
         var top = -surface.HeaderHeight;
 
         graphics.DrawRectangle(
-            PdfTheme.Brush(CapgeminiBrand.DarkBlue), new RectangleF(0, top, width, band - top));
+            PdfTheme.Brush(Brand.DarkBlue), new RectangleF(0, top, width, band - top));
 
         // The rule under the band, which is the one piece of the brand that is load bearing
         // rather than decorative: it is what makes the band read as a header rather than as
         // a block of colour somebody left there.
-        graphics.DrawRectangle(PdfTheme.Brush(CapgeminiBrand.Blue), new RectangleF(0, band, width, 3.5f));
+        graphics.DrawRectangle(PdfTheme.Brush(Brand.Blue), new RectangleF(0, band, width, 3.5f));
 
-        var markHeight = CoverWordmarkWidth * CapgeminiBrand.WordmarkAspect;
-        using (var mark = new MemoryStream(CapgeminiBrand.WordmarkWhite, writable: false))
+        var markHeight = CoverWordmarkWidth * Brand.WordmarkAspect;
+        using (var mark = new MemoryStream(Brand.WordmarkWhite, writable: false))
         {
             graphics.DrawImage(new PdfBitmap(mark), 48f, 40f, CoverWordmarkWidth, markHeight);
         }
@@ -254,7 +254,7 @@ public sealed partial class AssessmentReportPdf
         var eyebrow = new TextStyle
         {
             Size = 9,
-            Colour = CapgeminiBrand.LightBlue,
+            Colour = Brand.LightBlue,
             Align = PdfTextAlignment.Right,
             LineHeight = 1f
         };
@@ -267,27 +267,27 @@ public sealed partial class AssessmentReportPdf
         var tagline = new TextStyle
         {
             Size = 15,
-            Colour = CapgeminiBrand.White,
+            Colour = Brand.White,
             Align = PdfTextAlignment.Right,
             LineHeight = 1f
         };
 
         graphics.DrawString(
-            CapgeminiBrand.Tagline,
+            Brand.Tagline,
             surface.Theme.Font(tagline), PdfTheme.Brush(tagline.Colour),
             new RectangleF(48f, 60f, width - 96f, 32f), PdfTheme.Format(tagline));
 
         graphics.DrawString(model.Text["report.platform", "Power Platform"],
-            surface.Theme.Font(new TextStyle { Size = 30, Bold = true, Colour = CapgeminiBrand.White }),
-            PdfTheme.Brush(CapgeminiBrand.White), new PointF(48f, 160f));
+            surface.Theme.Font(new TextStyle { Size = 30, Bold = true, Colour = Brand.White }),
+            PdfTheme.Brush(Brand.White), new PointF(48f, 160f));
 
         graphics.DrawString(model.Text["report.title", "Solution assessment"],
-            surface.Theme.Font(new TextStyle { Size = 30, Bold = true, Colour = CapgeminiBrand.LightBlue }),
-            PdfTheme.Brush(CapgeminiBrand.LightBlue), new PointF(48f, 200f));
+            surface.Theme.Font(new TextStyle { Size = 30, Bold = true, Colour = Brand.LightBlue }),
+            PdfTheme.Brush(Brand.LightBlue), new PointF(48f, 200f));
 
         graphics.DrawString(model.ClientName ?? model.EngagementName,
-            surface.Theme.Font(new TextStyle { Size = 14, Colour = CapgeminiBrand.White }),
-            PdfTheme.Brush(CapgeminiBrand.White), new PointF(48f, 254f));
+            surface.Theme.Font(new TextStyle { Size = 14, Colour = Brand.White }),
+            PdfTheme.Brush(Brand.White), new PointF(48f, 254f));
 
         // The extraction mode is on the cover rather than in an appendix. A report from an
         // offline export and one from a live connection answer different questions, and
@@ -295,12 +295,17 @@ public sealed partial class AssessmentReportPdf
         graphics.DrawString(
             $"{model.ProducedUtc:d MMMM yyyy}  ·  {model.Text["report.readVia", "read via"]} {model.ExtractionMode}"
             + $"  ·  {model.SolutionNames.Count} {model.Text["report.solutionsWord", "solution(s)"]}",
-            surface.Theme.Font(new TextStyle { Size = 10, Colour = CapgeminiBrand.LightBlue }),
-            PdfTheme.Brush(CapgeminiBrand.LightBlue), new PointF(48f, 282f));
+            surface.Theme.Font(new TextStyle { Size = 10, Colour = Brand.LightBlue }),
+            PdfTheme.Brush(Brand.LightBlue), new PointF(48f, 282f));
 
         graphics.DrawString(
-            model.Text["report.preparedBy", "Prepared by Capgemini. Estimates are ranges from a rule catalogue, not a quotation."],
-            surface.Theme.Font(new TextStyle { Size = 8, Colour = CapgeminiBrand.Muted }),
+            // The disclaimer is the same whoever ships this; only the vendor changes, so the
+            // vendor is a placeholder rather than the same sentence twice in six languages.
+            string.Format(
+                System.Globalization.CultureInfo.InvariantCulture,
+                model.Text["report.preparedBy", "Prepared by {0}. Estimates are ranges from a rule catalogue, not a quotation."],
+                Brand.Name),
+            surface.Theme.Font(new TextStyle { Size = 8, Colour = Brand.Muted }),
             PdfTheme.Brush("#9AA6BF"), new PointF(48f, 304f));
 
         // Said on the cover, in a colour nobody scrolls past. A demonstration report that
@@ -309,12 +314,12 @@ public sealed partial class AssessmentReportPdf
         if (model.IsDemonstration)
         {
             graphics.DrawRectangle(
-                PdfTheme.Brush(CapgeminiBrand.Terracotta), new RectangleF(48f, band - 42f, width - 96f, 26f));
+                PdfTheme.Brush(Brand.Terracotta), new RectangleF(48f, band - 42f, width - 96f, 26f));
 
             graphics.DrawString(
                 model.Text["report.sampleBanner", "Sample data. No client estate, environment or person is represented here."].ToUpperInvariant(),
-                surface.Theme.Font(new TextStyle { Size = 8, Bold = true, Colour = CapgeminiBrand.White, LineHeight = 1f }),
-                PdfTheme.Brush(CapgeminiBrand.White), new PointF(58f, band - 35f));
+                surface.Theme.Font(new TextStyle { Size = 8, Bold = true, Colour = Brand.White, LineHeight = 1f }),
+                PdfTheme.Brush(Brand.White), new PointF(58f, band - 35f));
         }
 
         CoverFigures(surface, page, model, band + 34f);
@@ -346,14 +351,14 @@ public sealed partial class AssessmentReportPdf
             (model.Text["report.componentsRead", "Components read"],
              model.Score.ComponentsTotal.ToString("N0", Culture),
              $"{model.SolutionNames.Count} {model.Text["report.solutionsWord", "solution(s)"]}",
-             CapgeminiBrand.Blue),
+             Brand.Blue),
 
             (model.Text["report.findings", "Findings"],
              model.Findings.Count.ToString("N0", Culture),
              model.Score.LowCodeShare is { } share
                  ? $"{share.ToString("P0", Culture)} {model.Text["report.lowCode", "Low code"].ToLowerInvariant()}"
                  : string.Empty,
-             CapgeminiBrand.LightBlue),
+             Brand.LightBlue),
 
             (model.Text["report.estimatedEffort", "Estimated effort"],
 
@@ -363,12 +368,12 @@ public sealed partial class AssessmentReportPdf
              // differently depending on which region the container happened to run in.
              string.Create(Culture, $"{model.Score.TotalLowHours:N0}–{model.Score.TotalHighHours:N0} h"),
              model.Text["report.aRange", "a range, not a quotation"],
-             CapgeminiBrand.Turquoise),
+             Brand.Turquoise),
 
             (model.Text["report.notAssessed", "Not assessed"],
              $"{model.Score.NotAssessed.Count} / {RuleCatalogue.All.Count}",
              model.Text["report.checksThatCouldNotRun", "checks that could not run"],
-             CapgeminiBrand.Terracotta)
+             Brand.Terracotta)
         };
 
         flow.Row(
@@ -382,7 +387,7 @@ public sealed partial class AssessmentReportPdf
                             panel.Text(label.ToUpperInvariant(), new TextStyle
                             {
                                 Size = 7.5f,
-                                Colour = CapgeminiBrand.Muted,
+                                Colour = Brand.Muted,
                                 LetterSpacing = 0.4f,
                                 LineHeight = 1.2f
                             });
@@ -394,18 +399,18 @@ public sealed partial class AssessmentReportPdf
                                 // and the row stops reading as a row.
                                 Size = 16,
                                 Bold = true,
-                                Colour = CapgeminiBrand.DarkBlue,
+                                Colour = Brand.DarkBlue,
                                 LineHeight = 1.25f
                             }, paddingTop: 5f);
 
                             panel.Text(note, new TextStyle
                             {
                                 Size = 7.5f,
-                                Colour = CapgeminiBrand.Muted,
+                                Colour = Brand.Muted,
                                 LineHeight = 1.3f
                             }, paddingTop: 3f);
                         },
-                        background: CapgeminiBrand.Background,
+                        background: Brand.Background,
                         padding: 12f,
                         accent: accent,
                         accentWidth: 3.5f));
@@ -434,7 +439,7 @@ public sealed partial class AssessmentReportPdf
     private static void CoverStatement(Flow flow, Model model)
     {
         flow.Text(model.Text["report.whatThisSays", "What this report says"].ToUpperInvariant(),
-            new TextStyle { Size = 8, Bold = true, Colour = CapgeminiBrand.Muted, LetterSpacing = 0.5f },
+            new TextStyle { Size = 8, Bold = true, Colour = Brand.Muted, LetterSpacing = 0.5f },
             paddingTop: 26f);
 
         var written = model.Written.TryGetValue("managementSummary", out var paragraph)
@@ -496,7 +501,7 @@ public sealed partial class AssessmentReportPdf
         IReadOnlyList<(Finding Finding, Estimate Estimate, DiscoveredComponent? Component)> worst)
     {
         flow.Text(model.Text["report.theWorstOfIt", "The worst of it"].ToUpperInvariant(),
-            new TextStyle { Size = 8, Bold = true, Colour = CapgeminiBrand.Muted, LetterSpacing = 0.5f },
+            new TextStyle { Size = 8, Bold = true, Colour = Brand.Muted, LetterSpacing = 0.5f },
             paddingTop: 22f);
 
         flow.Table(table =>
@@ -556,8 +561,8 @@ public sealed partial class AssessmentReportPdf
             flow.Reserve(210f);
         }
 
-        flow.Text(text, new TextStyle { Size = 18, Bold = true, Colour = CapgeminiBrand.DarkBlue });
-        flow.Rule(CapgeminiBrand.LightBlue, paddingTop: 6f, thickness: 2f, width: 60f);
+        flow.Text(text, new TextStyle { Size = 18, Bold = true, Colour = Brand.DarkBlue });
+        flow.Rule(Brand.LightBlue, paddingTop: 6f, thickness: 2f, width: 60f);
         flow.Gap(14f);
     }
 
@@ -590,15 +595,15 @@ public sealed partial class AssessmentReportPdf
             {
                 flow.Panel(
                     background: "#FFFFFF",
-                    border: CapgeminiBrand.Terracotta,
+                    border: Brand.Terracotta,
                     content: inner => inner.Text(caveat, new TextStyle { Size = 9.5f }),
                     paddingTop: 8f);
             }
         }
 
         flow.Panel(
-            background: CapgeminiBrand.Line,
-            border: CapgeminiBrand.Line,
+            background: Brand.Line,
+            border: Brand.Line,
             content: inner => inner.Text(
                 "Every estimate in this report is a range with a reason attached. There is no single figure " +
                 "anywhere, because a single figure is a decision somebody takes and owns rather than a number " +
@@ -638,7 +643,7 @@ public sealed partial class AssessmentReportPdf
             {
                 flow.Text($"·  {RuleName(model, entry.Finding)}: {entry.Finding.ComponentName ?? model.Text["report.solutionWide", "solution wide"]}",
                     new TextStyle { Size = 10, Bold = true }, paddingTop: 6f);
-                flow.Text(RuleText(model, entry.Finding, "why", entry.Finding.Rule?.Why), new TextStyle { Size = 9.5f, Colour = CapgeminiBrand.Muted });
+                flow.Text(RuleText(model, entry.Finding, "why", entry.Finding.Rule?.Why), new TextStyle { Size = 9.5f, Colour = Brand.Muted });
             }
         }
 
@@ -679,7 +684,7 @@ public sealed partial class AssessmentReportPdf
                 lowCodeShare.ToString("P0", Culture)));
 
         flow.Text(model.Score.RatioDefinition,
-            new TextStyle { Size = 9, Colour = CapgeminiBrand.Muted }, paddingTop: 6f);
+            new TextStyle { Size = 9, Colour = Brand.Muted }, paddingTop: 6f);
 
         // CountedByCraft, not ByCraft. Configuration and content are in the table below and
         // never in the circle, which is the whole argument of the ratio definition printed
@@ -722,7 +727,7 @@ public sealed partial class AssessmentReportPdf
                 table.Cell(row.Medium.ToString(Culture), right: true);
                 table.Cell(row.Complex.ToString(Culture), right: true);
                 table.Cell(row.Unrated.ToString(Culture), right: true,
-                    colour: row.Unrated > 0 ? CapgeminiBrand.Muted : null);
+                    colour: row.Unrated > 0 ? Brand.Muted : null);
                 table.Cell(row.Total.ToString(Culture), right: true, bold: true);
             }
         }, paddingTop: 12f);
@@ -735,7 +740,7 @@ public sealed partial class AssessmentReportPdf
                 string.Format(Culture, model.Text["report.unratedComponents",
                     "{0} components could not be measured and are counted as unrated rather than simple. "], unrated) +
                 "The two are different statements and folding one into the other flatters the estate.",
-                new TextStyle { Size = 9, Colour = CapgeminiBrand.Muted }, paddingTop: 8f);
+                new TextStyle { Size = 9, Colour = Brand.Muted }, paddingTop: 8f);
         }
     }
 
@@ -763,7 +768,7 @@ public sealed partial class AssessmentReportPdf
             "Dated means supported and no longer where the platform is going. Deprecated means Microsoft has " +
             "announced removal. Where this report calls something dated rather than deprecated, that is a reading " +
             "of where the investment has gone rather than a Microsoft statement, and it is marked as such per component.",
-            new TextStyle { Size = 9, Colour = CapgeminiBrand.Muted }, paddingTop: 10f);
+            new TextStyle { Size = 9, Colour = Brand.Muted }, paddingTop: 10f);
     }
 
     private static void Findings(Flow flow, Model model)
@@ -777,7 +782,7 @@ public sealed partial class AssessmentReportPdf
                 .Where(level => model.Score.FindingsBySeverity.ContainsKey(level))
                 .Select(level => (model.Text["severity." + level, level], (decimal)model.Score.FindingsBySeverity[level]))],
             value => value.ToString("0", Culture),
-            colour: CapgeminiBrand.Blue);
+            colour: Brand.Blue);
 
         if (model.Score.DebtByDomain.Count > 0)
         {
@@ -795,7 +800,7 @@ public sealed partial class AssessmentReportPdf
         {
             flow.Together(inner =>
             {
-                inner.Text(category.Key, new TextStyle { Size = 12, Bold = true, Colour = CapgeminiBrand.Blue });
+                inner.Text(category.Key, new TextStyle { Size = 12, Bold = true, Colour = Brand.Blue });
 
                 inner.Table(table =>
                 {
@@ -816,7 +821,7 @@ public sealed partial class AssessmentReportPdf
                     inner.Text(
                         string.Format(Culture, model.Text["report.andMoreInWorkbook",
                             "and {0} more, in the findings workbook."], category.Count() - 25),
-                        new TextStyle { Size = 9, Colour = CapgeminiBrand.Muted }, paddingTop: 4f);
+                        new TextStyle { Size = 9, Colour = Brand.Muted }, paddingTop: 4f);
                 }
             }, paddingTop: 14f);
         }
@@ -858,7 +863,7 @@ public sealed partial class AssessmentReportPdf
             flow.Together(inner =>
             {
                 inner.Text($"{band}  ({bands.GetValueOrDefault(band)} findings)",
-                    new TextStyle { Size = 12, Bold = true, Colour = CapgeminiBrand.Blue });
+                    new TextStyle { Size = 12, Bold = true, Colour = Brand.Blue });
 
                 inner.Table(table =>
                 {
@@ -926,7 +931,7 @@ public sealed partial class AssessmentReportPdf
                 string.Format(Culture, model.Text["report.bandOnlyEstimates",
                     "{0} of these were not estimated individually and carry the band for their rule. "], bandOnly) +
                 "A band is what you get before anybody has looked at the specific component.",
-                new TextStyle { Size = 9, Colour = CapgeminiBrand.Muted }, paddingTop: 8f);
+                new TextStyle { Size = 9, Colour = Brand.Muted }, paddingTop: 8f);
         }
     }
 
@@ -997,7 +1002,7 @@ public sealed partial class AssessmentReportPdf
         flow.Text(
             "An identity matters here. A report produced under an administrator account is not evidence that a " +
             "least privileged integration could have produced the same one.",
-            new TextStyle { Size = 9, Colour = CapgeminiBrand.Muted }, paddingTop: 10f);
+            new TextStyle { Size = 9, Colour = Brand.Muted }, paddingTop: 10f);
     }
 
     /// <summary>
@@ -1038,7 +1043,7 @@ public sealed partial class AssessmentReportPdf
             foreach (var axis in model.Maturity.Where(axis => !string.IsNullOrWhiteSpace(axis.Evidence)))
             {
                 flow.Text($"{AxisLabel(model, axis.Axis)}: {axis.Evidence}",
-                    new TextStyle { Size = 9, Colour = CapgeminiBrand.Muted }, paddingTop: 3f);
+                    new TextStyle { Size = 9, Colour = Brand.Muted }, paddingTop: 3f);
             }
         }
 
@@ -1118,10 +1123,10 @@ public sealed partial class AssessmentReportPdf
 
     private static string SeverityColour(Severity severity) => severity switch
     {
-        Severity.Critical => CapgeminiBrand.DeepRed,
-        Severity.High => CapgeminiBrand.Terracotta,
-        Severity.Medium => CapgeminiBrand.Ink,
-        _ => CapgeminiBrand.Muted
+        Severity.Critical => Brand.DeepRed,
+        Severity.High => Brand.Terracotta,
+        Severity.Medium => Brand.Ink,
+        _ => Brand.Muted
     };
 
     /// <summary>

@@ -66,7 +66,7 @@
   "report.perEngagementCosts": "Coûts par mission",
   "report.platform": "Power Platform",
   "report.position": "Position",
-  "report.preparedBy": "Préparé par Capgemini. Les estimations sont des fourchettes issues d'un catalogue de règles, pas un devis.",
+  "report.preparedBy": "Préparé par {0}. Les estimations sont des fourchettes issues d'un catalogue de règles, pas un devis.",
   "report.proCode": "Pro code",
   "report.produced": "Produit le",
   "report.readVia": "Lu via",

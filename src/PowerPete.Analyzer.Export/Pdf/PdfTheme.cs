@@ -19,8 +19,8 @@ internal sealed record TextStyle
     /// <summary>Whether to use the bold face. Ubuntu ships as two files, so this picks a file.</summary>
     public bool Bold { get; init; }
 
-    /// <summary>A hex colour from <see cref="CapgeminiBrand"/>.</summary>
-    public string Colour { get; init; } = CapgeminiBrand.Ink;
+    /// <summary>A hex colour from <see cref="Brand"/>.</summary>
+    public string Colour { get; init; } = Brand.Ink;
 
     /// <summary>Line spacing as a multiple of the point size, the way CSS expresses it.</summary>
     public float LineHeight { get; init; } = 1.45f;
@@ -60,7 +60,7 @@ internal sealed class PdfTheme : IDisposable
 
         // A fresh stream per face. Syncfusion reads the stream lazily while subsetting, so two
         // fonts cannot share one and rewind it under each other.
-        var stream = new MemoryStream(style.Bold ? CapgeminiBrand.UbuntuBold : CapgeminiBrand.UbuntuRegular, writable: false);
+        var stream = new MemoryStream(style.Bold ? Brand.UbuntuBold : Brand.UbuntuRegular, writable: false);
         faces.Add(stream);
 
         var font = new PdfTrueTypeFont(stream, style.Size, PdfFontStyle.Regular);

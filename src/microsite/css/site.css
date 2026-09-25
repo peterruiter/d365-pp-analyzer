@@ -8,22 +8,22 @@
    =========================================================================== */
 
 :root {
-  --cap-blue-25: #f0f7ff;
-  --cap-blue-50: #deeeff;
-  --cap-blue-100: #b6d8ff;
-  --cap-blue-300: #52a0f5;
-  --cap-blue-600: #0058ab;
-  --cap-blue-700: #00438a;
-  --cap-blue-900: #001e47;
+  --ramp-blue-25: #f0f7ff;
+  --ramp-blue-50: #deeeff;
+  --ramp-blue-100: #b6d8ff;
+  --ramp-blue-300: #52a0f5;
+  --ramp-blue-600: #0058ab;
+  --ramp-blue-700: #00438a;
+  --ramp-blue-900: #001e47;
 
-  --cap-lightblue-300: #4ccbf7;
-  --cap-lightblue-600: #1db8f2;
-  --cap-turquoise-600: #00d5d0;
+  --ramp-lightblue-300: #4ccbf7;
+  --ramp-lightblue-600: #1db8f2;
+  --ramp-turquoise-600: #00d5d0;
 
   /* Capgemini's own call to action hover: the outline fills pale and the text goes
      near black. Sampled from their site rather than invented. */
-  --cap-hover-fill: #c7ccd3;
-  --cap-hover-ink: #171a22;
+  --ramp-hover-fill: #c7ccd3;
+  --ramp-hover-ink: #171a22;
 
   --ink-900: #121a38;
   --ink-800: #18224a;
@@ -55,7 +55,7 @@
      rather than collapsing into one flat colour. */
   --surface: var(--grey-white);
   --surface-card: var(--grey-white);
-  --surface-tint: var(--cap-blue-25);
+  --surface-tint: var(--ramp-blue-25);
   --surface-ink: var(--ink-900);
   --surface-drawer: rgba(18, 26, 56, .96);
   --border: var(--grey-3);
@@ -130,7 +130,7 @@ a { color: inherit; }
 
 .eyebrow {
   margin: 0 0 14px;
-  color: var(--cap-lightblue-600);
+  color: var(--ramp-lightblue-600);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: .16em;
@@ -179,7 +179,7 @@ a { color: inherit; }
 
    The hover is theirs too, and it is the part that carries the brand: the outline fills
    with a pale grey and the text flips to near black, rather than the border merely
-   brightening. --cap-hover-fill and --cap-hover-ink are their values. */
+   brightening. --ramp-hover-fill and --ramp-hover-ink are their values. */
 .button {
   display: inline-flex;
   align-items: center;
@@ -199,10 +199,10 @@ a { color: inherit; }
   transition: background .2s var(--ease-out), border-color .2s var(--ease-out), color .2s var(--ease-out);
 }
 
-.button--primary { background: var(--cap-blue-600); border-color: var(--cap-blue-600); color: #fff; }
-.button--primary:hover { background: var(--cap-hover-fill); border-color: var(--cap-hover-fill); color: var(--cap-hover-ink); }
+.button--primary { background: var(--ramp-blue-600); border-color: var(--ramp-blue-600); color: #fff; }
+.button--primary:hover { background: var(--ramp-hover-fill); border-color: var(--ramp-hover-fill); color: var(--ramp-hover-ink); }
 .button--ghost { border-color: rgba(255, 255, 255, .75); color: #fff; }
-.button--ghost:hover { background: var(--cap-hover-fill); border-color: var(--cap-hover-fill); color: var(--cap-hover-ink); }
+.button--ghost:hover { background: var(--ramp-hover-fill); border-color: var(--ramp-hover-fill); color: var(--ramp-hover-ink); }
 
 /* -------------------------------------------------------------------- hero -- */
 
@@ -232,8 +232,8 @@ a { color: inherit; }
   pointer-events: none;
 }
 
-.hero::before { top: -260px; right: -180px; background: radial-gradient(circle, var(--cap-blue-600), transparent 65%); animation: drift-a 22s var(--ease-out) infinite alternate; }
-.hero::after { bottom: -320px; left: -220px; background: radial-gradient(circle, var(--cap-turquoise-600), transparent 65%); opacity: .32; animation: drift-b 26s var(--ease-out) infinite alternate; }
+.hero::before { top: -260px; right: -180px; background: radial-gradient(circle, var(--ramp-blue-600), transparent 65%); animation: drift-a 22s var(--ease-out) infinite alternate; }
+.hero::after { bottom: -320px; left: -220px; background: radial-gradient(circle, var(--ramp-turquoise-600), transparent 65%); opacity: .32; animation: drift-b 26s var(--ease-out) infinite alternate; }
 
 @keyframes drift-a { to { transform: translate3d(-70px, 60px, 0) scale(1.12); } }
 @keyframes drift-b { to { transform: translate3d(60px, -50px, 0) scale(1.08); } }
@@ -248,7 +248,7 @@ a { color: inherit; }
 
 .hero h1 em {
   font-style: normal;
-  background: linear-gradient(100deg, var(--cap-lightblue-300), var(--cap-turquoise-600));
+  background: linear-gradient(100deg, var(--ramp-lightblue-300), var(--ramp-turquoise-600));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -275,7 +275,7 @@ a { color: inherit; }
   width: 1px;
   height: 34px;
   margin: 12px auto 0;
-  background: linear-gradient(var(--cap-lightblue-600), transparent);
+  background: linear-gradient(var(--ramp-lightblue-600), transparent);
   animation: cue 2.4s var(--ease-out) infinite;
 }
 
@@ -300,7 +300,7 @@ section.on-ink h2, section.on-ink h3 { color: var(--on-dark-high); }
   padding: 32px;
   background: var(--surface-card);
   border: 1px solid var(--border);
-  border-top: 4px solid var(--cap-blue-600);
+  border-top: 4px solid var(--ramp-blue-600);
   box-shadow: var(--elev-1);
   transition: box-shadow .3s var(--ease-out), transform .3s var(--ease-out);
 }
@@ -309,8 +309,8 @@ section.on-ink h2, section.on-ink h3 { color: var(--on-dark-high); }
 .card h3 { margin-bottom: 12px; font-size: 21px; font-weight: 400; }
 .card p { font-size: 15px; }
 
-.card:nth-child(2) { border-top-color: var(--cap-lightblue-600); }
-.card:nth-child(3) { border-top-color: var(--cap-turquoise-600); }
+.card:nth-child(2) { border-top-color: var(--ramp-lightblue-600); }
+.card:nth-child(3) { border-top-color: var(--ramp-turquoise-600); }
 .card:nth-child(4) { border-top-color: var(--ink-900); }
 
 .stat { padding: 28px 0; border-top: 1px solid rgba(255, 255, 255, .16); }
@@ -601,9 +601,9 @@ body.menu-open { overflow: hidden; }
 }
 
 .flip-controls button:hover:not([disabled]) {
-  background: var(--cap-hover-fill);
-  border-color: var(--cap-hover-fill);
-  color: var(--cap-hover-ink);
+  background: var(--ramp-hover-fill);
+  border-color: var(--ramp-hover-fill);
+  color: var(--ramp-hover-ink);
 }
 
 .flip-controls button[disabled] { opacity: .3; cursor: default; }
@@ -634,8 +634,8 @@ body.menu-open { overflow: hidden; }
   transition: background .2s var(--ease-out), border-color .2s var(--ease-out), color .2s var(--ease-out);
 }
 
-.lang-picker button:hover { background: var(--cap-hover-fill); border-color: var(--cap-hover-fill); color: var(--cap-hover-ink); }
-.lang-picker button[aria-pressed="true"] { background: var(--cap-blue-600); border-color: var(--cap-blue-600); color: #fff; }
+.lang-picker button:hover { background: var(--ramp-hover-fill); border-color: var(--ramp-hover-fill); color: var(--ramp-hover-ink); }
+.lang-picker button[aria-pressed="true"] { background: var(--ramp-blue-600); border-color: var(--ramp-blue-600); color: #fff; }
 
 .lang-page { margin: 0; }
 .lang-page img { display: block; width: 100%; height: auto; border: 1px solid var(--border); box-shadow: var(--elev-3); }
@@ -681,7 +681,7 @@ body.menu-open { overflow: hidden; }
   padding: 22px 24px;
   background: var(--surface-card);
   border: 1px solid var(--border);
-  border-left: 3px solid var(--cap-blue-600);
+  border-left: 3px solid var(--ramp-blue-600);
   transition: box-shadow .25s var(--ease-out), transform .25s var(--ease-out);
 }
 
@@ -749,12 +749,12 @@ body.menu-open { overflow: hidden; }
 .reach--none { color: var(--caption); opacity: .75; }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .reach--full { color: var(--cap-turquoise-600); }
-  :root:not([data-theme="light"]) .reach--partial { color: var(--cap-lightblue-300); }
+  :root:not([data-theme="light"]) .reach--full { color: var(--ramp-turquoise-600); }
+  :root:not([data-theme="light"]) .reach--partial { color: var(--ramp-lightblue-300); }
 }
 
-:root[data-theme="dark"] .reach--full { color: var(--cap-turquoise-600); }
-:root[data-theme="dark"] .reach--partial { color: var(--cap-lightblue-300); }
+:root[data-theme="dark"] .reach--full { color: var(--ramp-turquoise-600); }
+:root[data-theme="dark"] .reach--partial { color: var(--ramp-lightblue-300); }
 
 /* How many checks sit in a category. Pushed to the bottom of the tile so the
    numbers line up across a row whatever length the description ran to. */
@@ -817,7 +817,7 @@ section.on-ink .card p { color: var(--on-dark-mid); }
    a band at the old value would be indistinguishable from the page around it and
    the rhythm of the layout would disappear. */
 
-:root { color-scheme: light; --cap-blue-500: #006ec8; }
+:root { color-scheme: light; --ramp-blue-500: #006ec8; }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -858,13 +858,13 @@ section.on-ink .card p { color: var(--on-dark-mid); }
    ramp. The report pages keep a white mount in both themes, because a scan of a
    printed page floating on a dark card reads as a rendering fault. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .button--primary { background: var(--cap-blue-500); }
-  :root:not([data-theme="light"]) .lang-picker button[aria-pressed="true"] { background: var(--cap-blue-500); border-color: var(--cap-blue-500); }
+  :root:not([data-theme="light"]) .button--primary { background: var(--ramp-blue-500); }
+  :root:not([data-theme="light"]) .lang-picker button[aria-pressed="true"] { background: var(--ramp-blue-500); border-color: var(--ramp-blue-500); }
   :root:not([data-theme="light"]) .flip-track img { background: #ffffff; }
 }
 
-:root[data-theme="dark"] .button--primary { background: var(--cap-blue-500); }
-:root[data-theme="dark"] .lang-picker button[aria-pressed="true"] { background: var(--cap-blue-500); border-color: var(--cap-blue-500); }
+:root[data-theme="dark"] .button--primary { background: var(--ramp-blue-500); }
+:root[data-theme="dark"] .lang-picker button[aria-pressed="true"] { background: var(--ramp-blue-500); border-color: var(--ramp-blue-500); }
 :root[data-theme="dark"] .flip-track img { background: #ffffff; }
 
 /* ============================================================ header utility ==
@@ -938,7 +938,7 @@ section.on-ink .card p { color: var(--on-dark-mid); }
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: var(--cap-lightblue-600);
+  background: var(--ramp-lightblue-600);
   transition: transform .28s var(--ease-out);
 }
 
@@ -1003,7 +1003,7 @@ section.on-ink .card p { color: var(--on-dark-mid); }
   cursor: pointer;
 }
 
-.lang-menu-close:hover { color: var(--cap-lightblue-300); }
+.lang-menu-close:hover { color: var(--ramp-lightblue-300); }
 
 .lang-option {
   display: flex;
@@ -1020,7 +1020,7 @@ section.on-ink .card p { color: var(--on-dark-mid); }
 .lang-option:hover { background: rgba(255, 255, 255, .07); }
 
 .lang-option[aria-current="true"] {
-  background: var(--cap-blue-600);
+  background: var(--ramp-blue-600);
   border-top-color: transparent;
 }
 
@@ -1064,7 +1064,7 @@ section.on-ink .card p { color: var(--on-dark-mid); }
   background: transparent;
 }
 
-.drawer-floor .lang-button:hover { background: transparent; color: var(--cap-lightblue-300); }
+.drawer-floor .lang-button:hover { background: transparent; color: var(--ramp-lightblue-300); }
 
 /* The utility controls move into the drawer at the width the navigation does,
    which is the whole point of putting them in its floor. */

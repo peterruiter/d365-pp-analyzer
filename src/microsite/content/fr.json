@@ -1,5 +1,5 @@
 {
-  "meta.title": "Power Platform Solution Analyzer — Capgemini",
+  "meta.title": "Power Platform Solution Analyzer",
   "meta.description": "Lit un parc Power Platform, dit ce qui relève de la dette technique et estime le coût de sa correction. En lecture seule. Nomme ce qu’il n’a pas pu vérifier.",
   "meta.ogDescription": "Une évaluation d’un parc Power Platform qui n’y écrit jamais et qui dit toujours ce qu’elle n’a pas pu lire.",
   "nav.what": "Ce qu’il fait",
@@ -19,7 +19,7 @@
   "theme.lightOn": "Thème clair actif",
   "theme.darkOn": "Thème sombre actif",
   "theme.toggle": "Basculer entre clair et sombre",
-  "hero.eyebrow": "Capgemini · Power Platform",
+  "hero.eyebrow": "Power Platform",
   "hero.headline": "Savoir ce qu’il y a vraiment là-dedans.",
   "hero.lede": "Il lit un parc Power Platform, vous dit ce qui relève de la dette technique et ce que coûterait sa correction, et nomme chaque vérification qu’il n’a pas pu exécuter. Il n’écrit jamais dans l’environnement.",
   "hero.primary": "Se connecter",
@@ -120,7 +120,7 @@
   "limits.card3.body": "Il n’y a pas de mode de remédiation et il n’en est pas prévu. Tout ce qu’il produit est une recommandation, un rapport ou un élément de travail pour quelqu’un qui fera le travail lui-même.",
   "closing.heading": "Savoir ce qu’il y a vraiment là-dedans.",
   "closing.body": "Connectez-vous avec votre compte Capgemini. Un parc de démonstration vous attend, avec des constats que le produit a lui-même produits, de quoi regarder avant qu’un client ne vous ait rien donné.",
-  "footer.note": "Capgemini · Power Platform Solution Analyzer",
+  "footer.note": "Power Platform Solution Analyzer",
   "privacyBlock.eyebrow": "Confidentialité",
   "privacyPage.title": "Confidentialité — Power Platform Solution Analyzer",
   "privacyPage.description": "Ce que ce produit lit, ce qu’il écarte, ce qu’il refuse de faire, et où tout est conservé.",
@@ -173,7 +173,7 @@
   "report.page6": "La feuille de route. Chaque constat placé selon le type de problème.",
   "report.page7": "Maturité fonctionnelle, évaluée en atelier. Deux axes restent non évalués.",
   "report.page8": "Les scénarios, dans les mots du client.",
-  "alt.pageCover": "Couverture avec la marque Capgemini et les chiffres clés",
+  "alt.pageCover": "Couverture du rapport avec le logotype et les chiffres clés",
   "alt.pageSummary": "La page de synthèse",
   "alt.pageEstate": "Un diagramme en barres des composants par domaine",
   "alt.pageComplexity": "Un anneau du ratio low code et une répartition de la complexité",
@@ -189,5 +189,6 @@
   "product.screen3": "Le backlog : un epic par catégorie, avec des critères d'acceptation avant publication.",
   "alt.screenOverview": "L'écran de vue d'ensemble du produit",
   "alt.screenFindings": "Le tableau des constats",
-  "alt.screenBacklog": "L'arbre du backlog"
+  "alt.screenBacklog": "L'arbre du backlog",
+  "brand.name": "Power Platform Solution Analyzer"
 }

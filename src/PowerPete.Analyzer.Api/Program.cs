@@ -75,6 +75,11 @@ var connectionString = builder.Configuration.GetConnectionString("Analyzer")
 string? Setting(DeploymentSetting setting) =>
     DeploymentSettings.Read(setting, name => builder.Configuration[name]);
 
+// Before anything renders. The report, the workbook and the stylesheet below all read
+// Brand, and a brand chosen after the first request would mean the first client to ask for
+// a report got the wrong one.
+PowerPete.Analyzer.Export.Brand.Use(Setting(DeploymentSettings.Brand));
+
 var keyVaultUri = Setting(DeploymentSettings.KeyVaultUri);
 var initialAdmin = Setting(DeploymentSettings.InitialGlobalAdmin);
 var adminContact = Setting(DeploymentSettings.AdminContact) ?? string.Empty;
@@ -1219,6 +1224,80 @@ app.MapGet("/api/engagements/{engagementId:guid}/reports/{file}",
 // Served from the contract rather than described again here. extraction-sources.json says it
 // generates the connection wizard and the capability matrix, and the moment this file carried
 // its own copy the screen and the report would start disagreeing about what a mode reaches.
+// The palette, as a stylesheet.
+//
+// Everything the web app and the public site draw with derives from one ramp, which both
+// stylesheets declare on :root as their built-in default. This redefines those same custom
+// properties from the brand file, and it is linked after the stylesheet, so a brand is
+// twenty-odd values and nothing else in the CSS has to know a second brand exists.
+//
+// Anonymous on purpose. It is linked from the sign-in page and from every page of the
+// public site, both of which are read by people who have not signed in, and a stylesheet
+// behind authentication is a sign-in page with no colours on it.
+app.MapGet("/brand.css", () =>
+{
+    var lines = PowerPete.Analyzer.Export.Brand.Ramp
+        .Select(entry => $"  --ramp-{entry.Key}: {entry.Value};");
+
+    var css = $"/* {PowerPete.Analyzer.Export.Brand.Name}. Generated from brands/{PowerPete.Analyzer.Export.Brand.Id}.json. */\n"
+        + ":root {\n" + string.Join("\n", lines) + "\n}\n";
+
+    // Not cached. The whole point of choosing the brand at run time is that a restart
+    // changes it, and a stylesheet a browser held for a year would mean it did not.
+    return Results.Text(css, "text/css", System.Text.Encoding.UTF8);
+}).AllowAnonymous();
+
+// The brand's marks, at paths that do not change when the brand does.
+//
+// The alternative was a placeholder the microsite build fills in, which would have baked
+// the logo into the image and left a restart changing the colours but not the wordmark.
+// The alternative to that was swapping the src from script on load, which is a flash of
+// the wrong logo on every page view. A fixed path the server resolves is neither.
+//
+// Anonymous, for the same reason the stylesheet is: the sign-in page carries the wordmark
+// and is read by people who have not signed in.
+app.MapGet("/brand/{mark}", (string mark, IWebHostEnvironment host) =>
+{
+    var file = mark switch
+    {
+        "wordmark" => PowerPete.Analyzer.Export.Brand.AssetName("siteWordmark"),
+        "mark" => PowerPete.Analyzer.Export.Brand.AssetName("siteMark"),
+        "favicon" => PowerPete.Analyzer.Export.Brand.AssetName("favicon"),
+        _ => null
+    };
+
+    if (file is null) return Results.NotFound();
+
+    // Out of the same folder the public site's own images come from, which is where the
+    // microsite build puts every brand's assets. Path.GetFileName because the value comes
+    // from a brand file and a brand file should not be able to read /etc/passwd.
+    var path = Path.Combine(host.WebRootPath ?? "wwwroot", "assets", Path.GetFileName(file));
+
+    if (!File.Exists(path)) return Results.NotFound();
+
+    var type = Path.GetExtension(path).ToLowerInvariant() switch
+    {
+        ".svg" => "image/svg+xml",
+        ".png" => "image/png",
+        ".jpg" or ".jpeg" => "image/jpeg",
+        _ => "application/octet-stream"
+    };
+
+    // No caching, so a restart that changes the brand changes the logo with it.
+    return Results.File(path, type);
+}).AllowAnonymous();
+
+// What the product is called and who by, for the shell and the public site.
+app.MapGet("/api/brand", () => Results.Ok(new
+{
+    id = PowerPete.Analyzer.Export.Brand.Id,
+    name = PowerPete.Analyzer.Export.Brand.Name,
+    product = PowerPete.Analyzer.Export.Brand.Product,
+    site = PowerPete.Analyzer.Export.Brand.Site,
+    tagline = PowerPete.Analyzer.Export.Brand.Tagline,
+    copy = PowerPete.Analyzer.Export.Brand.Copy
+})).AllowAnonymous();
+
 app.MapGet("/api/extraction-modes", () =>
 {
     var path = ContractFiles.Path("extraction-sources.json");

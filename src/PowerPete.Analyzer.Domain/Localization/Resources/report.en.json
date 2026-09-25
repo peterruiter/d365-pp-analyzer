@@ -66,7 +66,7 @@
   "report.perEngagementCosts": "Per engagement costs",
   "report.platform": "Power Platform",
   "report.position": "Position",
-  "report.preparedBy": "Prepared by Capgemini. Estimates are ranges from a rule catalogue, not a quotation.",
+  "report.preparedBy": "Prepared by {0}. Estimates are ranges from a rule catalogue, not a quotation.",
   "report.proCode": "Pro code",
   "report.produced": "Produced",
   "report.readVia": "Read via",

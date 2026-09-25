@@ -25,7 +25,14 @@
 </script>
 
 <link rel="stylesheet" href="{{asset.css}}">
-<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/assets/favicon.svg">
-<meta name="theme-color" content="#0058ab">
+
+<!-- After the site's own stylesheet, which declares the ramp this overrides. The server
+     resolves both this and the marks below from whichever brand it is set to, so a restart
+     changes the livery without rebuilding the site. -->
+<link rel="stylesheet" href="/brand.css">
+<link rel="icon" href="/brand/favicon">
+<link rel="apple-touch-icon" href="/brand/favicon">
+
+<!-- Brand neutral, because a browser reads this before any stylesheet loads. -->
+<meta name="theme-color" content="#ffffff">
 {{alternates}}

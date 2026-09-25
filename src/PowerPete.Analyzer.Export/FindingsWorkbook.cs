@@ -120,7 +120,7 @@ public sealed class FindingsWorkbook
         {
             sheet.Cell(row, 1).Value = model.Text["inventory.caveats", "Before quoting anything in this workbook"];
             sheet.Cell(row, 1).Style.Font.Bold = true;
-            sheet.Cell(row, 1).Style.Font.FontColor = XLColor.FromHtml(CapgeminiBrand.Terracotta);
+            sheet.Cell(row, 1).Style.Font.FontColor = XLColor.FromHtml(Brand.Terracotta);
             row++;
 
             foreach (var caveat in model.Score.Caveats)
@@ -270,7 +270,7 @@ public sealed class FindingsWorkbook
             {
                 // Said in the cell rather than left as a word nobody recognises. This is the
                 // column people will ask about, and the answer is not "simple".
-                sheet.Cell(row, 8).Style.Font.FontColor = XLColor.FromHtml(CapgeminiBrand.Muted);
+                sheet.Cell(row, 8).Style.Font.FontColor = XLColor.FromHtml(Brand.Muted);
                 sheet.Cell(row, 8).GetComment().AddText("Not measurable from what this extraction reached. Not the same as simple.");
             }
 
@@ -303,7 +303,7 @@ public sealed class FindingsWorkbook
         {
             sheet.Cell(header, column + 1).Value = labels[column];
             sheet.Cell(header, column + 1).Style.Font.Bold = true;
-            sheet.Cell(header, column + 1).Style.Fill.BackgroundColor = XLColor.FromHtml(CapgeminiBrand.DarkBlue);
+            sheet.Cell(header, column + 1).Style.Fill.BackgroundColor = XLColor.FromHtml(Brand.DarkBlue);
             sheet.Cell(header, column + 1).Style.Font.FontColor = XLColor.White;
         }
 
@@ -380,7 +380,7 @@ public sealed class FindingsWorkbook
             cell.Value = labels[column];
             cell.Style.Font.Bold = true;
             cell.Style.Font.FontColor = XLColor.White;
-            cell.Style.Fill.BackgroundColor = XLColor.FromHtml(CapgeminiBrand.DarkBlue);
+            cell.Style.Fill.BackgroundColor = XLColor.FromHtml(Brand.DarkBlue);
         }
     }
 
@@ -400,10 +400,10 @@ public sealed class FindingsWorkbook
 
     private static XLColor SeverityColour(Severity severity) => severity switch
     {
-        Severity.Critical => XLColor.FromHtml(CapgeminiBrand.DeepRed),
-        Severity.High => XLColor.FromHtml(CapgeminiBrand.Terracotta),
-        Severity.Medium => XLColor.FromHtml(CapgeminiBrand.Ink),
-        _ => XLColor.FromHtml(CapgeminiBrand.Muted)
+        Severity.Critical => XLColor.FromHtml(Brand.DeepRed),
+        Severity.High => XLColor.FromHtml(Brand.Terracotta),
+        Severity.Medium => XLColor.FromHtml(Brand.Ink),
+        _ => XLColor.FromHtml(Brand.Muted)
     };
 
     /// <summary>

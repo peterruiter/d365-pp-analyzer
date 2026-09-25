@@ -6,30 +6,30 @@
    tokens below give them meaning, and rules use those, so a brand refresh is an
    edit here rather than a search through eight hundred lines. */
 :root {
-  --cap-blue-25: #f0f7ff;
-  --cap-blue-50: #deeeff;
-  --cap-blue-100: #b6d8ff;
-  --cap-blue-200: #87beff;
-  --cap-blue-300: #52a0f5;
-  --cap-blue-400: #2080e0;
-  --cap-blue-500: #006ec8;
-  --cap-blue-600: #0058ab;
-  --cap-blue-700: #00438a;
-  --cap-blue-800: #003069;
-  --cap-blue-900: #001e47;
+  --ramp-blue-25: #f0f7ff;
+  --ramp-blue-50: #deeeff;
+  --ramp-blue-100: #b6d8ff;
+  --ramp-blue-200: #87beff;
+  --ramp-blue-300: #52a0f5;
+  --ramp-blue-400: #2080e0;
+  --ramp-blue-500: #006ec8;
+  --ramp-blue-600: #0058ab;
+  --ramp-blue-700: #00438a;
+  --ramp-blue-800: #003069;
+  --ramp-blue-900: #001e47;
 
-  --cap-lightblue-25: #f0fbff;
-  --cap-lightblue-50: #def6fe;
-  --cap-lightblue-100: #b4eafd;
-  --cap-lightblue-300: #4ccbf7;
-  --cap-lightblue-600: #1db8f2;
-  --cap-lightblue-700: #0e9ccf;
+  --ramp-lightblue-25: #f0fbff;
+  --ramp-lightblue-50: #def6fe;
+  --ramp-lightblue-100: #b4eafd;
+  --ramp-lightblue-300: #4ccbf7;
+  --ramp-lightblue-600: #1db8f2;
+  --ramp-lightblue-700: #0e9ccf;
 
-  --cap-turquoise-400: #33ddd9;
-  --cap-turquoise-600: #00d5d0;
+  --ramp-turquoise-400: #33ddd9;
+  --ramp-turquoise-600: #00d5d0;
 
-  --cap-ink-900: #121a38;
-  --cap-ink-700: #1f2a4d;
+  --ramp-ink-900: #121a38;
+  --ramp-ink-700: #1f2a4d;
 
   --grey-white: #ffffff;
   --grey-2: #f4f4f4;
@@ -43,7 +43,7 @@
 
 :root {
   color-scheme: light;
-  --cp-bg: var(--cap-blue-25);
+  --cp-bg: var(--ramp-blue-25);
   --cp-bg-elevated: #ffffff;
   --cp-surface: #ffffff;
   --cp-surface-soft: var(--grey-2);
@@ -52,14 +52,14 @@
   --cp-text: #242424;
   --cp-text-muted: var(--grey-8);
   --cp-text-soft: var(--grey-7);
-  --cp-accent: var(--cap-blue-600);
-  --cp-accent-hover: var(--cap-blue-700);
+  --cp-accent: var(--ramp-blue-600);
+  --cp-accent-hover: var(--ramp-blue-700);
   --cp-accent-soft: rgba(0, 88, 171, 0.08);
   --cp-accent-fg: #ffffff;
   --cp-success: #16a34a;
   --cp-danger: #dc2626;
   --cp-warning: #f59e0b;
-  --cp-link: var(--cap-blue-600);
+  --cp-link: var(--ramp-blue-600);
   --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
   --cp-overlay: rgba(255, 255, 255, 0.8);
   --cp-panel: rgba(255, 255, 255, 0.86);
@@ -88,12 +88,12 @@
   --cp-auth-wash: linear-gradient(180deg, #edf4fb 0%, #f7f9fc 100%);
   --cp-code-bg: #102a43;
   --cp-code-fg: #f4f7fb;
-  --brand-blue: var(--cap-blue-600);
-  --brand-blue-dark: var(--cap-blue-700);
-  --brand-cyan: var(--cap-lightblue-600);
+  --brand-blue: var(--ramp-blue-600);
+  --brand-blue-dark: var(--ramp-blue-700);
+  --brand-cyan: var(--ramp-lightblue-600);
   --brand-orange: var(--brand-cyan);
-  --brand-ink: var(--cap-ink-900);
-  --brand-cloud: var(--cap-blue-50);
+  --brand-ink: var(--ramp-ink-900);
+  --brand-cloud: var(--ramp-blue-50);
   font-family: "Ubuntu", Verdana, "Segoe UI", system-ui, sans-serif;
   color: var(--cp-text);
   background: var(--cp-bg);
@@ -223,7 +223,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--brand-orange); 
   cursor: pointer;
 }
 .language-picker select:hover { background-color: rgba(255, 255, 255, .14); }
-.language-picker option { background: var(--cap-ink-900); color: #fff; }
+.language-picker option { background: var(--ramp-ink-900); color: #fff; }
 .language-picker select:hover, .language-picker select:focus-visible { border-color: var(--cp-on-brand); }
 .language-picker option { color: var(--brand-ink); background: var(--cp-surface); }
 @media (max-width: 680px) { .language-picker select { padding: 4px 6px; font-size: 11px; } }
@@ -334,7 +334,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--brand-orange); 
 
 /* A focus ring that belongs to the palette, and is visible on every surface. */
 :where(button, a, input, select, textarea):focus-visible {
-  outline: 2px solid var(--cap-blue-600);
+  outline: 2px solid var(--ramp-blue-600);
   outline-offset: 2px;
 }
 
@@ -358,19 +358,19 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--brand-orange); 
 /* The header band in ink rather than brand blue.
    The report's cover band is ink navy and the microsite's dark surfaces are the
    same, so a bright blue bar was the one place the product disagreed with both. */
-.topbar { background: var(--cap-ink-900); }
+.topbar { background: var(--ramp-ink-900); }
 
 /* Metric cards take the accent sequence the report's cover tiles use, in the same
    order, so a reader who has both open sees the same four measures marked the same
    four ways rather than one grey row and one coloured one. */
 .metrics-grid > :nth-child(1) .metric-card,
-.metrics-grid > :nth-child(1).metric-card { border-top-color: var(--cap-ink-900); }
+.metrics-grid > :nth-child(1).metric-card { border-top-color: var(--ramp-ink-900); }
 .metrics-grid > :nth-child(2) .metric-card,
-.metrics-grid > :nth-child(2).metric-card { border-top-color: var(--cap-blue-600); }
+.metrics-grid > :nth-child(2).metric-card { border-top-color: var(--ramp-blue-600); }
 .metrics-grid > :nth-child(3) .metric-card,
-.metrics-grid > :nth-child(3).metric-card { border-top-color: var(--cap-lightblue-600); }
+.metrics-grid > :nth-child(3).metric-card { border-top-color: var(--ramp-lightblue-600); }
 .metrics-grid > :nth-child(4) .metric-card,
-.metrics-grid > :nth-child(4).metric-card { border-top-color: var(--cap-turquoise-600); }
+.metrics-grid > :nth-child(4).metric-card { border-top-color: var(--ramp-turquoise-600); }
 
 /* The page sits on the palest blue rather than a grey, which is what lifts the
    white cards off it. Through the token, so the dark theme can move it. */
@@ -414,11 +414,11 @@ body { background: var(--cp-bg); }
     --cp-text: #e8edf6;
     --cp-text-muted: #b3bed4;
     --cp-text-soft: #8c99b5;
-    --cp-accent: var(--cap-blue-300);
-    --cp-accent-hover: var(--cap-lightblue-300);
+    --cp-accent: var(--ramp-blue-300);
+    --cp-accent-hover: var(--ramp-lightblue-300);
     --cp-accent-soft: rgba(82, 160, 245, .16);
     --cp-accent-fg: #06101f;
-    --cp-link: var(--cap-blue-300);
+    --cp-link: var(--ramp-blue-300);
     --cp-success: #4ade80;
     --cp-danger: #f87171;
     --cp-warning: #fbbf24;
@@ -453,11 +453,11 @@ body { background: var(--cp-bg); }
   --cp-text: #e8edf6;
   --cp-text-muted: #b3bed4;
   --cp-text-soft: #8c99b5;
-  --cp-accent: var(--cap-blue-300);
-  --cp-accent-hover: var(--cap-lightblue-300);
+  --cp-accent: var(--ramp-blue-300);
+  --cp-accent-hover: var(--ramp-lightblue-300);
   --cp-accent-soft: rgba(82, 160, 245, .16);
   --cp-accent-fg: #06101f;
-  --cp-link: var(--cap-blue-300);
+  --cp-link: var(--ramp-blue-300);
   --cp-success: #4ade80;
   --cp-danger: #f87171;
   --cp-warning: #fbbf24;
@@ -492,12 +492,12 @@ body { background: var(--cp-bg); }
    the element it belongs to. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) :where(button, a, input, select, textarea):focus-visible {
-    outline-color: var(--cap-lightblue-300);
+    outline-color: var(--ramp-lightblue-300);
   }
 }
 
 :root[data-theme="dark"] :where(button, a, input, select, textarea):focus-visible {
-  outline-color: var(--cap-lightblue-300);
+  outline-color: var(--ramp-lightblue-300);
 }
 
 /* ============================================================ theme toggle ==
@@ -546,7 +546,7 @@ body { background: var(--cp-bg); }
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: var(--cap-lightblue-600);
+  background: var(--ramp-lightblue-600);
   transition: transform .28s var(--ease-out);
 }
 
@@ -571,8 +571,8 @@ body { background: var(--cp-bg); }
    button class and a pill around them would be wrong. */
 
 :root {
-  --cap-hover-fill: #c7ccd3;
-  --cap-hover-ink: #171a22;
+  --ramp-hover-fill: #c7ccd3;
+  --ramp-hover-ink: #171a22;
 }
 
 .primary-button,
@@ -607,9 +607,9 @@ body { background: var(--cp-bg); }
 .auth-signin:hover,
 .export-actions .primary-button:hover,
 .export-actions .secondary-button:hover {
-  background: var(--cap-hover-fill);
-  border-color: var(--cap-hover-fill);
-  color: var(--cap-hover-ink);
+  background: var(--ramp-hover-fill);
+  border-color: var(--ramp-hover-fill);
+  color: var(--ramp-hover-ink);
   text-decoration: none;
 }
 

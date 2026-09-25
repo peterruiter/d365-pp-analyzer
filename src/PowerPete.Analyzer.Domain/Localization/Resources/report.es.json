@@ -66,7 +66,7 @@
   "report.perEngagementCosts": "Costes por proyecto",
   "report.platform": "Power Platform",
   "report.position": "Posición",
-  "report.preparedBy": "Elaborado por Capgemini. Las estimaciones son rangos de un catálogo de reglas, no un presupuesto.",
+  "report.preparedBy": "Preparado por {0}. Las estimaciones son rangos de un catálogo de reglas, no un presupuesto.",
   "report.proCode": "Pro code",
   "report.produced": "Producido el",
   "report.readVia": "Leído mediante",

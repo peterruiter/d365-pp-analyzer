@@ -3,16 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0058ab" />
+    <!-- The light theme's page background. Brand neutral on purpose: a browser reads this
+         before any stylesheet loads, so it cannot come from /brand.css, and a wrong colour
+         for a quarter of a second is worse than a neutral one. -->
+    <meta name="theme-color" content="#ffffff" />
     <!-- Shared with the public site rather than duplicated: one container serves both, and
          two copies of the same mark is how one of them ends up a year out of date. -->
     <!-- Relative, so it resolves under /app/ wherever the product is mounted. An
          absolute /assets path pointed at a file nothing put there, and the tab showed
          the browser default. -->
-    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="favicon.svg" />
+    <link rel="icon" href="/brand/favicon" />
+    <link rel="apple-touch-icon" href="/brand/favicon" />
+
+    <!-- After the bundle's own stylesheet, which declares the ramp this overrides. The
+         product is styled without it; this decides whose colours those are. -->
+    <link rel="stylesheet" href="/brand.css" />
     <meta name="description" content="Reads a Power Platform estate, says what is technical debt, and estimates what it would cost to fix." />
-    <title>Power Platform Solution Analyzer | Capgemini</title>
+    <title>Power Platform Solution Analyzer</title>
   </head>
   <body>
     <div id="root"></div>

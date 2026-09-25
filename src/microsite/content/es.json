@@ -1,5 +1,5 @@
 {
-  "meta.title": "Power Platform Solution Analyzer — Capgemini",
+  "meta.title": "Power Platform Solution Analyzer",
   "meta.description": "Lee un parque de Power Platform, dice qué es deuda técnica y estima cuánto costaría corregirla. Solo lectura. Nombra lo que no pudo comprobar.",
   "meta.ogDescription": "Una evaluación de un parque de Power Platform que nunca escribe en él y siempre dice qué no pudo leer.",
   "nav.what": "Qué hace",
@@ -19,7 +19,7 @@
   "theme.lightOn": "Tema claro activo",
   "theme.darkOn": "Tema oscuro activo",
   "theme.toggle": "Cambiar entre claro y oscuro",
-  "hero.eyebrow": "Capgemini · Power Platform",
+  "hero.eyebrow": "Power Platform",
   "hero.headline": "Descubra qué hay realmente ahí dentro.",
   "hero.lede": "Lee un parque de Power Platform, le dice qué es deuda técnica y cuánto costaría corregirla, y nombra cada comprobación que no pudo ejecutar. Nunca escribe en el entorno.",
   "hero.primary": "Iniciar sesión",
@@ -120,7 +120,7 @@
   "limits.card3.body": "No hay modo de remediación ni se planea añadirlo. Todo lo que produce es una recomendación, un informe o un elemento de trabajo para quien hará el trabajo por su cuenta.",
   "closing.heading": "Descubra qué hay realmente ahí dentro.",
   "closing.body": "Inicie sesión con su cuenta de Capgemini. Le espera un parque de demostración, con hallazgos que el propio producto generó, para que haya algo que mirar antes de que un cliente le haya dado nada.",
-  "footer.note": "Capgemini · Power Platform Solution Analyzer",
+  "footer.note": "Power Platform Solution Analyzer",
   "privacyBlock.eyebrow": "Privacidad",
   "privacyPage.title": "Privacidad — Power Platform Solution Analyzer",
   "privacyPage.description": "Qué lee este producto, qué descarta, qué se niega a hacer y dónde se guarda todo.",
@@ -173,7 +173,7 @@
   "report.page6": "La hoja de ruta. Cada hallazgo situado según el tipo de problema.",
   "report.page7": "Madurez funcional, puntuada en un taller. Dos ejes quedan sin puntuar.",
   "report.page8": "Escenarios, en las palabras del propio cliente.",
-  "alt.pageCover": "Portada con la marca Capgemini y las cifras principales",
+  "alt.pageCover": "Portada del informe con el logotipo y las cifras principales",
   "alt.pageSummary": "La página del resumen ejecutivo",
   "alt.pageEstate": "Un gráfico de barras de componentes por dominio",
   "alt.pageComplexity": "Un anillo de la proporción low code y un desglose de complejidad",
@@ -189,5 +189,6 @@
   "product.screen3": "El backlog: un epic por categoría, con criterios de aceptación antes de publicar.",
   "alt.screenOverview": "La pantalla de vista general del producto",
   "alt.screenFindings": "La tabla de hallazgos",
-  "alt.screenBacklog": "El árbol del backlog"
+  "alt.screenBacklog": "El árbol del backlog",
+  "brand.name": "Power Platform Solution Analyzer"
 }
