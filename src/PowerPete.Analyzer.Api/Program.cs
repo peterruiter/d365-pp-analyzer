@@ -1255,7 +1255,11 @@ app.MapGet("/brand.css", () =>
         .Select(entry => $"  --ramp-{entry.Key}: {entry.Value};");
 
     var css = $"/* {PowerPete.Analyzer.Export.Brand.Name}. Generated from brands/{PowerPete.Analyzer.Export.Brand.Id}.json. */\n"
-        + ":root {\n" + string.Join("\n", lines) + "\n}\n";
+        // :root:root rather than :root. The web app's bundle declares this same ramp
+        // and Vite injects its stylesheet after whatever index.html links, so a plain
+        // :root lost to it and the product never changed brand at all. Doubling the
+        // selector doubles the specificity and takes load order out of it.
+        + ":root:root {\n" + string.Join("\n", lines) + "\n}\n";
 
     // Not cached. The whole point of choosing the brand at run time is that a restart
     // changes it, and a stylesheet a browser held for a year would mean it did not.
