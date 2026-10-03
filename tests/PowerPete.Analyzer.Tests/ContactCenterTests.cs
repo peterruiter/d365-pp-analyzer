@@ -128,6 +128,46 @@ public class ContactCenterTests
         PowerPete.Analyzer.Dataverse.DataverseReader.NotInstalled.Should().Contain("not installed");
     }
 
+    // ------------------------------------------------------------- scoping ---
+
+    [Fact]
+    public void Contact_centre_configuration_survives_solution_scoping()
+    {
+        // The first run against a fully configured contact centre read every workstream,
+        // queue and capacity profile and then removed all of them, because none sat in the
+        // GovCase solutions the person had chosen. Each read was recounted to zero and
+        // reported as a success. Routing is the environment's, not a solution's.
+        var scope = new Dictionary<Guid, string>();
+        string[] chosen = ["GovCaseRegister"];
+
+        foreach (var type in PowerPete.Analyzer.Dataverse.DataverseReader.ContactCenterTypes)
+        {
+            var outside = Build.Component(type, "Outside every chosen solution") with
+            {
+                PlatformId = Guid.NewGuid().ToString(),
+                SolutionUniqueName = null
+            };
+
+            PowerPete.Analyzer.Dataverse.DataverseReader.InScope(outside, scope, chosen)
+                .Should().BeTrue($"{type} is contact centre configuration and belongs to the environment");
+        }
+    }
+
+    [Fact]
+    public void Ordinary_components_outside_the_chosen_solutions_are_still_scoped_out()
+    {
+        // The exemption is for routing only. Everything a solution builds is still scoped to
+        // what was chosen, or the run would read Microsoft's own solutions again.
+        var table = Build.Component("table", "Somebody else's table") with
+        {
+            PlatformId = Guid.NewGuid().ToString(),
+            SolutionUniqueName = null
+        };
+
+        PowerPete.Analyzer.Dataverse.DataverseReader.InScope(table, new Dictionary<Guid, string>(), ["GovCaseRegister"])
+            .Should().BeFalse();
+    }
+
     // ------------------------------------------------------------- members ---
 
     [Fact]

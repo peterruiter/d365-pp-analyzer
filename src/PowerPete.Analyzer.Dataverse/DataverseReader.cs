@@ -444,9 +444,19 @@ public sealed partial class DataverseReader(HttpClient client)
     /// <param name="component">The component.</param>
     /// <param name="scope">Identifiers the chosen solutions contain.</param>
     /// <param name="chosen">The chosen unique names.</param>
-    private static bool InScope(
+    internal static bool InScope(
         DiscoveredComponent component, Dictionary<Guid, string> scope, IReadOnlyList<string> chosen)
     {
+        // Contact centre configuration is the environment's, not a chosen solution's. The
+        // first run against a fully configured contact centre read every workstream, queue
+        // and capacity profile and then threw all of them away here, because the person had
+        // chosen their GovCase solutions and no routing queue lives in one. The recount below
+        // then reported each read as a success with nothing in it.
+        //
+        // A queue with nobody in it breaks every conversation routed to it whichever solution
+        // carries it, and the question was whether this environment's contact centre works.
+        if (Array.IndexOf(ContactCenterTypes, component.TypeId) >= 0) return true;
+
         // A solution is not a component of itself, so its own identifier is not in
         // solutioncomponent and the scope check below threw all eleven chosen solutions out
         // of the inventory they defined. The run read their contents and reported that it
