@@ -16,6 +16,30 @@ using PowerPete.Analyzer.Domain;
 /// Inactive configuration is skipped throughout. A deactivated queue with no members is
 /// tidy, not broken.
 /// </remarks>
+internal static class Queues
+{
+    /// <summary>
+    /// One of Microsoft's default queues, where the assignment method is the only setting
+    /// anybody can change.
+    /// </summary>
+    /// <remarks>
+    /// The first real contact centre this ran against reported overflow, operating hours and
+    /// service level on Default messaging, voice and entity queue: fifteen findings, every one
+    /// of them impossible to act on. Membership is the role, not a list, so a member count
+    /// says nothing about them either.
+    /// </remarks>
+    public static bool IsDefault(DiscoveredComponent queue) => queue.Attribute<bool?>("isDefault") == true;
+
+    /// <summary>A record queue: cases, email, voicemail. Not a customer on the line.</summary>
+    /// <remarks>
+    /// Out of operating hours is the only overflow condition a record queue has, and a case
+    /// that waits overnight is a case, not a customer left in a queue. Overflow, hours and a
+    /// service level measured in seconds are live-channel questions.
+    /// </remarks>
+    public static bool IsRecord(DiscoveredComponent queue) => queue.Attribute<bool?>("isRecordQueue") == true;
+}
+
+/// <summary>A routing queue with nobody in it.</summary>
 public sealed class QueueNoMembersHandler : IRuleHandler
 {
     /// <inheritdoc />
@@ -29,6 +53,7 @@ public sealed class QueueNoMembersHandler : IRuleHandler
         foreach (var queue in context.OfType("ccQueue"))
         {
             if (queue.Attribute<bool?>("isActive") != true) continue;
+            if (Queues.IsDefault(queue)) continue;
 
             // Zero, not null. Null is a count this product could not take.
             if (queue.Attribute<int?>("memberCount") != 0) continue;
@@ -137,6 +162,7 @@ public sealed class QueueNoOverflowHandler : IRuleHandler
         foreach (var queue in context.OfType("ccQueue"))
         {
             if (queue.Attribute<bool?>("isActive") != true) continue;
+            if (Queues.IsDefault(queue) || Queues.IsRecord(queue)) continue;
 
             if (queue.Attribute<bool?>("hasPreQueueOverflow") != false) continue;
             if (queue.Attribute<bool?>("hasInQueueOverflow") != false) continue;
@@ -168,6 +194,7 @@ public sealed class QueueNoOperatingHoursHandler : IRuleHandler
         foreach (var queue in context.OfType("ccQueue"))
         {
             if (queue.Attribute<bool?>("isActive") != true) continue;
+            if (Queues.IsDefault(queue) || Queues.IsRecord(queue)) continue;
             if (queue.Attribute<bool?>("hasOperatingHours") != false) continue;
             if (queue.Attribute<int?>("memberCount") == 0) continue;
 
@@ -192,6 +219,7 @@ public sealed class QueueNoServiceLevelHandler : IRuleHandler
         foreach (var queue in context.OfType("ccQueue"))
         {
             if (queue.Attribute<bool?>("isActive") != true) continue;
+            if (Queues.IsDefault(queue) || Queues.IsRecord(queue)) continue;
 
             // Null is unset. Zero is a threshold somebody typed, odd as it is, and not this
             // finding.

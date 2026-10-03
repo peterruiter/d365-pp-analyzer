@@ -42,6 +42,9 @@ public sealed partial class DataverseReader
     internal const string NotInstalled =
         "Dynamics 365 Contact Center is not installed in this environment, so there was nothing here to check.";
 
+    /// <summary>A record queue: cases, email, voicemail. 192350000 is messaging, 192350002 voice.</summary>
+    internal const int RecordQueue = 192350001;
+
     /// <summary>Push. The other value, 192350001, is pick.</summary>
     private const int DistributionPush = 192350000;
 
@@ -197,6 +200,11 @@ public sealed partial class DataverseReader
                 // about the second.
                 ["memberCount"] = Int(queue, "numberofmembers"),
                 ["isDefault"] = Bool(queue, "msdyn_isdefaultqueue"),
+
+                // The option value, not the label. The label is in the environment's
+                // language, and a rule that compared it with "Entity" would treat every
+                // record queue in a Dutch environment as a live channel.
+                ["isRecordQueue"] = Int(queue, "msdyn_queuetype") is { } type ? type == RecordQueue : null,
             }));
 
             count++;

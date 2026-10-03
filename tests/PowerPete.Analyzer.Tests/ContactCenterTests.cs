@@ -274,6 +274,78 @@ public class ContactCenterTests
     }
 
     [Fact]
+    public void Microsofts_default_queues_are_not_held_to_settings_they_do_not_have()
+    {
+        // The first real contact centre reported overflow, operating hours and service level
+        // on Default messaging, voice and entity queue. The assignment method is the only
+        // thing anybody can change on them, so every one of those findings was unfixable.
+        // Members, so the empty-queue suppression cannot be what keeps these quiet.
+        var unfinished = Queue(
+            ("isDefault", true),
+            ("hasOperatingHours", false),
+            ("hasPreQueueOverflow", false),
+            ("hasInQueueOverflow", false),
+            ("serviceLevelSeconds", null));
+
+        IRuleHandler[] settings =
+        [
+            new QueueNoOverflowHandler(), new QueueNoOperatingHoursHandler(), new QueueNoServiceLevelHandler()
+        ];
+
+        foreach (var handler in settings)
+        {
+            handler.Run(Build.Context([unfinished])).Should().BeEmpty($"{handler.RuleId} is a setting a default queue does not have");
+        }
+
+        // Membership of a default queue is the agent role, not a list, so its count proves nothing.
+        Run(new QueueNoMembersHandler(), Queue(("isDefault", true), ("memberCount", 0))).Should().BeEmpty();
+
+        // The assignment method is the one setting a default queue has, so that one still counts.
+        Run(new QueueNoAssignmentHandler(), Queue(("isDefault", true), ("assignsNothing", true)))
+            .Should().ContainSingle();
+    }
+
+    [Fact]
+    public void Record_queues_are_not_held_to_live_channel_settings()
+    {
+        // A case waiting overnight is a case, not a customer on the line, and out of hours is
+        // the only overflow condition a record queue has.
+        var cases = Queue(
+            ("isRecordQueue", true),
+            ("hasOperatingHours", false),
+            ("hasPreQueueOverflow", false),
+            ("hasInQueueOverflow", false),
+            ("serviceLevelSeconds", null));
+
+        IRuleHandler[] live =
+        [
+            new QueueNoOverflowHandler(), new QueueNoOperatingHoursHandler(), new QueueNoServiceLevelHandler()
+        ];
+
+        live.SelectMany(handler => handler.Run(Build.Context([cases]))).Should().BeEmpty();
+
+        // Nobody in it still matters: records are not auto-assigned from an empty queue.
+        Run(new QueueNoMembersHandler(), Queue(("isRecordQueue", true), ("memberCount", 0)))
+            .Should().ContainSingle();
+
+        // And a live queue with the same gaps still reports all three.
+        live.SelectMany(handler => handler.Run(Build.Context([Queue(
+                ("isRecordQueue", false),
+                ("hasOperatingHours", false),
+                ("hasPreQueueOverflow", false),
+                ("hasInQueueOverflow", false),
+                ("serviceLevelSeconds", null))])))
+            .Should().HaveCount(3);
+    }
+
+    [Fact]
+    public void The_record_queue_is_recognised_by_its_value_not_its_label()
+    {
+        // The label is in the environment's language. 192350001 is Entity everywhere.
+        PowerPete.Analyzer.Dataverse.DataverseReader.RecordQueue.Should().Be(192350001);
+    }
+
+    [Fact]
     public void A_workstream_with_no_default_queue_is_reported_and_one_unknown_is_not()
     {
         var missing = Build.Component("ccWorkstream", "Chat", false, ("isActive", true), ("hasDefaultQueue", false));

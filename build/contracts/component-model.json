@@ -1041,7 +1041,8 @@
         "maxQueueSize",
         "serviceLevelSeconds",
         "memberCount",
-        "isDefault"
+        "isDefault",
+        "isRecordQueue"
       ]
     },
     {

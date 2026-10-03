@@ -32,7 +32,7 @@ public class DemoEstateTests
     private static readonly Dictionary<int, string> ShapeAtVersion = new()
     {
         // 6: the contact centre, which version 5 should have been and was not.
-        [6] = "E90CA3422FE1C686",
+        [6] = "E90CA3422FE1C686", [7] = "C0060620DBA24262",
     };
 
     /// <summary>

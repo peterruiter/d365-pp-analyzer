@@ -57,7 +57,7 @@ public static class DemoEstate
     /// against this number, so a change here without a change to the shape, or the reverse,
     /// fails in the test run.
     /// </remarks>
-    public const int SeedVersion = 6;
+    public const int SeedVersion = 7;
 
     /// <summary>What it is called.</summary>
     public const string Name = "Demonstration estate";
@@ -1115,21 +1115,21 @@ public static class DemoEstate
                 ("assignmentStrategy", "Omnichannel Assignment"), ("hasOperatingHours", true),
                 ("hasPreQueueOverflow", false), ("hasInQueueOverflow", false), ("priority", 1),
                 ("maxQueueSize", (int?)null), ("serviceLevelSeconds", 60), ("memberCount", 0),
-                ("isDefault", false));
+                ("isDefault", false), ("isRecordQueue", false));
 
             Add("ccQueue", "Billing enquiries", "nwu_billing", MainSolution, false,
                 ("isActive", true), ("queueType", "Voice"), ("assignsNothing", true),
                 ("assignmentStrategy", "No Assignment"), ("hasOperatingHours", true),
                 ("hasPreQueueOverflow", true), ("hasInQueueOverflow", false), ("priority", 2),
                 ("maxQueueSize", 40), ("serviceLevelSeconds", 120), ("memberCount", 6),
-                ("isDefault", false));
+                ("isDefault", false), ("isRecordQueue", false));
 
             Add("ccQueue", "General customer service", "nwu_general", MainSolution, false,
                 ("isActive", true), ("queueType", "Messaging"), ("assignsNothing", false),
                 ("assignmentStrategy", "Omnichannel Assignment"), ("hasOperatingHours", false),
                 ("hasPreQueueOverflow", false), ("hasInQueueOverflow", false), ("priority", 3),
                 ("maxQueueSize", (int?)null), ("serviceLevelSeconds", (int?)null), ("memberCount", 12),
-                ("isDefault", true));
+                ("isDefault", false), ("isRecordQueue", false));
 
             // Configured properly, so nothing fires on it.
             Add("ccQueue", "Priority outages", "nwu_priority_outage", MainSolution, false,
@@ -1137,7 +1137,7 @@ public static class DemoEstate
                 ("assignmentStrategy", "Omnichannel Assignment"), ("hasOperatingHours", true),
                 ("hasPreQueueOverflow", true), ("hasInQueueOverflow", true), ("priority", 1),
                 ("maxQueueSize", 25), ("serviceLevelSeconds", 30), ("memberCount", 9),
-                ("isDefault", false));
+                ("isDefault", false), ("isRecordQueue", false));
 
             Add("ccWorkstream", "Web chat - outages", "nwu_ws_chat_outage", MainSolution, false,
                 ("isActive", true), ("distribution", "push"), ("capacityFormat", "profile"),
