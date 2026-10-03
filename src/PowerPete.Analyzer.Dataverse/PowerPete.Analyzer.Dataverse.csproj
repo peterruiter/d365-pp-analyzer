@@ -20,4 +20,11 @@
     <PackageReference Include="Azure.Storage.Blobs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The contact centre detection is internal, and its three answers are the whole of what
+         decides whether eight rules run at all. Worth testing directly rather than through a
+         full read of a faked environment. -->
+    <InternalsVisibleTo Include="PowerPete.Analyzer.Tests" />
+  </ItemGroup>
+
 </Project>

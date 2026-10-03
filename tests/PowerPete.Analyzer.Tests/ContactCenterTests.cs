@@ -60,6 +60,74 @@ public class ContactCenterTests
     private static List<Finding> Run(IRuleHandler handler, params DiscoveredComponent[] components) =>
         [.. handler.Run(Build.Context(components))];
 
+    // ---------------------------------------------------------- detection ---
+
+    /// <summary>Answers the metadata question with whatever status a test needs.</summary>
+    private sealed class Answers(System.Net.HttpStatusCode status) : HttpMessageHandler
+    {
+        public string? Asked { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Asked = request.RequestUri!.ToString();
+
+            return Task.FromResult(new HttpResponseMessage(status)
+            {
+                Content = new StringContent("{}", System.Text.Encoding.UTF8, "application/json")
+            });
+        }
+    }
+
+    private static PowerPete.Analyzer.Dataverse.DataverseReader Reader(HttpMessageHandler handler) =>
+        new(new HttpClient(handler) { BaseAddress = new Uri("https://contoso.crm4.dynamics.com") });
+
+    [Fact]
+    public async Task A_missing_table_means_no_contact_centre_and_is_not_a_failure()
+    {
+        var answers = new Answers(System.Net.HttpStatusCode.NotFound);
+
+        var (installed, failure) = await Reader(answers).DetectContactCenterAsync(CancellationToken.None);
+
+        installed.Should().BeFalse();
+        failure.Should().BeNull("a table that is not installed is nothing to check, not something that went wrong");
+
+        // Asked of the metadata rather than of the entity set. On the entity set a 404 could
+        // equally be this product asking for the wrong name, and the two would look the same.
+        answers.Asked.Should().Contain("EntityDefinitions(LogicalName='msdyn_liveworkstream')");
+    }
+
+    [Fact]
+    public async Task A_table_that_answers_means_a_contact_centre()
+    {
+        var (installed, failure) = await Reader(new Answers(System.Net.HttpStatusCode.OK))
+            .DetectContactCenterAsync(CancellationToken.None);
+
+        installed.Should().BeTrue();
+        failure.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Anything_else_is_unknown_and_says_so()
+    {
+        // Not "no contact centre". A 500, a 403, a throttled call: none of them says the table
+        // is absent, and treating them as absence would quietly turn eight rules off on an
+        // environment that is a contact centre, with a successful-looking run to show for it.
+        var (installed, failure) = await Reader(new Answers(System.Net.HttpStatusCode.InternalServerError))
+            .DetectContactCenterAsync(CancellationToken.None);
+
+        installed.Should().BeFalse();
+        failure.Should().NotBeNullOrWhiteSpace().And.Contain("could not be determined");
+    }
+
+    [Fact]
+    public void Not_installed_carries_a_note_so_it_cannot_pass_for_installed_and_empty()
+    {
+        // The first real run came back succeeded, zero, no reason, for all three reads, and
+        // nobody could tell "not a contact centre" from "a contact centre with nothing in
+        // it". The note is the only thing that separates them.
+        PowerPete.Analyzer.Dataverse.DataverseReader.NotInstalled.Should().Contain("not installed");
+    }
+
     // ------------------------------------------------------------- members ---
 
     [Fact]

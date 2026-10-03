@@ -289,8 +289,14 @@ public sealed partial class DataverseReader(HttpClient client)
                 // Not a contact centre is nothing to check, recorded as a successful read of
                 // nothing. Could not tell is the other thing, and goes on the not-assessed
                 // list with the reason, exactly as any other read that failed.
+                //
+                // The successful case says why it is empty. Without that, "not installed" and
+                // "installed with nothing configured" were the same row -- succeeded, zero, no
+                // reason -- and the first real run against an environment called CCaaS could
+                // not say which it was. The detection was the first thing asked for and its
+                // answer was written nowhere anybody could read it.
                 reads.Add(contactCenter.FailureReason is null
-                    ? new EntityRead(type, true, 0, null)
+                    ? new EntityRead(type, true, 0, NotInstalled)
                     : new EntityRead(type, false, null, contactCenter.FailureReason));
             }
         }

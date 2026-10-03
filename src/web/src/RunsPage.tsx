@@ -300,8 +300,18 @@ function RunRow({ engagementId, run, onWatch, onRemoved }: {
                       <td>{entity.recordCount ?? '—'}</td>
                       <td><span className="tag muted">{t('source.' + entity.evidenceSource)}</span></td>
                       <td className="wrapping-cell">
+                        {/*
+                          A successful read can still carry a note, and the note is the
+                          point when the count is zero: "not installed here" and "installed
+                          with nothing in it" are both a successful zero, and only the note
+                          says which. This showed the reason only on a failure, so the one
+                          read whose reason mattered most was the one nobody saw.
+                        */}
                         {entity.succeeded
-                          ? <span className="tag complete">{t('runs.status.succeeded')}</span>
+                          ? <>
+                              <span className="tag complete">{t('runs.status.succeeded')}</span>
+                              {entity.error && <small className="read-note">{entity.error}</small>}
+                            </>
                           : <span className="tag danger">{entity.error ?? t('runs.status.failed')}</span>}
                       </td>
                     </tr>

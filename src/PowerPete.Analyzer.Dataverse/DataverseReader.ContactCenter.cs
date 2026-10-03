@@ -31,6 +31,17 @@ public sealed partial class DataverseReader
     /// </remarks>
     internal static readonly string[] ContactCenterTypes = ["ccWorkstream", "ccQueue", "ccCapacityProfile"];
 
+    /// <summary>
+    /// What a contact centre read records when there is no contact centre.
+    /// </summary>
+    /// <remarks>
+    /// A note on a successful read, not a failure: nothing was wrong, there was simply
+    /// nothing to look at. It is the only thing that tells this apart from a contact centre
+    /// that is installed and empty, which records the same zero with no reason.
+    /// </remarks>
+    internal const string NotInstalled =
+        "Dynamics 365 Contact Center is not installed in this environment, so there was nothing here to check.";
+
     /// <summary>Push. The other value, 192350001, is pick.</summary>
     private const int DistributionPush = 192350000;
 
