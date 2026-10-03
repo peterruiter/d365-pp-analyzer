@@ -22,6 +22,65 @@ public class DemoEstateTests
 {
     private static readonly DemoEstate.Result Estate = DemoEstate.Build();
 
+    /// <summary>
+    /// What the demonstration looked like at each seed version, as a fingerprint.
+    /// </summary>
+    /// <remarks>
+    /// Add a line here when SeedVersion moves, with the fingerprint the failure prints. The
+    /// older lines stay as the record of what each version was.
+    /// </remarks>
+    private static readonly Dictionary<int, string> ShapeAtVersion = new()
+    {
+        // 6: the contact centre, which version 5 should have been and was not.
+        [6] = "E90CA3422FE1C686",
+    };
+
+    /// <summary>
+    /// Every component and every attribute, in a stable order, hashed.
+    /// </summary>
+    /// <remarks>
+    /// Attributes as well as components, because changing a queue's member count changes
+    /// what the demonstration finds, and that needs a rebuild as surely as adding a queue.
+    /// </remarks>
+    private static string Fingerprint(DemoEstate.Result estate)
+    {
+        var text = new System.Text.StringBuilder();
+
+        foreach (var component in estate.Components.OrderBy(component => component.StableKey, StringComparer.Ordinal))
+        {
+            text.Append(component.StableKey).Append('|').Append(component.TypeId).Append('|').Append(component.DisplayName);
+
+            foreach (var attribute in component.Attributes.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+            {
+                text.Append('|').Append(attribute.Key).Append('=')
+                    .Append(Convert.ToString(attribute.Value, System.Globalization.CultureInfo.InvariantCulture));
+            }
+
+            text.Append('\n');
+        }
+
+        var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(text.ToString()));
+        return Convert.ToHexString(hash)[..16];
+    }
+
+    [Fact]
+    public void The_seed_version_moves_whenever_the_demonstration_does()
+    {
+        // The seeder rebuilds the demonstration only when SeedVersion changes. The contact
+        // centre was added without that change, so the estate anybody actually opened kept
+        // no contact centre while this whole file passed against the code.
+        var shape = Fingerprint(Estate);
+
+        ShapeAtVersion.Should().ContainKey(DemoEstate.SeedVersion,
+            $"SeedVersion is {DemoEstate.SeedVersion} and nothing records what that version looks like. "
+            + $"Add [{DemoEstate.SeedVersion}] = \"{shape}\" to ShapeAtVersion.");
+
+        ShapeAtVersion[DemoEstate.SeedVersion].Should().Be(shape,
+            $"the demonstration has changed shape and SeedVersion is still {DemoEstate.SeedVersion}, so the "
+            + "deployed demonstration will not be rebuilt and nobody will see the change. Bump SeedVersion, "
+            + $"and record [{DemoEstate.SeedVersion + 1}] = \"{shape}\" in ShapeAtVersion.");
+    }
+
     [Fact]
     public void The_low_code_donut_agrees_with_the_number_written_in_it()
     {

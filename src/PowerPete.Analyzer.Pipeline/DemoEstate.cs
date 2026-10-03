@@ -50,8 +50,14 @@ public static class DemoEstate
     /// skipping itself the moment the engagement exists. That is the difference between a
     /// demonstration that gains whatever a later release added and one frozen at whatever it
     /// looked like the first time the container started.
+    ///
+    /// Not left to memory any more. The contact centre was added at version 5 without the
+    /// bump, and the deployed demonstration kept no contact centre while every test passed
+    /// against the code. DemoEstateTests fingerprints the estate and records the fingerprint
+    /// against this number, so a change here without a change to the shape, or the reverse,
+    /// fails in the test run.
     /// </remarks>
-    public const int SeedVersion = 5;
+    public const int SeedVersion = 6;
 
     /// <summary>What it is called.</summary>
     public const string Name = "Demonstration estate";
