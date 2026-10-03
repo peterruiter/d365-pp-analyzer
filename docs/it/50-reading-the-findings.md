@@ -2,7 +2,7 @@
 
 ## Categorie
 
-Ogni regola sta in una di dieci categorie. La schermata dei rilievi raggruppa per categoria.
+Ogni regola sta in una di undici categorie. La schermata dei rilievi raggruppa per categoria.
 
 | Categoria | Riguarda |
 |---|---|
@@ -16,6 +16,7 @@ Ogni regola sta in una di dieci categorie. La schermata dei rilievi raggruppa pe
 | **Sicurezza** | Privilegi, segreti ed esposizione. |
 | **Operabilità** | Se qualcuno si accorgerebbe che si è rotto. |
 | **Componenti IA** | Agenti, prompt e modelli: se ciò che è costruito sull'IA è fondato, aggiornato e di qualcuno. |
+| **Dynamics 365 Contact Center** | Flussi di lavoro, code e capacità: se una conversazione in arrivo raggiunge qualcuno in grado di prenderla. Letto solo dove Contact Center è installato, quindi un ambiente senza non ha nulla qui anziché un elenco di controlli che non sono potuti partire. |
 
 Modernizzazione è la categoria che un cliente desidera di più e quella che più facilmente
 viene sopravvenduta, perciò ogni regola al suo interno porta anche una ragione per lasciare

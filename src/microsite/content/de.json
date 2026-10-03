@@ -106,6 +106,8 @@
   "rules.categoryBody.operability": "Ob überhaupt jemand merkt, wenn etwas ausfällt. Eine Landschaft ganz ohne Fehleralarmierung ist eine, in der die erste Störungsmeldung von einem Kunden kommt.",
   "rules.category.ai": "KI-Komponenten",
   "rules.categoryBody.ai": "Agenten, Prompts und Modelle. Ob das, was die Landschaft auf KI gebaut hat, fundiert, aktuell und jemandem zugeordnet ist.",
+  "rules.category.contactCenter": "Dynamics 365 Contact Center",
+  "rules.categoryBody.contactCenter": "Arbeitsstreams, Warteschlangen und Kapazität. Ob ein eingehendes Gespräch jemanden erreicht, der es annehmen kann -- nur gelesen, wo Contact Center installiert ist.",
   "languages.eyebrow": "Sprachen",
   "languages.heading": "Sechs Sprachen und drei getrennte Einstellungen.",
   "languages.body1": "Englisch, Niederländisch, Deutsch, Französisch, Spanisch und Italienisch, durchgängig: die Bildschirme, die Regelerläuterungen, die Befunde, der Bericht und das Backlog. Die Sprache, in der Sie das Produkt lesen, die Sprache des Berichts und die Sprache des Backlogs sind drei Einstellungen, weil eine niederländische Beraterin, die einen englischen Bericht für die Konzern-IT eines Kunden und ein spanisches Backlog für das Lieferteam schreibt, der Normalfall ist und kein Sonderfall.",

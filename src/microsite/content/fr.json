@@ -106,6 +106,8 @@
   "rules.categoryBody.operability": "Si quelqu’un s’apercevrait d’une panne. Un parc sans aucune alerte sur les échecs est un parc où le premier signalement d’incident vient d’un client.",
   "rules.category.ai": "Composants IA",
   "rules.categoryBody.ai": "Agents, prompts et modèles. Si ce que le patrimoine a bâti sur l'IA est fondé sur quelque chose, à jour et rattaché à quelqu'un.",
+  "rules.category.contactCenter": "Dynamics 365 Contact Center",
+  "rules.categoryBody.contactCenter": "Flux de travail, files et capacité. Si une conversation qui arrive atteint quelqu'un capable de la prendre -- lu uniquement là où Contact Center est installé.",
   "languages.eyebrow": "Langues",
   "languages.heading": "Six langues, et trois réglages distincts.",
   "languages.body1": "Anglais, néerlandais, allemand, français, espagnol et italien, partout : les écrans, les explications des règles, les constats, le rapport et le backlog. La langue dans laquelle vous lisez le produit, celle du rapport et celle du backlog sont trois réglages, parce qu’une consultante néerlandaise qui rédige un rapport anglais pour la DSI groupe d’un client et un backlog espagnol pour l’équipe de réalisation est le cas normal et non l’exception.",

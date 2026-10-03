@@ -106,6 +106,8 @@
   "rules.categoryBody.operability": "Of iemand het zou merken als het stukgaat. Een landschap zonder enige foutmelding is er een waar de eerste melding van een storing van een klant komt.",
   "rules.category.ai": "AI-componenten",
   "rules.categoryBody.ai": "Agents, prompts en modellen. Of wat het landschap op AI heeft gebouwd ergens op gefundeerd is, actueel is en van iemand is.",
+  "rules.category.contactCenter": "Dynamics 365 Contact Center",
+  "rules.categoryBody.contactCenter": "Werkstromen, wachtrijen en capaciteit. Of een gesprek dat binnenkomt iemand bereikt die het kan aannemen -- alleen gelezen waar Contact Center is geïnstalleerd.",
   "languages.eyebrow": "Talen",
   "languages.heading": "Zes talen, en drie aparte instellingen.",
   "languages.body1": "Engels, Nederlands, Duits, Frans, Spaans en Italiaans, overal: de schermen, de regeluitleg, de bevindingen, het rapport en de backlog. De taal waarin je het product leest, de taal waarin het rapport verschijnt en de taal waarin de backlog is geschreven zijn drie instellingen, omdat een Nederlandse consultant die een Engels rapport schrijft voor de groeps-IT van een klant en een Spaanse backlog voor het deliveryteam het normale geval is en geen uitzondering.",

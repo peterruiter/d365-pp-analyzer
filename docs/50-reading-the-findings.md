@@ -2,7 +2,7 @@
 
 ## Categories
 
-Every rule sits in one of ten categories. The findings screen groups by them.
+Every rule sits in one of eleven categories. The findings screen groups by them.
 
 | Category | Is about |
 |---|---|
@@ -16,6 +16,7 @@ Every rule sits in one of ten categories. The findings screen groups by them.
 | **Security** | Privilege, secrets and exposure. |
 | **Operability** | Whether anybody would find out when it breaks. |
 | **AI components** | Agents, prompts and models: whether what the estate built on AI is grounded, current and owned. |
+| **Dynamics 365 Contact Center** | Workstreams, queues and capacity: whether a conversation that arrives reaches somebody who can take it. Read only where Contact Center is installed, so an environment without one has nothing here rather than a list of checks that could not run. |
 
 Modernisation is the category a client most wants and the one most likely to be oversold, so
 every rule in it carries a reason to leave the thing alone as well.

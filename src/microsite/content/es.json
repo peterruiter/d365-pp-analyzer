@@ -106,6 +106,8 @@
   "rules.categoryBody.operability": "Si alguien se enteraría de que algo se ha roto. Un parque sin ninguna alerta de fallo es uno donde el primer aviso de una caída llega de un cliente.",
   "rules.category.ai": "Componentes de IA",
   "rules.categoryBody.ai": "Agentes, prompts y modelos. Si lo que el patrimonio ha construido sobre IA se apoya en algo, está al día y tiene dueño.",
+  "rules.category.contactCenter": "Dynamics 365 Contact Center",
+  "rules.categoryBody.contactCenter": "Secuencias de trabajo, colas y capacidad. Si una conversación que llega alcanza a alguien que pueda atenderla -- solo se lee donde Contact Center está instalado.",
   "languages.eyebrow": "Idiomas",
   "languages.heading": "Seis idiomas, y tres ajustes separados.",
   "languages.body1": "Inglés, neerlandés, alemán, francés, español e italiano, en todo: las pantallas, las explicaciones de las reglas, los hallazgos, el informe y el backlog. El idioma en que usted lee el producto, el idioma en que sale el informe y el idioma en que se escribe el backlog son tres ajustes, porque una consultora neerlandesa que redacta un informe en inglés para la IT corporativa de un cliente y un backlog en español para el equipo de entrega es el caso normal y no la excepción.",

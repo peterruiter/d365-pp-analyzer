@@ -482,6 +482,29 @@ public class DataLayerTests
 
         missing.Should().BeEmpty("a category with no name is an epic title in the wrong language");
 
+        // And the public site, which builds a tile per category and falls back to the
+        // identifier. Checking only the backlog bundle let the eleventh category reach the
+        // front page as <h3>contactCenter</h3> above an empty paragraph: the product read
+        // the name from one place and the public read it from another, and only one was
+        // guarded.
+        var site = Path.Combine(Directory.GetParent(Solution())!.FullName, "src", "microsite", "content");
+        var tiles = new List<string>();
+
+        foreach (var language in Contracts.Read("locales").Array("locales").Select(locale => locale.Str("code")))
+        {
+            var content = JsonDocument.Parse(File.ReadAllText(Path.Combine(site, $"{language}.json"))).RootElement;
+
+            tiles.AddRange(
+                from category in categories
+                from key in new[] { "rules.category.", "rules.categoryBody." }
+                let full = key + category.Str("id")
+                where !content.TryGetProperty(full, out var value) || value.GetString() is not { Length: > 0 }
+                select $"{language}: {full}");
+        }
+
+        tiles.Should().BeEmpty(
+            "the public site builds a tile per category and prints the identifier where there is no name");
+
         // And English has to agree with the contract, because the contract's name is the
         // fallback. Two spellings of the same category, one of which only appears when a
         // translation is missing, is a difference nobody would ever think to look for.

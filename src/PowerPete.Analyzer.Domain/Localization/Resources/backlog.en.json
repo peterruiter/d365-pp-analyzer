@@ -187,5 +187,6 @@
   "backlog.category.performance": "Performance",
   "backlog.category.security": "Security",
   "backlog.category.operability": "Operability",
-  "backlog.category.ai": "AI components"
+  "backlog.category.ai": "AI components",
+  "backlog.category.contactCenter": "Dynamics 365 Contact Center"
 }

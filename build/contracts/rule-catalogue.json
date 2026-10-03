@@ -66,6 +66,11 @@
       "id": "ai",
       "name": "AI components",
       "description": "Agents, prompts and models. Whether what the estate has built on AI is grounded in something, current, and owned by somebody. Three component types were counted here and nothing was ever said about them."
+    },
+    {
+      "id": "contactCenter",
+      "name": "Dynamics 365 Contact Center",
+      "description": "Workstreams, queues and capacity: whether a conversation that arrives reaches somebody who can take it. Only read where Contact Center is installed, so an environment without one has nothing here rather than a list of checks that could not run."
     }
   ],
   "checkerIntegration": {
@@ -1279,6 +1284,187 @@
       "falsePositive": "A judgement by a model, and it says so on every finding. A description in a language the reviewer did not expect, or one meaningful only to the team that wrote it, will read as uninformative when it is not.",
       "workItemType": "task",
       "estimateBand": "trivial",
+      "roadmap": {
+        "row": "process",
+        "column": "architecture",
+        "band": "unclutter"
+      }
+    },
+    {
+      "id": "contactCenter.queueNoMembers",
+      "name": "Routing queue with nobody in it",
+      "category": "contactCenter",
+      "severity": "critical",
+      "appliesTo": [
+        "ccQueue"
+      ],
+      "evidence": [
+        "metadata"
+      ],
+      "detection": "An active omnichannel queue whose member count is zero. The count is a column on the queue, so this is what the environment says rather than an inference from anything else.",
+      "why": "Work routed here is never offered to anybody. The customer waits until they give up, and nothing in the configuration looks wrong: the workstream is valid, the routing rule matches and the queue exists. It is the one fault that is invisible from every screen except this one.",
+      "recommendation": "Add the agents who should take this work, or remove the routing that sends work here. If the queue is a deliberate holding area, make that explicit with an overflow action rather than leaving work to wait for people who are never coming.",
+      "falsePositive": "A queue that is genuinely retired but still active. Deactivate it, which is the fix anyway.",
+      "workItemType": "bug",
+      "estimateBand": "small",
+      "roadmap": {
+        "row": "process",
+        "column": "technology",
+        "band": "accelerate"
+      }
+    },
+    {
+      "id": "contactCenter.queueNoAssignment",
+      "name": "Routing queue that assigns nothing",
+      "category": "contactCenter",
+      "severity": "high",
+      "appliesTo": [
+        "ccQueue"
+      ],
+      "evidence": [
+        "metadata"
+      ],
+      "detection": "An active omnichannel queue whose assignment strategy is 'No Assignment'.",
+      "why": "Work reaches the queue and stops there. Agents can pick it if they go and look, but nothing offers it to anybody, so on a push channel it waits exactly as long as it would in a queue with no members, while the queue itself shows a healthy membership.",
+      "recommendation": "Choose an assignment method, usually highest capacity or round robin. Keep No Assignment only for a queue that is meant to be worked by hand, and then make sure the workstreams feeding it are pick rather than push.",
+      "falsePositive": "A queue worked entirely by hand from a pick workstream. Record that on the engagement.",
+      "workItemType": "bug",
+      "estimateBand": "small",
+      "roadmap": {
+        "row": "process",
+        "column": "technology",
+        "band": "accelerate"
+      }
+    },
+    {
+      "id": "contactCenter.capacityProfileUnheld",
+      "name": "Capacity profile no agent holds",
+      "category": "contactCenter",
+      "severity": "high",
+      "appliesTo": [
+        "ccCapacityProfile"
+      ],
+      "evidence": [
+        "metadata"
+      ],
+      "detection": "An active capacity profile that at least one active workstream requires and that no agent holds. Both halves are read: the workstreams that require it and the agents assigned to it.",
+      "why": "Work from those workstreams needs an agent with this profile, and there is none, so no agent is ever eligible for it. It sits in the queue with every other setting correct, which makes it the most expensive contact centre fault to find from the outside.",
+      "recommendation": "Assign the profile to the agents who should take this work, or remove it from the workstreams that require it. Check the queue for work that has been waiting since the profile was added.",
+      "workItemType": "bug",
+      "estimateBand": "small",
+      "roadmap": {
+        "row": "process",
+        "column": "technology",
+        "band": "accelerate"
+      }
+    },
+    {
+      "id": "contactCenter.workstreamNoDefaultQueue",
+      "name": "Workstream with no fallback queue",
+      "category": "contactCenter",
+      "severity": "medium",
+      "appliesTo": [
+        "ccWorkstream"
+      ],
+      "evidence": [
+        "metadata"
+      ],
+      "detection": "An active workstream with no default queue.",
+      "why": "Work that matches none of the routing rules has nowhere to land. Every route can be correct today and the first conversation that falls between them disappears from the operation, usually on the day a new product launches and the rules have not caught up.",
+      "recommendation": "Set a default queue staffed by people who can triage anything, and watch its volume: work arriving there is a route that is missing.",
+      "workItemType": "task",
+      "estimateBand": "small",
+      "roadmap": {
+        "row": "process",
+        "column": "architecture",
+        "band": "unclutter"
+      }
+    },
+    {
+      "id": "contactCenter.queueNoOverflow",
+      "name": "Queue with no overflow handling",
+      "category": "contactCenter",
+      "severity": "medium",
+      "appliesTo": [
+        "ccQueue"
+      ],
+      "evidence": [
+        "metadata"
+      ],
+      "detection": "An active omnichannel queue with neither a pre-queue nor an in-queue overflow rule set.",
+      "why": "When the queue is full, out of hours or waiting too long, nothing happens: the work waits. Overflow is how a contact centre says what should happen instead -- another queue, a callback, a message -- and a queue without it has made that decision by default, in the customer’s time.",
+      "recommendation": "Decide what should happen when this queue cannot keep up, and configure it: transfer to a queue that can, offer a callback, or end the conversation with a message that says when to try again.",
+      "falsePositive": "A small queue with ample staff and no operating hours limit may never need it. Say so on the engagement.",
+      "workItemType": "story",
+      "estimateBand": "medium",
+      "roadmap": {
+        "row": "process",
+        "column": "architecture",
+        "band": "accelerate"
+      }
+    },
+    {
+      "id": "contactCenter.queueNoOperatingHours",
+      "name": "Queue with no operating hours",
+      "category": "contactCenter",
+      "severity": "medium",
+      "appliesTo": [
+        "ccQueue"
+      ],
+      "evidence": [
+        "metadata"
+      ],
+      "detection": "An active omnichannel queue with no operating hours record.",
+      "why": "The queue is open every hour of every day as far as routing is concerned, so work arrives at three in the morning and waits for people who will not be there until nine. Customers are not told the line is closed; they are left in a queue.",
+      "recommendation": "Attach the operating hours the team actually keeps, and pair them with an overflow action for out-of-hours work so customers are told rather than kept waiting.",
+      "falsePositive": "A queue staffed around the clock. Record that and the finding stops being worth reading.",
+      "workItemType": "task",
+      "estimateBand": "small",
+      "roadmap": {
+        "row": "process",
+        "column": "technology",
+        "band": "accelerate"
+      }
+    },
+    {
+      "id": "contactCenter.queueNoServiceLevel",
+      "name": "Queue with no service level",
+      "category": "contactCenter",
+      "severity": "low",
+      "appliesTo": [
+        "ccQueue"
+      ],
+      "evidence": [
+        "metadata"
+      ],
+      "detection": "An active omnichannel queue with no service level threshold.",
+      "why": "Service level reporting for this queue measures against nothing, so the figure a supervisor reads is not a figure about this queue. Nothing breaks; the numbers just stop meaning anything.",
+      "recommendation": "Set the threshold the business has actually agreed for this queue, in seconds.",
+      "workItemType": "task",
+      "estimateBand": "trivial",
+      "roadmap": {
+        "row": "process",
+        "column": "technology",
+        "band": "unclutter"
+      }
+    },
+    {
+      "id": "contactCenter.capacityProfileDailyBlock",
+      "name": "Capacity profile that blocks for the rest of the day",
+      "category": "contactCenter",
+      "severity": "info",
+      "appliesTo": [
+        "ccCapacityProfile"
+      ],
+      "evidence": [
+        "metadata"
+      ],
+      "detection": "An active capacity profile that blocks assignment once its maximum is reached and resets daily rather than immediately.",
+      "why": "An agent who reaches the maximum is offered nothing more from it until the next day. That is a legitimate cap -- twenty cases a day, say -- and a surprising one when it was meant to be a concurrency limit, because it looks the same in the form either way.",
+      "recommendation": "Confirm the daily cap is intended. If it was meant to limit how many items an agent holds at once, set the reset to immediate.",
+      "falsePositive": "A deliberate daily quota. Override it once on the engagement.",
+      "workItemType": "none",
+      "estimateBand": "none",
       "roadmap": {
         "row": "process",
         "column": "architecture",

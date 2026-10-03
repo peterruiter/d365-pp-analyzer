@@ -996,6 +996,73 @@
         "solutionZip"
       ],
       "countsTowardRatio": false
+    },
+    {
+      "id": "ccWorkstream",
+      "name": "Contact Center workstream",
+      "domain": "platform",
+      "craft": "config",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata"
+      ],
+      "countsTowardRatio": false,
+      "attributes": [
+        "isActive",
+        "distribution",
+        "capacityFormat",
+        "capacityRequired",
+        "autoCloseAfterInactivity",
+        "maxConcurrent",
+        "hasDefaultQueue",
+        "isRecordRouting",
+        "channel"
+      ]
+    },
+    {
+      "id": "ccQueue",
+      "name": "Contact Center queue",
+      "domain": "platform",
+      "craft": "config",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata"
+      ],
+      "countsTowardRatio": false,
+      "attributes": [
+        "isActive",
+        "queueType",
+        "assignsNothing",
+        "assignmentStrategy",
+        "hasOperatingHours",
+        "hasPreQueueOverflow",
+        "hasInQueueOverflow",
+        "priority",
+        "maxQueueSize",
+        "serviceLevelSeconds",
+        "memberCount",
+        "isDefault"
+      ]
+    },
+    {
+      "id": "ccCapacityProfile",
+      "name": "Contact Center capacity profile",
+      "domain": "platform",
+      "craft": "config",
+      "lifecycle": "current",
+      "evidence": [
+        "metadata"
+      ],
+      "countsTowardRatio": false,
+      "attributes": [
+        "isActive",
+        "defaultMaxUnits",
+        "blocksAssignment",
+        "resetsDaily",
+        "agentCount",
+        "requiredBy",
+        "requiredByCount"
+      ]
     }
   ],
   "complexityRules": {

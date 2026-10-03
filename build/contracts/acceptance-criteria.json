@@ -302,6 +302,48 @@
       "when": "Its description says what it is for and what would break without it",
       "then": "Somebody who has never seen the component can say why it exists from the description alone",
       "testRequirement": "Show the description to somebody who did not build it and ask what the component does. Getting the name back is the failure this is about."
+    },
+    "contactCenter.queueNoMembers": {
+      "given": "The queue {componentName}, active, routed to and with nobody in it",
+      "when": "The agents who should take its work have been added, or the routing to it removed",
+      "then": "Work arriving at the queue is offered to an agent, or no longer arrives there",
+      "testRequirement": "Start a test conversation on a workstream that routes here and confirm an agent is offered it. A queue with members is not proof; an offer reaching somebody is."
+    },
+    "contactCenter.queueNoAssignment": {
+      "given": "The queue {componentName}, set to assign nothing",
+      "when": "An assignment method has been chosen, or the queue recorded as worked by hand from pick workstreams",
+      "then": "Work reaching the queue is offered to an eligible agent without anybody going to look for it",
+      "testRequirement": "Route a test conversation here with an agent available and confirm it is offered within the expected time."
+    },
+    "contactCenter.capacityProfileUnheld": {
+      "given": "The capacity profile {componentName}, required by {evidenceValue} and held by no agent",
+      "when": "The profile has been assigned to the agents who take this work, or removed from the workstreams that require it",
+      "then": "At least one available agent is eligible for work from every workstream that requires it",
+      "testRequirement": "Start a test conversation on one of those workstreams with only profile holders available and confirm one of them is offered it."
+    },
+    "contactCenter.workstreamNoDefaultQueue": {
+      "given": "The workstream {componentName}, with no default queue",
+      "when": "A default queue staffed for triage has been set",
+      "then": "Work matching no routing rule lands in that queue and is offered to somebody",
+      "testRequirement": "Send a test conversation that matches none of the routing rules and confirm it reaches the default queue."
+    },
+    "contactCenter.queueNoOverflow": {
+      "given": "The queue {componentName}, with no overflow handling",
+      "when": "What should happen when it cannot keep up has been decided and configured",
+      "then": "Work that cannot be served in time is transferred, called back or told when to return, rather than left waiting",
+      "testRequirement": "Trigger the overflow condition -- a full queue, out of hours, or a long wait -- with a test conversation and confirm the configured action happens."
+    },
+    "contactCenter.queueNoOperatingHours": {
+      "given": "The queue {componentName}, open every hour as far as routing is concerned",
+      "when": "The operating hours the team keeps have been attached",
+      "then": "Work arriving out of hours is handled by the out-of-hours action rather than queued for nobody",
+      "testRequirement": "Start a test conversation outside the configured hours and confirm the customer is told, or the work goes where out-of-hours work is meant to go."
+    },
+    "contactCenter.queueNoServiceLevel": {
+      "given": "The queue {componentName}, with no service level threshold",
+      "when": "The threshold the business agreed has been set",
+      "then": "Service level reporting for the queue measures against that threshold",
+      "testRequirement": "Open the queue in the supervisor dashboard after a day of traffic and confirm the service level shown is against the configured threshold."
     }
   }
 }

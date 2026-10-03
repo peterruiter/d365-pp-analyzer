@@ -106,6 +106,8 @@
   "rules.categoryBody.operability": "Whether anybody would find out when it breaks. An estate with no failure alerting anywhere is one where the first report of an outage comes from a customer.",
   "rules.category.ai": "AI components",
   "rules.categoryBody.ai": "Agents, prompts and models. Whether what the estate has built on AI is grounded in something, current, and owned by somebody.",
+  "rules.category.contactCenter": "Dynamics 365 Contact Center",
+  "rules.categoryBody.contactCenter": "Workstreams, queues and capacity. Whether a conversation that arrives reaches somebody who can take it -- read only where Contact Center is installed.",
   "languages.eyebrow": "Languages",
   "languages.heading": "Six languages, and three separate settings.",
   "languages.body1": "English, Dutch, German, French, Spanish and Italian, throughout: the screens, the rule explanations, the findings, the report and the backlog. The language you read the product in, the language the report comes out in and the language the backlog is written in are three settings, because a Dutch consultant writing an English report for a client's group IT and a Spanish backlog for the delivery team is the normal case rather than an edge one.",

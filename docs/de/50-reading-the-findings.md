@@ -2,7 +2,7 @@
 
 ## Kategorien
 
-Jede Regel sitzt in einer von zehn Kategorien. Der Befundbildschirm gruppiert danach.
+Jede Regel sitzt in einer von elf Kategorien. Der Befundbildschirm gruppiert danach.
 
 | Kategorie | Handelt von |
 |---|---|
@@ -16,6 +16,7 @@ Jede Regel sitzt in einer von zehn Kategorien. Der Befundbildschirm gruppiert da
 | **Sicherheit** | Berechtigungen, Geheimnisse und Exposition. |
 | **Betreibbarkeit** | Ob überhaupt jemand merken würde, wenn es kaputtgeht. |
 | **KI-Komponenten** | Agenten, Prompts und Modelle: ob das auf KI Gebaute fundiert, aktuell und jemandem zugeordnet ist. |
+| **Dynamics 365 Contact Center** | Arbeitsstreams, Warteschlangen und Kapazität: ob ein eingehendes Gespräch jemanden erreicht, der es annehmen kann. Nur gelesen, wo Contact Center installiert ist, sodass eine Umgebung ohne hier nichts hat statt einer Liste von Prüfungen, die nicht laufen konnten. |
 
 Modernisierung ist die Kategorie, die ein Kunde sich am meisten wünscht und die am ehesten
 überverkauft wird, deshalb trägt jede Regel darin auch einen Grund, die Sache in Ruhe zu

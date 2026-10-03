@@ -2,7 +2,7 @@
 
 ## Categorías
 
-Cada regla pertenece a una de diez categorías. La pantalla de hallazgos agrupa por ellas.
+Cada regla pertenece a una de once categorías. La pantalla de hallazgos agrupa por ellas.
 
 | Categoría | Trata de |
 |---|---|
@@ -16,6 +16,7 @@ Cada regla pertenece a una de diez categorías. La pantalla de hallazgos agrupa 
 | **Seguridad** | Privilegios, secretos y exposición. |
 | **Operabilidad** | Si alguien se enteraría de que se ha roto. |
 | **Componentes de IA** | Agentes, prompts y modelos: si lo construido sobre IA está fundamentado, al día y tiene dueño. |
+| **Dynamics 365 Contact Center** | Secuencias de trabajo, colas y capacidad: si una conversación que llega alcanza a alguien que pueda atenderla. Solo se lee donde Contact Center está instalado, así que un entorno sin él no tiene nada aquí en lugar de una lista de comprobaciones que no pudieron ejecutarse. |
 
 Modernización es la categoría que más quiere un cliente y la que más fácilmente se sobrevende,
 así que cada regla que contiene lleva también una razón para dejar la cosa en paz.

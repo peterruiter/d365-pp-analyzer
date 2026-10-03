@@ -2,7 +2,7 @@
 
 ## Catégories
 
-Chaque règle appartient à l'une des dix catégories. L'écran des constats regroupe par
+Chaque règle appartient à l'une des onze catégories. L'écran des constats regroupe par
 catégorie.
 
 | Catégorie | Porte sur |
@@ -17,6 +17,7 @@ catégorie.
 | **Sécurité** | Privilèges, secrets et exposition. |
 | **Exploitabilité** | Si quelqu'un s'apercevrait que cela a cassé. |
 | **Composants IA** | Agents, prompts et modèles : si ce qui est bâti sur l'IA est fondé, à jour et rattaché à quelqu'un. |
+| **Dynamics 365 Contact Center** | Flux de travail, files et capacité : si une conversation qui arrive atteint quelqu'un capable de la prendre. Lu uniquement là où Contact Center est installé, donc un environnement sans lui n'a rien ici plutôt qu'une liste de contrôles qui n'ont pas pu s'exécuter. |
 
 La modernisation est la catégorie qu'un client veut le plus et celle que l'on survend le plus
 facilement, donc chaque règle qu'elle contient porte aussi une raison de laisser la chose

@@ -2,7 +2,7 @@
 
 ## Categorieën
 
-Elke regel valt in een van tien categorieën. Het bevindingenscherm groepeert erop.
+Elke regel valt in een van elf categorieën. Het bevindingenscherm groepeert erop.
 
 | Categorie | Gaat over |
 |---|---|
@@ -16,6 +16,7 @@ Elke regel valt in een van tien categorieën. Het bevindingenscherm groepeert er
 | **Beveiliging** | Rechten, geheimen en blootstelling. |
 | **Beheersbaarheid** | Of iemand erachter zou komen wanneer het stukgaat. |
 | **AI-componenten** | Agents, prompts en modellen: of wat er op AI is gebouwd gefundeerd, actueel en van iemand is. |
+| **Dynamics 365 Contact Center** | Werkstromen, wachtrijen en capaciteit: of een gesprek dat binnenkomt iemand bereikt die het kan aannemen. Alleen gelezen waar Contact Center is geïnstalleerd, dus een omgeving zonder heeft hier niets in plaats van een lijst controles die niet konden draaien. |
 
 Modernisering is de categorie die een klant het liefst wil en die het vaakst wordt overdreven,
 dus elke regel erin draagt ook een reden om het ding met rust te laten.

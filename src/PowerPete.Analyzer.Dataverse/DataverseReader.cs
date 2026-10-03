@@ -22,7 +22,7 @@ using PowerPete.Analyzer.Domain;
 /// their own, summed, look exactly like an estate with nothing in it, and that report would be
 /// believed.
 /// </remarks>
-public sealed class DataverseReader(HttpClient client)
+public sealed partial class DataverseReader(HttpClient client)
 {
     private const string Api = "/api/data/v9.2/";
 
@@ -244,10 +244,17 @@ public sealed class DataverseReader(HttpClient client)
 
         var identity = (await TestAsync(cancellationToken).ConfigureAwait(false)).Identity;
 
-        // Eleven entity reads, twelve with run history. Named here rather than counted in a
-        // constant, because a reader added below and a total left up here is how a progress
-        // bar ends up saying twelve of eleven.
-        var total = includeRuntime ? 14 : 13;
+        // Asked before the total, because whether there are contact centre reads to do
+        // decides how many reads there are. A progress bar that counted three it was never
+        // going to make would stop at thirteen of sixteen on every environment that is not a
+        // contact centre, which is most of them.
+        var contactCenter = await DetectContactCenterAsync(cancellationToken).ConfigureAwait(false);
+
+        // Eleven entity reads, twelve with run history, three more where a contact centre is
+        // installed. Named here rather than counted in a constant, because a reader added
+        // below and a total left up here is how a progress bar ends up saying twelve of
+        // eleven.
+        var total = (includeRuntime ? 14 : 13) + (contactCenter.Installed ? ContactCenterTypes.Length : 0);
         var done = 0;
 
         Task Step(string componentTypeId, Func<Task<int>> read)
@@ -268,6 +275,25 @@ public sealed class DataverseReader(HttpClient client)
         await Step("report", () => ReadReportsAsync(components, cancellationToken)).ConfigureAwait(false);
         await Step("copilotStudioAgent", () => ReadAgentsAsync(components, cancellationToken)).ConfigureAwait(false);
         await Step("aiBuilderModel", () => ReadAiModelsAsync(components, cancellationToken)).ConfigureAwait(false);
+
+        if (contactCenter.Installed)
+        {
+            await Step("ccWorkstream", () => ReadWorkstreamsAsync(components, cancellationToken)).ConfigureAwait(false);
+            await Step("ccQueue", () => ReadContactCenterQueuesAsync(components, cancellationToken)).ConfigureAwait(false);
+            await Step("ccCapacityProfile", () => ReadCapacityProfilesAsync(components, cancellationToken)).ConfigureAwait(false);
+        }
+        else
+        {
+            foreach (var type in ContactCenterTypes)
+            {
+                // Not a contact centre is nothing to check, recorded as a successful read of
+                // nothing. Could not tell is the other thing, and goes on the not-assessed
+                // list with the reason, exactly as any other read that failed.
+                reads.Add(contactCenter.FailureReason is null
+                    ? new EntityRead(type, true, 0, null)
+                    : new EntityRead(type, false, null, contactCenter.FailureReason));
+            }
+        }
 
         if (includeRuntime)
         {

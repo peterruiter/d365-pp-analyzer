@@ -1102,6 +1102,66 @@ public static class DemoEstate
                 ("lastModifiedUtc", "2026-06-18T16:22:00Z"), ("activeRequest", (string?)null),
                 ("description", "Trained during the finance pilot."));
 
+            // The contact centre. Queues are read only where they are omnichannel queues, so
+            // every one here is one routing actually uses.
+            Add("ccQueue", "Outage reports - after hours", "nwu_outage_afterhours", MainSolution, false,
+                ("isActive", true), ("queueType", "Messaging"), ("assignsNothing", false),
+                ("assignmentStrategy", "Omnichannel Assignment"), ("hasOperatingHours", true),
+                ("hasPreQueueOverflow", false), ("hasInQueueOverflow", false), ("priority", 1),
+                ("maxQueueSize", (int?)null), ("serviceLevelSeconds", 60), ("memberCount", 0),
+                ("isDefault", false));
+
+            Add("ccQueue", "Billing enquiries", "nwu_billing", MainSolution, false,
+                ("isActive", true), ("queueType", "Voice"), ("assignsNothing", true),
+                ("assignmentStrategy", "No Assignment"), ("hasOperatingHours", true),
+                ("hasPreQueueOverflow", true), ("hasInQueueOverflow", false), ("priority", 2),
+                ("maxQueueSize", 40), ("serviceLevelSeconds", 120), ("memberCount", 6),
+                ("isDefault", false));
+
+            Add("ccQueue", "General customer service", "nwu_general", MainSolution, false,
+                ("isActive", true), ("queueType", "Messaging"), ("assignsNothing", false),
+                ("assignmentStrategy", "Omnichannel Assignment"), ("hasOperatingHours", false),
+                ("hasPreQueueOverflow", false), ("hasInQueueOverflow", false), ("priority", 3),
+                ("maxQueueSize", (int?)null), ("serviceLevelSeconds", (int?)null), ("memberCount", 12),
+                ("isDefault", true));
+
+            // Configured properly, so nothing fires on it.
+            Add("ccQueue", "Priority outages", "nwu_priority_outage", MainSolution, false,
+                ("isActive", true), ("queueType", "Voice"), ("assignsNothing", false),
+                ("assignmentStrategy", "Omnichannel Assignment"), ("hasOperatingHours", true),
+                ("hasPreQueueOverflow", true), ("hasInQueueOverflow", true), ("priority", 1),
+                ("maxQueueSize", 25), ("serviceLevelSeconds", 30), ("memberCount", 9),
+                ("isDefault", false));
+
+            Add("ccWorkstream", "Web chat - outages", "nwu_ws_chat_outage", MainSolution, false,
+                ("isActive", true), ("distribution", "push"), ("capacityFormat", "profile"),
+                ("capacityRequired", (int?)null), ("autoCloseAfterInactivity", 900),
+                ("maxConcurrent", 3), ("hasDefaultQueue", false), ("isRecordRouting", false),
+                ("channel", "Live chat"));
+
+            Add("ccWorkstream", "Voice - billing", "nwu_ws_voice_billing", MainSolution, false,
+                ("isActive", true), ("distribution", "push"), ("capacityFormat", "unit"),
+                ("capacityRequired", 100), ("autoCloseAfterInactivity", (int?)null),
+                ("maxConcurrent", 1), ("hasDefaultQueue", true), ("isRecordRouting", false),
+                ("channel", "Voice"));
+
+            // Required by the chat workstream, held by nobody: the expensive one.
+            Add("ccCapacityProfile", "Specialist meter engineers", "nwu_cap_meter", MainSolution, false,
+                ("isActive", true), ("defaultMaxUnits", 2), ("blocksAssignment", false),
+                ("resetsDaily", false), ("agentCount", 0), ("requiredBy", "Web chat - outages"),
+                ("requiredByCount", 1));
+
+            Add("ccCapacityProfile", "Case quota", "nwu_cap_quota", MainSolution, false,
+                ("isActive", true), ("defaultMaxUnits", 20), ("blocksAssignment", true),
+                ("resetsDaily", true), ("agentCount", 14), ("requiredBy", "Voice - billing"),
+                ("requiredByCount", 1));
+
+            // Held and required, so nothing fires on it.
+            Add("ccCapacityProfile", "Standard chat", "nwu_cap_chat", MainSolution, false,
+                ("isActive", true), ("defaultMaxUnits", 3), ("blocksAssignment", false),
+                ("resetsDaily", false), ("agentCount", 18), ("requiredBy", "Web chat - outages"),
+                ("requiredByCount", 1));
+
             var variables = new (string Name, bool Default, bool Secret, string? Value)[]
             {
                 ("nwu_BillingApiBaseUrl", true, false, "https://billing-test.northwind-utilities.example"),
