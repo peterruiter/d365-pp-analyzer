@@ -37,6 +37,9 @@ param logAnalyticsKey string
 @description('Application Insights connection string.')
 param appInsightsConnectionString string = ''
 
+@description('Custom domains bound to the API, as the deployed app reports them: name, certificateId, bindingType. Empty removes every one, so Deploy-Infrastructure.ps1 reads them back and passes them in.')
+param customDomains array = []
+
 @description('Image both containers run. Empty on a first deployment, before anything has been built.')
 param image string = ''
 
@@ -228,6 +231,10 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
         targetPort: 8080
         transport: 'auto'
         allowInsecure: false
+        // Bound with "az containerapp hostname bind", which issues the managed certificate,
+        // and carried here so a redeploy does not remove them. An ingress block without this
+        // list is an instruction to have no custom domains, not to leave them alone.
+        customDomains: customDomains
       }
       // Configured whatever image is running. Making this conditional on a real image
       // meant the first deployment left it off, and the first "az containerapp update"

@@ -63,6 +63,9 @@ param adminContactEmail string = ''
 @description('Sign-in name of the first global administrator. Without one, nobody can be admitted.')
 param initialGlobalAdminUpn string = ''
 
+@description('Custom domains bound to the API. Read back from the deployed app by Deploy-Infrastructure.ps1; empty removes them.')
+param customDomains array = []
+
 module sql 'modules/sql.bicep' = {
   name: 'sql'
   params: {
@@ -162,6 +165,7 @@ module containers 'modules/containerapps.bicep' = {
     syncfusionLicenseKey: syncfusionLicenseKey
     adminContactEmail: adminContactEmail
     initialGlobalAdminUpn: initialGlobalAdminUpn
+    customDomains: customDomains
   }
 }
 

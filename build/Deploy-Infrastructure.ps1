@@ -319,6 +319,24 @@ if ($ContainerImage)
     $parameters += "containerImage=$ContainerImage"
 }
 
+# Custom domains, read back for the same reason as the image. They are bound outside the
+# template, with "az containerapp hostname bind", because that is what issues the managed
+# certificate; and an ingress block that does not list them removes them. A deployment run to
+# change anything else would otherwise take d365analyzer.com off the product, and the old
+# address would go on working, so nothing would look wrong from here.
+$customDomains = az containerapp show --name "$NamePrefix-api" --resource-group $ResourceGroup `
+    --query 'properties.configuration.ingress.customDomains' --output json 2>$null | ConvertFrom-Json
+
+if ($customDomains)
+{
+    $domainsFile = Join-Path ([System.IO.Path]::GetTempPath()) "$deploymentName-domains.json"
+    @{ customDomains = @{ value = @($customDomains) } } | ConvertTo-Json -Depth 5 | Set-Content $domainsFile -Encoding utf8
+    $parameters += "@$domainsFile"
+
+    Write-Host "Keeping the custom domains already bound: $((@($customDomains) | ForEach-Object name) -join ', ')"
+    Write-Host ''
+}
+
 if ($InitialGlobalAdminUpn)
 {
     $parameters += "initialGlobalAdminUpn=$InitialGlobalAdminUpn"
