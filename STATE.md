@@ -396,7 +396,12 @@ the reach a screen promises is the same reach the report withdraws.
 
 Up and serving: SQL server and database, Key Vault, container registry, container apps
 environment, the API and worker apps, Log Analytics and Application Insights. The API is at
-`https://ppanalyzer-api.calmforest-a31e153d.swedencentral.azurecontainerapps.io`.
+`https://d365analyzer.com` and `https://www.d365analyzer.com` (custom domains, DNS at De
+Hostingmeesters, free managed certificates), and still at
+`https://ppanalyzer-api.calmforest-a31e153d.swedencentral.azurecontainerapps.io`. All three are
+redirect URIs on the Entra application, for sign-in and for the delegated connection callback.
+Capgemini's Zscaler blocks the bare `d365analyzer.com` as a newly registered domain; `www` gets
+through.
 
 `/api/version` reports 37 rules and 50 component types, `/api/auth/status` answers anonymously,
 every language bundle serves, and the protected endpoints redirect to sign in rather than
