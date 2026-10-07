@@ -1752,6 +1752,55 @@ public class DataLayerTests
             .ToList();
     }
 
+    [Fact]
+    public void No_fixture_is_shaped_like_a_real_providers_key()
+    {
+        // This product looks for secrets in solutions, so its fixtures plant secrets for it to
+        // find. The sample solution planted one in the exact format of a live Stripe key, the
+        // repository is public, and GitHub reported it to Stripe and to its owner as a leaked
+        // credential. It was invented, but nobody receiving that alert can know that without
+        // reading the code, and the right response to such an alert is to revoke first.
+        //
+        // The analyzer's own rule matches any long value after api_key or AccountKey=, so a
+        // fixture never needs a provider's real format to be found. These are the formats
+        // that providers scan public repositories for.
+        var formats = new Dictionary<string, Regex>
+        {
+            ["Stripe"] = new(@"\b[rs]k_live_[A-Za-z0-9]{20,}", RegexOptions.None, TimeSpan.FromSeconds(5)),
+            ["GitHub"] = new(@"\bgh[pousr]_[A-Za-z0-9]{36}\b|\bgithub_pat_[A-Za-z0-9_]{60,}", RegexOptions.None, TimeSpan.FromSeconds(5)),
+            ["AWS"] = new(@"\bAKIA[0-9A-Z]{16}\b", RegexOptions.None, TimeSpan.FromSeconds(5)),
+            ["Slack"] = new(@"\bxox[abprs]-[A-Za-z0-9-]{10,}", RegexOptions.None, TimeSpan.FromSeconds(5)),
+            ["Entra client secret"] = new(@"\b[A-Za-z0-9_\-.]{3}\dQ~[A-Za-z0-9_\-.~]{31,34}", RegexOptions.None, TimeSpan.FromSeconds(5)),
+            ["Azure Storage"] = new(@"AccountKey=[A-Za-z0-9+/]{86}==", RegexOptions.None, TimeSpan.FromSeconds(5)),
+            ["private key"] = new(@"-----BEGIN [A-Z ]*PRIVATE KEY-----", RegexOptions.None, TimeSpan.FromSeconds(5)),
+        };
+
+        string[] skipped = ["bin", "obj", "node_modules", "dist", "wwwroot", ".git", "samples"];
+        string[] text = [".cs", ".ps1", ".psm1", ".json", ".ts", ".tsx", ".js", ".md", ".bicep", ".sql", ".yml", ".yaml", ".xml", ".html", ".css", ".csproj", ".props"];
+
+        var root = Directory.GetParent(Solution())!.FullName;
+        var offenders = new List<string>();
+
+        foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+        {
+            var relative = Path.GetRelativePath(root, file);
+            if (relative.Split(Path.DirectorySeparatorChar).Any(part => skipped.Contains(part, StringComparer.OrdinalIgnoreCase))) continue;
+            if (!text.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase)) continue;
+            if (relative.EndsWith("package-lock.json", StringComparison.OrdinalIgnoreCase)) continue;
+
+            var content = File.ReadAllText(file);
+
+            foreach (var (provider, format) in formats)
+            {
+                if (format.IsMatch(content)) offenders.Add($"{relative}: {provider}");
+            }
+        }
+
+        offenders.Should().BeEmpty(
+            "a fixture in a real provider's format is reported as a leaked credential the moment it is "
+            + "pushed; use an obviously invented value, which the analyzer's own rule still finds");
+    }
+
     private static string Solution()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

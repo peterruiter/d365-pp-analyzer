@@ -57,7 +57,7 @@ public static class DemoEstate
     /// against this number, so a change here without a change to the shape, or the reverse,
     /// fails in the test run.
     /// </remarks>
-    public const int SeedVersion = 7;
+    public const int SeedVersion = 8;
 
     /// <summary>What it is called.</summary>
     public const string Name = "Demonstration estate";
@@ -783,7 +783,7 @@ public static class DemoEstate
 
                     // A shared access signature pasted into a formula, which is the single
                     // most common way a secret ends up in a solution file.
-                    "Set(varToken, \"AccountKey=Zm9vYmFyYmF6cXV4MTIzNDU2Nzg5MGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6QUJDRA==\")"),
+                    "Set(varToken, \"AccountKey=RVhBTVBMRS1ub3QtYS1yZWFsLXN0b3JhZ2Uta2V5LWZvci10aGUtZGVtbw==\")"),
                 ("Crew Dispatch", FieldSolution, 9, 220, 700, true, 1_800_000, null),
                 ("Green Scheme Signup", MainSolution, 5, 96, 240, false, 700_000, null)
             };

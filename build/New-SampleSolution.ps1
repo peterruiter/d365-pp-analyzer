@@ -184,7 +184,7 @@ function onLoad(executionContext) {
 Write-File 'WebResources/smp_integration.js' @'
 var config = {
     endpoint: "https://partner.example.org/v1",
-    api_key: "sk_live_9f2b7c41e8a35d6094bf72e1c8a4d03b5e6f7a89",
+    api_key: "EXAMPLE_not_a_real_key_9f2b7c41e8a35d6094bf72e1c8a4",
     retry: 3
 };
 function send(payload) { return fetch(config.endpoint, { headers: { "x-api-key": config.api_key } }); }
