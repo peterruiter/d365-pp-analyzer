@@ -98,4 +98,13 @@ the whole offline path runs with no client file, no environment and nobody's per
 
 ## Licence
 
-Copyright Capgemini. All rights reserved.
+MIT. See `LICENSE.md`.
+
+The .NET packages, npm packages and Azure services this project depends on are licensed
+under their own terms, which the MIT licence does not change. The PDF report uses
+Syncfusion, which needs its own licence key. See `Directory.Packages.props` and
+`src/web/package.json` for the dependency list.
+
+Nothing in this repository contains client data. Any deployment that processes client data
+does so inside a boundary agreed with that client, under a separate processing agreement,
+with a retention period and a scripted deletion path.

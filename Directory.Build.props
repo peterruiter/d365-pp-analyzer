@@ -26,7 +26,8 @@
     <Company>Capgemini</Company>
     <Product>Power Platform Solution Analyzer</Product>
     <Authors>Peter Ruiter</Authors>
-    <Copyright>Copyright Capgemini. All rights reserved.</Copyright>
+    <Copyright>Copyright (c) 2026 Capgemini. MIT licence.</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
 
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <!-- CS1591: missing XML comment. Generated files carry their own docs and

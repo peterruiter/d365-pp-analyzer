@@ -1,22 +1,21 @@
-# Licence
+MIT License
 
-Copyright Capgemini. All rights reserved.
+Copyright (c) 2026 Capgemini
 
-This repository contains proprietary Capgemini intellectual property. It is not open
-source and is not licensed for redistribution.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-Use is limited to Capgemini personnel working on client engagements, under the
-applicable client engagement terms.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-## Third party components
-
-The .NET packages, npm packages and Azure services this project depends on are
-licensed under their own terms. See `Directory.Packages.props` and
-`src/web/package.json` for the dependency list.
-
-## Client data
-
-Nothing in this repository contains client data. Any deployment that processes client
-data does so inside a boundary agreed with that client, under a separate processing
-agreement, with a retention period and a scripted deletion path. See
-`docs/07-handling-client-solution-files.md`.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
