@@ -23,10 +23,10 @@
     <VersionFile>$(MSBuildThisFileDirectory)VERSION</VersionFile>
     <Version Condition="Exists('$(VersionFile)')">$([System.IO.File]::ReadAllText('$(VersionFile)').Trim())</Version>
 
-    <Company>Capgemini</Company>
+    <Company>PowerPete</Company>
     <Product>Power Platform Solution Analyzer</Product>
     <Authors>Peter Ruiter</Authors>
-    <Copyright>Copyright (c) 2026 Capgemini. MIT licence.</Copyright>
+    <Copyright>Copyright (c) 2026 PowerPete. MIT licence.</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
 
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
