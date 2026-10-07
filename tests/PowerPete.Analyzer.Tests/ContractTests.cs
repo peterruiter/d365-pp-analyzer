@@ -505,6 +505,24 @@ public class DataLayerTests
         tiles.Should().BeEmpty(
             "the public site builds a tile per category and prints the identifier where there is no name");
 
+        // And the workspace, which loads only the ui bundle. Its findings filter listed
+        // "contactCenter", "alm" and "ai" for as long as the backlog bundle was the only one
+        // with names in it: a third place reading the same names, unguarded like the second.
+        var filter = new List<string>();
+
+        foreach (var language in Contracts.Read("locales").Array("locales").Select(locale => locale.Str("code")))
+        {
+            var ui = JsonDocument.Parse(File.ReadAllText(Path.Combine(Resources(), $"ui.{language}.json"))).RootElement;
+
+            filter.AddRange(
+                from category in categories
+                let key = $"findings.category.{category.Str("id")}"
+                where !ui.TryGetProperty(key, out var value) || value.GetString() is not { Length: > 0 }
+                select $"{language}: {key}");
+        }
+
+        filter.Should().BeEmpty("the findings filter prints the identifier where there is no name");
+
         // And English has to agree with the contract, because the contract's name is the
         // fallback. Two spellings of the same category, one of which only appears when a
         // translation is missing, is a difference nobody would ever think to look for.

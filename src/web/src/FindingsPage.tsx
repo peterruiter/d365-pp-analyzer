@@ -154,7 +154,12 @@ export function FindingsPage({ engagementId }: { engagementId: string }) {
           {t('findings.category')}
           <select value={category} onChange={event => setCategory(event.target.value)}>
             <option value="all">{t('findings.all')}</option>
-            {categories.map(name => <option key={name} value={name}>{name}</option>)}
+            {/* By name, not by identifier. The list said "contactCenter" and "alm", which is
+                what the database calls them and not what anybody reading findings does. */}
+            {categories
+              .map(id => ({ id, name: t(`findings.category.${id}`) }))
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map(({ id, name }) => <option key={id} value={id}>{name}</option>)}
           </select>
         </label>
 
