@@ -1771,6 +1771,43 @@ public class DataLayerTests
     }
 
     [Fact]
+    public void The_documents_call_a_category_by_its_name()
+    {
+        // The report had a section headed "alm" and a cost table with a row called
+        // "contactCenter", and the workbook's category column said the same: both printed
+        // the identifier, in the documents a client actually reads. The names were sitting
+        // in the backlog bundle, translated, the whole time.
+        var workbook = new PowerPete.Analyzer.Export.FindingsWorkbook.Model(
+            "Northwind", Guid.NewGuid(), DateTime.UtcNow, "assessment", null, null!, [], [], [], [], "nl");
+
+        var report = new PowerPete.Analyzer.Export.AssessmentReportPdf.Model(
+            "Northwind", null, Guid.NewGuid(), DateTime.UtcNow, "assessment", null, [], null!, [], [], [],
+            new Dictionary<string, string>(), [], "en");
+
+        report.Category("contactCenter").Should().Be("Dynamics 365 Contact Center");
+        report.Category("alm").Should().Be("ALM and solution hygiene");
+        workbook.Category("alm").Should().Be("ALM en oplossingshygiëne", "the workbook is written in its own language");
+
+        // And nothing in the exports hands an identifier straight to the page. Every one of
+        // the three places that did read either the group key or the rule's category and
+        // printed it.
+        var raw = new Regex(
+            @"(?:\.Cell\(|\.Text\(|\.Value\s*=)\s*(?:category\.Key|[^;\n]*\.Rule\?\.Category\b(?![^;\n]*Category\())",
+            RegexOptions.None, TimeSpan.FromSeconds(5));
+
+        var offenders = Directory
+            .EnumerateFiles(Path.Combine(Solution(), "PowerPete.Analyzer.Export"), "*.cs", SearchOption.AllDirectories)
+            .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            .SelectMany(file => File.ReadAllLines(file)
+                .Select((line, index) => (file, line, index))
+                .Where(entry => raw.IsMatch(entry.line))
+                .Select(entry => $"{Path.GetFileName(entry.file)}:{entry.index + 1}: {entry.line.Trim()}"))
+            .ToList();
+
+        offenders.Should().BeEmpty("a category goes through Category(id), which is where its name is");
+    }
+
+    [Fact]
     public void No_fixture_is_shaped_like_a_real_providers_key()
     {
         // This product looks for secrets in solutions, so its fixtures plant secrets for it to

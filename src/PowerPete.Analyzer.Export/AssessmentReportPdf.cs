@@ -73,6 +73,23 @@ public sealed partial class AssessmentReportPdf
         /// finding text is the half a client actually reads.
         /// </remarks>
         internal Localiser Rules { get; } = new Localiser("finding", Language);
+
+        /// <summary>The bundle the category names are kept in.</summary>
+        /// <remarks>
+        /// The backlog's, because that is where they were first translated and the guard
+        /// checks them there. A third copy for the documents would be a third place for the
+        /// eleventh category to be forgotten.
+        /// </remarks>
+        private Localiser Categories { get; } = new Localiser("backlog", Language);
+
+        /// <summary>What a category is called, in this document's language.</summary>
+        /// <remarks>
+        /// This printed the identifier, so the report had a section headed "alm" and a cost
+        /// table with a row called "contactCenter", in the one document a client reads.
+        /// </remarks>
+        /// <param name="id">The category identifier.</param>
+        internal string Category(string id) =>
+            Categories["backlog.category." + id, RuleCatalogue.CategoryNames.GetValueOrDefault(id, id)];
     }
 
     private static readonly CultureInfo Culture = CultureInfo.InvariantCulture;
@@ -800,7 +817,7 @@ public sealed partial class AssessmentReportPdf
         {
             flow.Together(inner =>
             {
-                inner.Text(category.Key, new TextStyle { Size = 12, Bold = true, Colour = Brand.Blue });
+                inner.Text(model.Category(category.Key), new TextStyle { Size = 12, Bold = true, Colour = Brand.Blue });
 
                 inner.Table(table =>
                 {
@@ -907,7 +924,7 @@ public sealed partial class AssessmentReportPdf
                 .GroupBy(entry => entry.Finding.Rule?.Category ?? "other", StringComparer.Ordinal)
                 .OrderByDescending(group => group.Sum(entry => entry.Estimate.HighHours)))
             {
-                table.Cell(category.Key);
+                table.Cell(model.Category(category.Key));
                 table.Cell(category.Count().ToString(Culture), right: true);
                 table.Cell($"{category.Sum(entry => entry.Estimate.LowHours):0.#}–{category.Sum(entry => entry.Estimate.HighHours):0.#}",
                     right: true);

@@ -62,6 +62,23 @@ public sealed class FindingsWorkbook
         /// finding text is the half a client actually reads.
         /// </remarks>
         internal Localiser Rules { get; } = new Localiser("finding", Language);
+
+        /// <summary>The bundle the category names are kept in.</summary>
+        /// <remarks>
+        /// The backlog's, because that is where they were first translated and the guard
+        /// checks them there. A third copy for the documents would be a third place for the
+        /// eleventh category to be forgotten.
+        /// </remarks>
+        private Localiser Categories { get; } = new Localiser("backlog", Language);
+
+        /// <summary>What a category is called, in this document's language.</summary>
+        /// <remarks>
+        /// This printed the identifier, so the report had a section headed "alm" and a cost
+        /// table with a row called "contactCenter", in the one document a client reads.
+        /// </remarks>
+        /// <param name="id">The category identifier.</param>
+        internal string Category(string id) =>
+            Categories["backlog.category." + id, RuleCatalogue.CategoryNames.GetValueOrDefault(id, id)];
     }
 
     /// <summary>Builds the workbook.</summary>
@@ -177,7 +194,7 @@ public sealed class FindingsWorkbook
         {
             sheet.Cell(row, 1).Value = entry.Finding.Severity.ToString();
             sheet.Cell(row, 1).Style.Font.FontColor = SeverityColour(entry.Finding.Severity);
-            sheet.Cell(row, 2).Value = entry.Finding.Rule?.Category ?? "";
+            sheet.Cell(row, 2).Value = entry.Finding.Rule?.Category is { } category ? model.Category(category) : "";
             sheet.Cell(row, 3).Value = RuleName(model, entry.Finding);
             sheet.Cell(row, 4).Value = entry.Finding.ComponentName ?? "(solution wide)";
             sheet.Cell(row, 5).Value = entry.Component?.Type?.Name ?? "";
